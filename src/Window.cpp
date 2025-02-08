@@ -35,22 +35,11 @@ Window::Window(Application* app, HINSTANCE hInstance, float width, float height)
 		m_app);
 
 	ShowWindow(m_hwnd, SW_NORMAL);
-
-	// Main sample loop.
-	MSG msg = {};
-	while (msg.message != WM_QUIT)
-	{
-		// Process any messages in the queue.
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
 }
 
 LRESULT Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	static bool sizeMove = false;
 	auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 	switch (msg)
@@ -81,6 +70,20 @@ LRESULT Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
+
+		case WM_ENTERSIZEMOVE:
+				sizeMove = true;
+			break;
+
+		case WM_EXITSIZEMOVE:
+			sizeMove = false;
+			if (app) {
+				RECT rc;
+				GetClientRect(hWnd, &rc);
+
+				app->OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
+			}
+			break;
 
 		default:
 			break;
