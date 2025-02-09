@@ -1,10 +1,14 @@
+Texture2D g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+
 struct Input
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
+    float2 uv : TEXCOORD0;
 };
 
 
 float4 main(Input input) : SV_TARGET {
-    return input.color;
+    return g_texture.Sample(g_sampler, input.uv);
 }

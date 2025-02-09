@@ -27,6 +27,9 @@ private:
 	std::unique_ptr<Window> m_window;
 
 	static const UINT FrameCount = 2;
+	static const UINT TextureWidth = 256;
+	static const UINT TextureHeight = 256;
+	static const UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
 
 	bool m_useWarpDevice = false;
 
@@ -42,6 +45,7 @@ private:
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	UINT m_rtvDescriptorSize;
@@ -50,6 +54,7 @@ private:
 	// App resources.
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	ComPtr<ID3D12Resource> m_texture;
 
 
 	// Synchronization objects.
@@ -67,6 +72,7 @@ private:
 
 	void LoadPipeline();
 	void LoadAssets();
+	std::vector<UINT8> GenerateTextureData();
 	void PopulateCommandList();
 	void WaitForPreviousFrame();
 
