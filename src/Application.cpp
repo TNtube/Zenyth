@@ -315,12 +315,10 @@ void Application::LoadAssets()
 		// Define the geometry for a triangle.
 		Vertex triangleVertices[] =
 			{
-				{ { -0.25f, 0.25f * m_aspectRatio, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-				{ { 0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+				{ {  0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 1.0f } },
 				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-				{ { -0.25f, 0.25f * m_aspectRatio, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-				{ { 0.25f, 0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-				{ { 0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+				{ { -0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { 0.0f, 0.0f } },
+				{ {  0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 0.0f } },
 			};
 
 		const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -330,11 +328,11 @@ void Application::LoadAssets()
 		// over. Please read up on Default Heap usage. An upload heap is used here for
 		// code simplicity and because there are very few verts to actually transfer.
 		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		auto cbResDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+		auto vbResDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
 		ThrowIfFailed(m_device->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,
-			&cbResDesc,
+			&vbResDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&m_vertexBuffer)));
@@ -350,6 +348,32 @@ void Application::LoadAssets()
 		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
+	}
+
+	// Create the Index Buffer
+	{
+		uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
+		const UINT indexBufferSize = sizeof(indices);
+
+		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		auto ibResDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+		ThrowIfFailed(m_device->CreateCommittedResource(
+			&heapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&ibResDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_indexBuffer)));
+
+		UINT8* pIndexDataBegin;
+		CD3DX12_RANGE readRange(0, 0);
+		ThrowIfFailed(m_indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
+		memcpy(pIndexDataBegin, indices, sizeof(indices));
+		m_indexBuffer->Unmap(0, nullptr);
+
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_indexBufferView.SizeInBytes = indexBufferSize;
 	}
 
 	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
@@ -475,7 +499,8 @@ void Application::PopulateCommandList()
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	m_commandList->DrawInstanced(6, 1, 0, 0);
+	m_commandList->IASetIndexBuffer(&m_indexBufferView);
+	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 	// Indicate that the back buffer will now be used to present.
 	resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
