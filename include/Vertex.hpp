@@ -5,6 +5,6 @@
 class Vertex
 {
 public:
-	DirectX::XMFLOAT3 position;
+	DirectX::XMFLOAT4 position;
 	DirectX::XMFLOAT2 uv;
 };
