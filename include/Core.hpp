@@ -1,8 +1,8 @@
-#pragma
+#pragma once
 #include "stdafx.h"
 
 
-void ThrowIfFailed(HRESULT hr, const char* msg = "")
+inline void ThrowIfFailed(HRESULT hr, const char* msg = "")
 {
 	if (FAILED(hr))
 	{

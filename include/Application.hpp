@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Buffers.hpp"
 #include "Window.hpp"
 
 using namespace DirectX;
@@ -27,9 +28,6 @@ private:
 	std::unique_ptr<Window> m_window;
 
 	static constexpr UINT FrameCount = 2;
-	static constexpr UINT TextureWidth = 256;
-	static constexpr UINT TextureHeight = 256;
-	static constexpr UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
 
 	bool m_useWarpDevice = false;
 
@@ -64,9 +62,8 @@ private:
 	ComPtr<ID3D12Resource> m_indexBuffer;
 	D3D12_INDEX_BUFFER_VIEW m_indexBufferView {};
 	ComPtr<ID3D12Resource> m_texture;
-	ComPtr<ID3D12Resource> m_constantBuffer;
 	SceneConstantBuffer m_constantBufferData {};
-	UINT8* m_pCbvDataBegin;
+	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer;
 
 
 	// Synchronization objects.
@@ -84,7 +81,6 @@ private:
 
 	void LoadPipeline();
 	void LoadAssets();
-	std::vector<UINT8> GenerateTextureData();
 	void PopulateCommandList();
 	void WaitForPreviousFrame();
 

@@ -3,6 +3,8 @@ project(Zenyth)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
+
 if (NOT EXISTS "${CMAKE_BINARY_DIR}/xrepo.cmake")
     message(STATUS "Downloading xrepo.cmake from https://github.com/xmake-io/xrepo-cmake/")
     file(DOWNLOAD "https://raw.githubusercontent.com/xmake-io/xrepo-cmake/main/xrepo.cmake"
@@ -14,6 +16,7 @@ include(${CMAKE_BINARY_DIR}/xrepo.cmake)
 
 xrepo_package("directx-headers")
 xrepo_package("glm")
+xrepo_package("directxtex")
 
 include_directories(include)
 
@@ -25,6 +28,8 @@ add_executable(Zenyth WIN32
         src/Application.cpp
         include/Core.hpp
         include/Vertex.hpp
+        include/Buffers.hpp
+        src/Buffers.cpp
 )
 
 add_custom_target(copy_resources ALL
@@ -41,4 +46,4 @@ target_compile_definitions(Zenyth PUBLIC UNICODE _UNICODE)
 
 target_link_libraries(Zenyth PUBLIC d3d12 dxgi D3DCompiler.lib)
 
-xrepo_target_packages(Zenyth directx-headers glm)
+xrepo_target_packages(Zenyth directx-headers glm directxtex)

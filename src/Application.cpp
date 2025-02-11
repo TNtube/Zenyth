@@ -2,6 +2,8 @@
 #include "Application.hpp"
 #include "Core.hpp"
 #include "Vertex.hpp"
+#include "DirectXTex.h"
+#include "glm/glm.hpp"
 
 
 void Application::Run()
@@ -59,7 +61,7 @@ void Application::OnUpdate()
 	{
 		m_constantBufferData.offset.x = -offsetBounds;
 	}
-	memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+	m_constantBuffer->SetData(m_constantBufferData);
 }
 
 void Application::OnRender()
@@ -98,6 +100,8 @@ void Application::OnKeyUp(uint8_t key)
 
 void Application::LoadPipeline()
 {
+	ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+
 	UINT dxgiFactoryFlags = 0;
 
 #if defined(_DEBUG)
@@ -333,12 +337,17 @@ void Application::LoadAssets()
 	// Create the vertex buffer.
 	{
 		// Define the geometry for a triangle.
+		glm::vec2 textCoord(0.0f);
+
+		float u = textCoord.x / 16.0f;
+		float v = textCoord.y / 16.0f;
+		float one = 1.0f / 16.0f;
 		Vertex triangleVertices[] =
 			{
-				{ {  0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-				{ { -0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-				{ {  0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+				{ {  0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { u + one, v + one } },
+				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { u, v + one } },
+				{ { -0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { u, v } },
+				{ {  0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { u + one, v } },
 			};
 
 		const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -404,17 +413,17 @@ void Application::LoadAssets()
 
 	// Create the texture.
 	{
-		// Describe and create a Texture2D.
-		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.MipLevels = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDesc.Width = TextureWidth;
-		textureDesc.Height = TextureHeight;
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		textureDesc.DepthOrArraySize = 1;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		// Copy data to the intermediate upload heap and then schedule a copy
+		// from the upload heap to the Texture2D.
+		// std::vector<UINT8> texture = GenerateTextureData();
+
+		TexMetadata info {};
+		auto image = std::make_unique<ScratchImage>();
+		ThrowIfFailed(LoadFromDDSFile( GetAssetFullPath(L"textures/terrain.dds").c_str(),
+			DDS_FLAGS_NONE, &info, *image ));
+
+
+		CD3DX12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(info.format, info.width, info.height, 1, info.mipLevels);
 
 		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(m_device->CreateCommittedResource(
@@ -438,16 +447,12 @@ void Application::LoadAssets()
 			nullptr,
 			IID_PPV_ARGS(&textureUploadHeap)));
 
-		// Copy data to the intermediate upload heap and then schedule a copy
-		// from the upload heap to the Texture2D.
-		std::vector<UINT8> texture = GenerateTextureData();
-
 		D3D12_SUBRESOURCE_DATA textureData = {};
-		textureData.pData = &texture[0];
-		textureData.RowPitch = TextureWidth * TexturePixelSize;
-		textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+		textureData.pData = image->GetPixels();
+		textureData.RowPitch = info.width * 4;
+		textureData.SlicePitch = textureData.RowPitch * info.height;
 
-		UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+		UpdateSubresources<1>(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
 		auto transition = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		m_commandList->ResourceBarrier(1, &transition);
 
@@ -456,7 +461,7 @@ void Application::LoadAssets()
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
 		m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_resourceHeap->GetCPUDescriptorHandleForHeapStart());
 	}
 
@@ -465,37 +470,7 @@ void Application::LoadAssets()
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	// Create the constant buffer.
-	{
-		const UINT constantBufferSize = sizeof(SceneConstantBuffer);    // CB size is required to be 256-byte aligned.
-
-		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		auto cbResDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&cbResDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_constantBuffer)));
-
-		// Describe and create a constant buffer view.
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = constantBufferSize;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(
-			m_resourceHeap->GetCPUDescriptorHandleForHeapStart(),
-			1, // Offset from start (assuming SRV is at index 0)
-			m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-		);
-		m_device->CreateConstantBufferView(&cbvDesc, cbvHandle);
-
-		// Map and initialize the constant buffer. We don't unmap this until the
-		// app closes. Keeping things mapped for the lifetime of the resource is okay.
-		CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
-	}
+	m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap.Get(), 1);
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
@@ -537,13 +512,8 @@ void Application::PopulateCommandList()
 
 	m_commandList->SetGraphicsRootDescriptorTable(0, m_resourceHeap->GetGPUDescriptorHandleForHeapStart());
 
-	// Add offset for CBV
-	CD3DX12_GPU_DESCRIPTOR_HANDLE cbvGpuHandle(
-		m_resourceHeap->GetGPUDescriptorHandleForHeapStart(),
-		1, // Same offset as in CPU handle creation
-		m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-	);
-	m_commandList->SetGraphicsRootDescriptorTable(1, cbvGpuHandle);
+	// apply cbv
+	m_constantBuffer->Apply(m_commandList.Get());
 
 
 	m_commandList->RSSetViewports(1, &m_viewport);
@@ -668,40 +638,4 @@ void Application::OnWindowSizeChanged(int width, int height)
 {
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	LoadAssets();
-}
-
-std::vector<UINT8> Application::GenerateTextureData()
-{
-	const UINT rowPitch = TextureWidth * TexturePixelSize;
-	const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
-	const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
-	const UINT textureSize = rowPitch * TextureHeight;
-
-	std::vector<UINT8> data(textureSize);
-	UINT8* pData = &data[0];
-
-	for (UINT n = 0; n < textureSize; n += TexturePixelSize)
-	{
-		UINT x = n % rowPitch;
-		UINT y = n / rowPitch;
-		UINT i = x / cellPitch;
-		UINT j = y / cellHeight;
-
-		if (i % 2 == j % 2)
-		{
-			pData[n] = 0x00;        // R
-			pData[n + 1] = 0x00;    // G
-			pData[n + 2] = 0x00;    // B
-			pData[n + 3] = 0xff;    // A
-		}
-		else
-		{
-			pData[n] = 0xff;        // R
-			pData[n + 1] = 0xff;    // G
-			pData[n + 2] = 0xff;    // B
-			pData[n + 3] = 0xff;    // A
-		}
-	}
-
-	return data;
 }
