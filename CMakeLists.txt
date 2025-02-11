@@ -3,8 +3,6 @@ project(Zenyth)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
-
 if (NOT EXISTS "${CMAKE_BINARY_DIR}/xrepo.cmake")
     message(STATUS "Downloading xrepo.cmake from https://github.com/xmake-io/xrepo-cmake/")
     file(DOWNLOAD "https://raw.githubusercontent.com/xmake-io/xrepo-cmake/main/xrepo.cmake"
@@ -13,6 +11,7 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/xrepo.cmake")
 endif()
 
 include(${CMAKE_BINARY_DIR}/xrepo.cmake)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
 xrepo_package("directx-headers")
 xrepo_package("glm")
