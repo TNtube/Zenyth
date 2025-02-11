@@ -370,58 +370,7 @@ void Application::LoadAssets()
 	ComPtr<ID3D12Resource> textureUploadHeap;
 
 	// Create the texture.
-	{
-		// Copy data to the intermediate upload heap and then schedule a copy
-		// from the upload heap to the Texture2D.
-		// std::vector<UINT8> texture = GenerateTextureData();
-
-		TexMetadata info {};
-		auto image = std::make_unique<ScratchImage>();
-		ThrowIfFailed(LoadFromDDSFile( GetAssetFullPath(L"textures/terrain.dds").c_str(),
-			DDS_FLAGS_NONE, &info, *image ));
-
-
-		CD3DX12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(info.format, info.width, info.height, 1, info.mipLevels);
-
-		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_texture)));
-
-		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
-
-		heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		textureDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-		// Create the GPU upload buffer.
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&textureUploadHeap)));
-
-		D3D12_SUBRESOURCE_DATA textureData = {};
-		textureData.pData = image->GetPixels();
-		textureData.RowPitch = info.width * 4;
-		textureData.SlicePitch = textureData.RowPitch * info.height;
-
-		UpdateSubresources<1>(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-		auto transition = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		m_commandList->ResourceBarrier(1, &transition);
-
-		// Describe and create a SRV for the texture.
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
-		m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_resourceHeap->GetCPUDescriptorHandleForHeapStart());
-	}
+	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), textureUploadHeap.Get(), m_resourceHeap.Get(), m_commandList.Get(), 0);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -468,7 +417,7 @@ void Application::PopulateCommandList()
 	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-	m_commandList->SetGraphicsRootDescriptorTable(0, m_resourceHeap->GetGPUDescriptorHandleForHeapStart());
+	m_texture->Apply(m_commandList.Get());
 
 	// apply cbv
 	m_constantBuffer->Apply(m_commandList.Get());

@@ -3,6 +3,7 @@
 #include "Buffers.hpp"
 #include "Window.hpp"
 #include "Vertex.hpp"
+#include "Texture.hpp"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -60,7 +61,7 @@ private:
 	// App resources.
 	std::unique_ptr<Zenyth::VertexBuffer<Vertex>> m_vertexBuffer;
 	std::unique_ptr<Zenyth::IndexBuffer> m_indexBuffer;
-	ComPtr<ID3D12Resource> m_texture;
+	std::unique_ptr<Zenyth::Texture> m_texture;
 	SceneConstantBuffer m_constantBufferData {};
 	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer;
 

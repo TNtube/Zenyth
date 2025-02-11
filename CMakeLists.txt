@@ -30,6 +30,8 @@ add_executable(Zenyth WIN32
         include/Vertex.hpp
         include/Buffers.hpp
         src/Buffers.cpp
+        include/Texture.hpp
+        src/Texture.cpp
 )
 
 add_custom_target(copy_resources ALL
