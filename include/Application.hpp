@@ -26,10 +26,10 @@ public:
 private:
 	std::unique_ptr<Window> m_window;
 
-	static const UINT FrameCount = 2;
-	static const UINT TextureWidth = 256;
-	static const UINT TextureHeight = 256;
-	static const UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
+	static constexpr UINT FrameCount = 2;
+	static constexpr UINT TextureWidth = 256;
+	static constexpr UINT TextureHeight = 256;
+	static constexpr UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
 
 	bool m_useWarpDevice = false;
 
@@ -60,20 +60,20 @@ private:
 
 	// App resources.
 	ComPtr<ID3D12Resource> m_vertexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView {};
 	ComPtr<ID3D12Resource> m_indexBuffer;
-	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+	D3D12_INDEX_BUFFER_VIEW m_indexBufferView {};
 	ComPtr<ID3D12Resource> m_texture;
 	ComPtr<ID3D12Resource> m_constantBuffer;
-	SceneConstantBuffer m_constantBufferData = {};
+	SceneConstantBuffer m_constantBufferData {};
 	UINT8* m_pCbvDataBegin;
 
 
 	// Synchronization objects.
 	UINT m_frameIndex;
-	HANDLE m_fenceEvent;
+	HANDLE m_fenceEvent {};
 	ComPtr<ID3D12Fence> m_fence;
-	UINT64 m_fenceValue;
+	UINT64 m_fenceValue {};
 
 
 	void GetHardwareAdapter(
