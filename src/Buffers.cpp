@@ -27,4 +27,23 @@ namespace Zenyth {
 	void Buffer::Unmap() const {
 		m_buffer->Unmap(0, nullptr);
 	}
+
+	IndexBuffer::IndexBuffer(ID3D12Device *device, const uint32_t* data, size_t size)
+		: Buffer(device, size)
+	{
+		UINT8* pVertexDataBegin;
+
+		Map(&pVertexDataBegin);
+		memcpy(pVertexDataBegin, data, size);
+		Unmap();
+
+		m_bufferView.BufferLocation = m_buffer->GetGPUVirtualAddress();
+		m_bufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_bufferView.SizeInBytes = size;
+	}
+
+	void IndexBuffer::Apply(ID3D12GraphicsCommandList *commandList) const
+	{
+		commandList->IASetIndexBuffer(&m_bufferView);
+	}
 }

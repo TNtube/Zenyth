@@ -2,6 +2,7 @@
 
 #include "Buffers.hpp"
 #include "Window.hpp"
+#include "Vertex.hpp"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -57,10 +58,8 @@ private:
 
 
 	// App resources.
-	ComPtr<ID3D12Resource> m_vertexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView {};
-	ComPtr<ID3D12Resource> m_indexBuffer;
-	D3D12_INDEX_BUFFER_VIEW m_indexBufferView {};
+	std::unique_ptr<Zenyth::VertexBuffer<Vertex>> m_vertexBuffer;
+	std::unique_ptr<Zenyth::IndexBuffer> m_indexBuffer;
 	ComPtr<ID3D12Resource> m_texture;
 	SceneConstantBuffer m_constantBufferData {};
 	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer;
