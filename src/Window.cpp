@@ -58,7 +58,8 @@ LRESULT Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_KEYUP:
 			app->OnKeyUp(static_cast<uint8_t>(wParam));
 			return 0;
-
+		case WM_MOUSEMOVE:
+			app->OnMouseMove(static_cast<uint8_t>(wParam), static_cast<int32_t>(lParam));
 		case WM_PAINT:
 			if (app)
 			{

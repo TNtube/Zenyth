@@ -1,9 +1,17 @@
 #pragma once
 
+#include "stdafx.h"
+
 #include "Buffers.hpp"
+#include "Camera.hpp"
 #include "Window.hpp"
 #include "Vertex.hpp"
 #include "Texture.hpp"
+#include "StepTimer.h"
+
+namespace Zenyth {
+	struct CameraData;
+}
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -15,9 +23,11 @@ class Application
 {
 public:
 	Application(HINSTANCE hInstance, bool useWrapDevice);
+	~Application();
 	void Run();
 
 	void OnInit();
+	void Tick();
 	void OnUpdate();
 	void OnRender();
 	void OnDestroy();
@@ -26,8 +36,9 @@ public:
 
 	void OnKeyDown(uint8_t key);
 	void OnKeyUp(uint8_t key);
+	void OnMouseMove(int x, int y);
 private:
-	std::unique_ptr<Window> m_window;
+	std::unique_ptr<Window> m_window{};
 
 	static constexpr UINT FrameCount = 2;
 
@@ -41,6 +52,12 @@ private:
 		XMFLOAT4 offset;
 		float padding[60]; // Padding so the constant buffer is 256-byte aligned.
 	};
+
+	ComPtr<ID3D12Debug> debug;
+	ComPtr<ID3D12Debug1> dxgiDebug;
+	ComPtr<ID3D12InfoQueue> dxgiInfoQueue;
+
+	DWORD m_callbackCookie{};
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
@@ -59,11 +76,11 @@ private:
 
 
 	// App resources.
-	std::unique_ptr<Zenyth::VertexBuffer<Vertex>> m_vertexBuffer;
-	std::unique_ptr<Zenyth::IndexBuffer> m_indexBuffer;
-	std::unique_ptr<Zenyth::Texture> m_texture;
+	std::unique_ptr<Zenyth::VertexBuffer<Vertex>> m_vertexBuffer{};
+	std::unique_ptr<Zenyth::IndexBuffer> m_indexBuffer{};
+	std::unique_ptr<Zenyth::Texture> m_texture{};
 	SceneConstantBuffer m_constantBufferData {};
-	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer;
+	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer{};
 
 
 	// Synchronization objects.
@@ -85,5 +102,14 @@ private:
 	void WaitForPreviousFrame();
 
 	std::wstring GetAssetFullPath(const std::wstring& assetName);
+	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> cbCamera = nullptr;
+
+	Zenyth::Camera m_camera;
+	// Rendering loop timer.
+	DX::StepTimer                           m_timer;
+
+	// Input devices.
+	std::unique_ptr<DirectX::Keyboard>      m_keyboard;
+	std::unique_ptr<DirectX::Mouse>         m_mouse;
 
 };

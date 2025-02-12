@@ -25,7 +25,7 @@ namespace Zenyth
 	private:
 		ID3D12Device* m_pDevice;
 
-		D3D12_GPU_DESCRIPTOR_HANDLE m_gpuHandle;
+		D3D12_GPU_DESCRIPTOR_HANDLE m_gpuHandle{};
 
 		ComPtr<ID3D12Resource> m_texture;
 

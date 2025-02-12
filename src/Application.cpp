@@ -2,12 +2,19 @@
 #include "Application.hpp"
 #include "Core.hpp"
 #include "Vertex.hpp"
-#include "DirectXTex.h"
-#include "glm/glm.hpp"
+#include <directxtk12/SimpleMath.h>
+#include <directxtk12/DDSTextureLoader.h>
+
+using namespace DirectX::SimpleMath;
 
 
 void Application::Run()
 {
+
+	HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+	if (FAILED(hr))
+		return;
+
 
 	// Parse the command line parameters
 	int argc;
@@ -30,25 +37,41 @@ void Application::Run()
 	}
 
 	OnDestroy();
+	CoUninitialize();
 
 }
 
 Application::Application(HINSTANCE hInstance, bool useWrapDevice)
 	:	m_useWarpDevice(useWrapDevice),
-		m_frameIndex(0),
+		m_aspectRatio(static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight)),
 		m_viewport(0.0f, 0.0f, ScreenWidth, ScreenHeight),
 		m_scissorRect(0, 0, ScreenWidth, ScreenHeight),
 		m_rtvDescriptorSize(0),
-		m_aspectRatio(static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight))
+		m_frameIndex(0),
+		m_camera(XMConvertToRadians(80), m_aspectRatio)
 {
 	m_window = std::make_unique<Window>(this, hInstance, ScreenWidth, ScreenHeight);
 	OnInit();
 }
 
+Application::~Application() = default;
+
 void Application::OnInit()
 {
+
+	// Create input devices
+	m_keyboard = std::make_unique<Keyboard>();
+	m_mouse = std::make_unique<Mouse>();
+	m_mouse->SetWindow(m_window->GetHWND());
 	LoadPipeline();
 	LoadAssets();
+}
+
+void Application::Tick() {
+	m_timer.Tick([&]() { OnUpdate(); });
+
+
+	OnRender();
 }
 
 void Application::OnUpdate()
@@ -62,6 +85,9 @@ void Application::OnUpdate()
 		m_constantBufferData.offset.x = -offsetBounds;
 	}
 	m_constantBuffer->SetData(m_constantBufferData);
+
+	auto const kb = m_keyboard->GetState();
+	m_camera.Update(m_timer.GetElapsedSeconds(), kb, m_mouse.get());
 }
 
 void Application::OnRender()
@@ -98,22 +124,26 @@ void Application::OnKeyUp(uint8_t key)
 	std::cout << "Key Up: " << key << std::endl;
 }
 
+void Application::OnMouseMove(int x, int y) {
+	std::cout << "MouseMove: " << x << ", " << y << std::endl;
+}
+
 void Application::LoadPipeline()
 {
 	ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 
 	UINT dxgiFactoryFlags = 0;
 
-#if defined(_DEBUG)
+#if defined(DEBUG)
 	{
-		ComPtr<ID3D12Debug> debugController;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-		{
-			debugController->EnableDebugLayer();
+		ComPtr<ID3D12Debug> spDebugController0;
+		ComPtr<ID3D12Debug1> spDebugController1;
+		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&spDebugController0)));
+		ThrowIfFailed(spDebugController0->QueryInterface(IID_PPV_ARGS(&spDebugController1)));
+		spDebugController1->SetEnableGPUBasedValidation(true);
 
-			// Enable additional debug layers.
-			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-		}
+		// Enable additional debug layers.
+		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 	}
 #endif
 
@@ -337,7 +367,7 @@ void Application::LoadAssets()
 	// Create the vertex buffer.
 	{
 		// Define the geometry for a triangle.
-		glm::vec2 textCoord(0.0f);
+		Vector2 textCoord(0.0f);
 
 		float u = textCoord.x / 16.0f;
 		float v = textCoord.y / 16.0f;
