@@ -68,7 +68,9 @@ void Application::OnInit()
 }
 
 void Application::Tick() {
-	m_timer.Tick([&]() { OnUpdate(); });
+	m_timer.Tick([&]() {
+		OnUpdate();
+	});
 
 
 	OnRender();
@@ -88,10 +90,15 @@ void Application::OnUpdate()
 
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(m_timer.GetElapsedSeconds(), kb, m_mouse.get());
+	m_cameraConstantBuffer->SetData(m_camera.GetCameraData());
 }
 
 void Application::OnRender()
 {
+	// Don't try to render anything before the first Update.
+	if (m_timer.GetFrameCount() == 0)
+		return;
+
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
 
@@ -263,11 +270,11 @@ void Application::LoadAssets()
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
 
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
-		CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[2]; // Increase size to 3
+		CD3DX12_ROOT_PARAMETER1 rootParameters[2]; // Increase size to 3
 
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
 		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 		rootParameters[1].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_VERTEX);
@@ -374,10 +381,10 @@ void Application::LoadAssets()
 		float one = 1.0f / 16.0f;
 		Vertex triangleVertices[] =
 			{
-				{ {  0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { u + one, v + one } },
-				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f, 1.0f }, { u, v + one } },
-				{ { -0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { u, v } },
-				{ {  0.25f,  0.25f * m_aspectRatio, 0.0f, 1.0f }, { u + one, v } },
+				{ {  0.25f, -0.25f, 0.0f, 1.0f }, { u + one, v + one } },
+				{ { -0.25f, -0.25f, 0.0f, 1.0f }, { u, v + one } },
+				{ { -0.25f,  0.25f, 0.0f, 1.0f }, { u, v } },
+				{ {  0.25f,  0.25f, 0.0f, 1.0f }, { u + one, v } },
 			};
 
 		const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -402,12 +409,13 @@ void Application::LoadAssets()
 	// Create the texture.
 	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), textureUploadHeap.Get(), m_resourceHeap.Get(), m_commandList.Get(), 0);
 
+	m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap.Get(), 1);
+	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>(m_device.Get(), m_resourceHeap.Get(), 2);
+
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap.Get(), 1);
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
@@ -446,11 +454,16 @@ void Application::PopulateCommandList()
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-	m_texture->Apply(m_commandList.Get());
-
 	// apply cbv
-	m_constantBuffer->Apply(m_commandList.Get());
+	auto ptr = m_resourceHeap->GetGPUDescriptorHandleForHeapStart();
+	m_commandList->SetGraphicsRootDescriptorTable(0, ptr); // texture
+
+	ptr.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_commandList->SetGraphicsRootDescriptorTable(1, ptr); // constant buffers
+//
+//	m_constantBuffer->Apply(m_commandList.Get());
+//	m_texture->Apply(m_commandList.Get());
+//	m_cameraConstantBuffer->Apply(m_commandList.Get());
 
 
 	m_commandList->RSSetViewports(1, &m_viewport);

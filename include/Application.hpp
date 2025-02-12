@@ -81,6 +81,7 @@ private:
 	std::unique_ptr<Zenyth::Texture> m_texture{};
 	SceneConstantBuffer m_constantBufferData {};
 	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer{};
+	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer{};
 
 
 	// Synchronization objects.

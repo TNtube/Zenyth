@@ -1,4 +1,3 @@
-#include <iostream>
 #include "Window.hpp"
 
 #include "Application.hpp"
@@ -51,26 +50,42 @@ LRESULT Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
 		}
 		return 0;
-		case WM_KEYDOWN:
-			app->OnKeyDown(static_cast<uint8_t>(wParam));
-			return 0;
-
-		case WM_KEYUP:
-			app->OnKeyUp(static_cast<uint8_t>(wParam));
-			return 0;
-		case WM_MOUSEMOVE:
-			app->OnMouseMove(static_cast<uint8_t>(wParam), static_cast<int32_t>(lParam));
 		case WM_PAINT:
 			if (app)
 			{
-				app->OnUpdate();
-				app->OnRender();
+				app->Tick();
 			}
 			return 0;
 
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
+
+		case WM_ACTIVATE:
+		case WM_INPUT:
+		case WM_MOUSEMOVE:
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_MOUSEWHEEL:
+		case WM_XBUTTONDOWN:
+		case WM_XBUTTONUP:
+		case WM_MOUSEHOVER:
+			Mouse::ProcessMessage(msg, wParam, lParam);
+			break;
+
+		case WM_KEYDOWN:
+		case WM_KEYUP:
+		case WM_SYSKEYUP:
+			Keyboard::ProcessMessage(msg, wParam, lParam);
+			break;
+
+		case WM_SYSKEYDOWN:
+			Keyboard::ProcessMessage(msg, wParam, lParam);
+			break;
 
 		case WM_ENTERSIZEMOVE:
 				sizeMove = true;

@@ -31,6 +31,7 @@ namespace Zenyth {
 	IndexBuffer::IndexBuffer(ID3D12Device *device, const uint32_t* data, size_t size)
 		: Buffer(device, size)
 	{
+		m_buffer->SetName(L"Index buffer");
 		UINT8* pVertexDataBegin;
 
 		Map(&pVertexDataBegin);

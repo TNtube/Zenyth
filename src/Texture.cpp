@@ -1,3 +1,4 @@
+#include <format>
 #include "Texture.hpp"
 #include "DirectXTex.h"
 #include "Core.hpp"
@@ -72,7 +73,18 @@ namespace Zenyth
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
-		device->CreateShaderResourceView(output->m_texture.Get(), &srvDesc, resourceHeap->GetCPUDescriptorHandleForHeapStart());
+
+
+		auto cpuHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+			resourceHeap->GetCPUDescriptorHandleForHeapStart(),
+			offset, // Same offset as in CPU handle creation
+			device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		device->CreateShaderResourceView(output->m_texture.Get(), &srvDesc, cpuHandle);
+
+
+		auto msg = std::format("Texture buffer: {}", (const char*)filename);
+		std::wstring wmsg(msg.begin(), msg.end());
+		output->m_texture->SetName(wmsg.c_str());
 
 		return std::move(output);
 	}

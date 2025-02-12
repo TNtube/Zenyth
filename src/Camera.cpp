@@ -67,8 +67,8 @@ namespace Zenyth
 		CameraData md;
 		md.mView = view.Transpose();
 		md.mProjection = projection.Transpose();
-		md.camPos = Vector4(camPos);
-		md.camPos.w = 1.0f;
+//		md.camPos = Vector4(camPos);
+//		md.camPos.w = 1.0f;
 		return std::move(md);
 	}
 }
