@@ -50,6 +50,8 @@ Application::Application(HINSTANCE hInstance, bool useWrapDevice)
 		m_frameIndex(0),
 		m_camera(XMConvertToRadians(80), m_aspectRatio)
 {
+
+	m_camera.SetPosition({ 0, 0, 2 });
 	m_window = std::make_unique<Window>(this, hInstance, ScreenWidth, ScreenHeight);
 	OnInit();
 }
@@ -146,6 +148,7 @@ void Application::LoadPipeline()
 		ComPtr<ID3D12Debug> spDebugController0;
 		ComPtr<ID3D12Debug1> spDebugController1;
 		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&spDebugController0)));
+		spDebugController0->EnableDebugLayer();
 		ThrowIfFailed(spDebugController0->QueryInterface(IID_PPV_ARGS(&spDebugController1)));
 		spDebugController1->SetEnableGPUBasedValidation(true);
 

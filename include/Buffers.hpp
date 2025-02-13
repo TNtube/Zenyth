@@ -107,9 +107,9 @@ namespace Zenyth {
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = sizeof(T);
 		const CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(
-			descriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-			offset, // Offset from start
-			device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+			m_pResourceHeap->GetCPUDescriptorHandleForHeapStart(),
+			m_offset, // Offset from start
+			m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
 		);
 		device->CreateConstantBufferView(&cbvDesc, cbvHandle);
 
