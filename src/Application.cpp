@@ -56,13 +56,7 @@ Application::Application(HINSTANCE hInstance, bool useWrapDevice)
 	OnInit();
 }
 
-Application::~Application() {
-
-	ComPtr<ID3D12InfoQueue1> spInfoQueue;
-	if (SUCCEEDED(m_device->QueryInterface(IID_PPV_ARGS(&spInfoQueue)))) {
-		spInfoQueue->UnregisterMessageCallback(m_callbackCookie);
-	}
-};
+Application::~Application() = default;
 
 void Application::OnInit()
 {
@@ -166,46 +160,6 @@ void Application::LoadPipeline()
 			IID_PPV_ARGS(&m_device)
 		));
 	}
-
-#ifdef DEBUG
-	{
-		ComPtr<ID3D12InfoQueue1> spInfoQueue;
-		if (SUCCEEDED(m_device->QueryInterface(IID_PPV_ARGS(&spInfoQueue)))) {
-			spInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-			spInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-
-			// Filter out messages
-			D3D12_MESSAGE_SEVERITY severities[] =
-				{
-					D3D12_MESSAGE_SEVERITY_INFO
-				};
-
-			D3D12_INFO_QUEUE_FILTER filter = {};
-			filter.DenyList.NumSeverities = _countof(severities);
-			filter.DenyList.pSeverityList = severities;
-			filter.DenyList.NumIDs = 0;
-			filter.DenyList.pIDList = nullptr;
-
-			spInfoQueue->PushStorageFilter(&filter);
-
-			// Set up the callback
-			spInfoQueue->RegisterMessageCallback(
-				[](
-					D3D12_MESSAGE_CATEGORY Category,
-					D3D12_MESSAGE_SEVERITY Severity,
-					D3D12_MESSAGE_ID ID,
-					LPCSTR pDescription,
-					void* pContext)
-				{
-					// Handle the message here
-					std::cout << pDescription << std::endl;
-				},
-				D3D12_MESSAGE_CALLBACK_FLAG_NONE,
-				nullptr,    // Context pointer
-				&m_callbackCookie);  // Store this to use when unregistering
-		}
-	}
-#endif
 
 	// Describe and create the command queue.
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
