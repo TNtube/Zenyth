@@ -106,14 +106,14 @@ void Application::OnRender()
 	// Present the frame.
 	ThrowIfFailed(m_swapChain->Present(1, 0));
 
-	WaitForPreviousFrame();
+	MoveToNextFrame();
 }
 
 void Application::OnDestroy()
 {
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
-	WaitForPreviousFrame();
+	WaitForGpu();
 
 	CloseHandle(m_fenceEvent);
 }
@@ -203,14 +203,6 @@ void Application::LoadPipeline()
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)), "Failed to create descriptor heap");
 
-		// Describe and create a shader resource view (SRV) heap for the texture.
-		// Describe and create a constant buffer view (CBV) descriptor heap.
-
-		// Note: CBVs and SRVs share the same heap, but are not the same descriptors.
-
-		// Flags indicate that this descriptor heap can be bound to the pipeline
-		// and that descriptors contained in it can be referenced by a root table.
-
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.NumDescriptors = 3; // 1 SRV for the texture and 1 CBV for the scene constant buffer.
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -224,25 +216,21 @@ void Application::LoadPipeline()
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		// Create a RTV for each frame.
+		// Create a RTV and a command allocator for each frame.
 		for (UINT n = 0; n < FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])), "Failed to get buffer");
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 			rtvHandle.Offset(1, m_rtvDescriptorSize);
-		}
 
-		ThrowIfFailed(
-			m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)),
-			"Failed to create command allocator"
-		);
+			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])), "Failed to create command allocator");
+		}
 	}
 
 }
 
 void Application::LoadAssets()
 {
-	// Create an empty root signature.
 	{
 		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 
@@ -359,7 +347,7 @@ void Application::LoadAssets()
 	}
 
 	// Create the command list.
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
 	// Create the vertex buffer.
 	{
@@ -409,8 +397,8 @@ void Application::LoadAssets()
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
-		ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		m_fenceValue = 1;
+		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		m_fenceValues[m_frameIndex]++;
 
 		// Create an event handle to use for frame synchronization.
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -422,22 +410,22 @@ void Application::LoadAssets()
 		// Wait for the command list to execute; we are reusing the same command
 		// list in our main loop but for now, we just want to wait for setup to
 		// complete before continuing.
-		WaitForPreviousFrame();
+		WaitForGpu();
 	}
 
 }
 
-void Application::PopulateCommandList()
+void Application::PopulateCommandList() const
 {
 	// Command list allocators can only be reset when the associated
 	// command lists have finished execution on the GPU; apps should use
 	// fences to determine GPU execution progress.
-	ThrowIfFailed(m_commandAllocator->Reset());
+	ThrowIfFailed(m_commandAllocators[m_frameIndex]->Reset());
 
 	// However, when ExecuteCommandList() is called on a particular command
 	// list, that command list can then be reset at any time and must be before
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get()));
 
 	// Set necessary state.
 	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
@@ -481,26 +469,38 @@ void Application::PopulateCommandList()
 	ThrowIfFailed(m_commandList->Close());
 }
 
-void Application::WaitForPreviousFrame()
+// Wait for pending GPU work to complete.
+void Application::WaitForGpu()
 {
-	// WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-	// This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-	// sample illustrates how to use fences for efficient resource usage and to
-	// maximize GPU utilization.
+	// Schedule a Signal command in the queue.
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
 
-	// Signal and increment the fence value.
-	const UINT64 fence = m_fenceValue;
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-	m_fenceValue++;
+	// Wait until the fence has been processed.
+	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
+	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 
-	// Wait until the previous frame is finished.
-	if (m_fence->GetCompletedValue() < fence)
+	// Increment the fence value for the current frame.
+	m_fenceValues[m_frameIndex]++;
+}
+
+void Application::MoveToNextFrame()
+{
+	// Schedule a Signal command in the queue.
+	const UINT64 currentFenceValue = m_fenceValues[m_frameIndex];
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+
+	// Update the frame index.
+	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+	// If the next frame is not ready to be rendered yet, wait until it is ready.
+	if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex])
 	{
-		ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-		WaitForSingleObject(m_fenceEvent, INFINITE);
+		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
+		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 	}
 
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	// Set the fence value for the next frame.
+	m_fenceValues[m_frameIndex] = currentFenceValue + 1;
 }
 
 _Use_decl_annotations_

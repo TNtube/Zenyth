@@ -62,7 +62,7 @@ private:
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12Device> m_device;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-	ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+	ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
@@ -85,7 +85,7 @@ private:
 	UINT m_frameIndex;
 	HANDLE m_fenceEvent {};
 	ComPtr<ID3D12Fence> m_fence;
-	UINT64 m_fenceValue {};
+	UINT64 m_fenceValues[FrameCount] {};
 
 
 	void GetHardwareAdapter(
@@ -96,8 +96,10 @@ private:
 
 	void LoadPipeline();
 	void LoadAssets();
-	void PopulateCommandList();
-	void WaitForPreviousFrame();
+	void PopulateCommandList() const;
+
+	void WaitForGpu();
+	void MoveToNextFrame();
 
 	std::wstring GetAssetFullPath(const std::wstring& assetName);
 	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> cbCamera = nullptr;
