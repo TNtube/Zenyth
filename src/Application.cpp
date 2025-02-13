@@ -56,7 +56,13 @@ Application::Application(HINSTANCE hInstance, bool useWrapDevice)
 	OnInit();
 }
 
-Application::~Application() = default;
+Application::~Application() {
+
+	ComPtr<ID3D12InfoQueue1> spInfoQueue;
+	if (SUCCEEDED(m_device->QueryInterface(IID_PPV_ARGS(&spInfoQueue)))) {
+		spInfoQueue->UnregisterMessageCallback(m_callbackCookie);
+	}
+};
 
 void Application::OnInit()
 {
