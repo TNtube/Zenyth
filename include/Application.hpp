@@ -33,10 +33,6 @@ public:
 	void OnDestroy();
 
 	void OnWindowSizeChanged(int width, int height);
-
-	void OnKeyDown(uint8_t key);
-	void OnKeyUp(uint8_t key);
-	void OnMouseMove(int x, int y);
 private:
 	std::unique_ptr<Window> m_window{};
 

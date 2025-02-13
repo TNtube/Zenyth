@@ -69,6 +69,6 @@ namespace Zenyth
 		md.mProjection = projection.Transpose();
 //		md.camPos = Vector4(camPos);
 //		md.camPos.w = 1.0f;
-		return std::move(md);
+		return md;
 	}
 }

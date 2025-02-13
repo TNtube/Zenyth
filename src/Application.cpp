@@ -29,7 +29,7 @@ void Application::Run()
 	while (msg.message != WM_QUIT)
 	{
 		// Process any messages in the queue.
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -127,20 +127,6 @@ void Application::OnDestroy()
 	WaitForPreviousFrame();
 
 	CloseHandle(m_fenceEvent);
-}
-
-void Application::OnKeyDown(uint8_t key)
-{
-	std::cout << "Key Down: " << key << std::endl;
-}
-
-void Application::OnKeyUp(uint8_t key)
-{
-	std::cout << "Key Up: " << key << std::endl;
-}
-
-void Application::OnMouseMove(int x, int y) {
-	std::cout << "MouseMove: " << x << ", " << y << std::endl;
 }
 
 void Application::LoadPipeline()
@@ -372,24 +358,30 @@ void Application::LoadAssets()
 //		ThrowIfFailed(D3DCompileFromFile(pixelShaderPath.c_str(), nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
 		ComPtr<ID3DBlob> error;
-		if (FAILED(D3DCompileFromFile(vertexShaderPath.c_str(), nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, &error)))
+
+		HRESULT hr;
+
+		hr = D3DCompileFromFile(vertexShaderPath.c_str(), nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, &error);
+		if (FAILED(hr))
 		{
 			if (error)
 			{
-				std::string test = (char*)error->GetBufferPointer();
-				OutputDebugStringA(test.c_str());
+				std::string output = static_cast<char *>(error->GetBufferPointer());
+				std::cout << output << std::endl;
 			}
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+			ThrowIfFailed(hr);
 		}
 
-		if (FAILED(D3DCompileFromFile(pixelShaderPath.c_str(), nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, &error)))
+		hr = D3DCompileFromFile(pixelShaderPath.c_str(), nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, &error);
+
+		if (FAILED(hr))
 		{
 			if (error)
 			{
-				std::string test = (char*)error->GetBufferPointer();
-				OutputDebugStringA(test.c_str());
+				std::string output = static_cast<char *>(error->GetBufferPointer());
+				std::cout << output << std::endl;
 			}
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+			ThrowIfFailed(hr);
 		}
 
 		// Define the vertex input layout.
