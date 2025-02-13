@@ -1,7 +1,7 @@
 cbuffer SceneConstantBuffer : register(b0)
 {
-    float4 offset;
-    float4 padding[15];
+    float4x4 model;
+    float4 padding[12];
 };
 
 cbuffer CameraConstantBuffer : register(b1)
@@ -30,8 +30,8 @@ struct Output
 Output main(Input input)
 {
 	Output output = (Output)0;
-// 	output.position = mul( input.position, model );
-    output.position = input.position + offset;
+	output.position = mul( input.position, model );
+//    output.position = input.position + offset;
 	output.position = mul( output.position, view );
 	output.position = mul( output.position, projection );
 	output.uv = input.uv;

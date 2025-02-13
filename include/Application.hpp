@@ -8,6 +8,7 @@
 #include "Vertex.hpp"
 #include "Texture.hpp"
 #include "StepTimer.h"
+#include "engine/Transform.hpp"
 
 namespace Zenyth {
 	struct CameraData;
@@ -45,8 +46,8 @@ private:
 
 	struct SceneConstantBuffer
 	{
-		XMFLOAT4 offset;
-		float padding[60]; // Padding so the constant buffer is 256-byte aligned.
+		SimpleMath::Matrix model;
+		SimpleMath::Vector4 offset[12];
 	};
 
 	ComPtr<ID3D12Debug> debug;
@@ -75,7 +76,7 @@ private:
 	std::unique_ptr<Zenyth::VertexBuffer<Vertex>> m_vertexBuffer{};
 	std::unique_ptr<Zenyth::IndexBuffer> m_indexBuffer{};
 	std::unique_ptr<Zenyth::Texture> m_texture{};
-	SceneConstantBuffer m_constantBufferData {};
+	Zenyth::Transform m_faceTransform {};
 	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer{};
 	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer{};
 

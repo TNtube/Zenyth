@@ -33,6 +33,8 @@ add_executable(Zenyth WIN32
         src/Texture.cpp
         include/Camera.hpp
         src/Camera.cpp
+        include/engine/Transform.hpp
+        src/engine/Transform.cpp
 )
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)

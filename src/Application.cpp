@@ -66,7 +66,6 @@ Application::~Application() {
 
 void Application::OnInit()
 {
-
 	// Create input devices
 	m_keyboard = std::make_unique<Keyboard>();
 	m_mouse = std::make_unique<Mouse>();
@@ -86,15 +85,11 @@ void Application::Tick() {
 
 void Application::OnUpdate()
 {
-	const float translationSpeed = 0.005f;
-	const float offsetBounds = 1.25f;
+	m_faceTransform.SetPosition(2 * cosf(m_timer.GetTotalSeconds()), 3 * sinf(m_timer.GetTotalSeconds()), 0);
 
-	m_constantBufferData.offset.x += translationSpeed;
-	if (m_constantBufferData.offset.x > offsetBounds)
-	{
-		m_constantBufferData.offset.x = -offsetBounds;
-	}
-	m_constantBuffer->SetData(m_constantBufferData);
+	SceneConstantBuffer scb;
+	scb.model = m_faceTransform.GetTransformMatrix().Transpose();
+	m_constantBuffer->SetData(scb);
 
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(m_timer.GetElapsedSeconds(), kb, m_mouse.get());
