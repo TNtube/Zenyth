@@ -37,7 +37,7 @@ public:
 private:
 	std::unique_ptr<Window> m_window{};
 
-	static constexpr UINT FrameCount = 2;
+	static constexpr UINT FrameCount = 3;
 
 	bool m_useWarpDevice = false;
 
