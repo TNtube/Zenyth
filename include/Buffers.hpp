@@ -19,6 +19,7 @@ namespace Zenyth {
 	protected:
 		ComPtr<ID3D12Resource> m_buffer;
 		ID3D12Device* m_pDevice {};
+		size_t m_size {};
 	};
 
 	template<typename T>
@@ -97,7 +98,7 @@ namespace Zenyth {
 
 	template<class T>
 	ConstantBuffer<T>::ConstantBuffer(ID3D12Device *device, ID3D12DescriptorHeap *descriptorHeap, const int8_t offset)
-		: Buffer(device, sizeof(T)), m_pResourceHeap(descriptorHeap), m_offset(offset)
+		: Buffer(device, (sizeof(T) + 255) & ~255), m_pResourceHeap(descriptorHeap), m_offset(offset)
 	{
 		auto msg = std::format("Constant buffer of offset {} bytes and type {}", offset, typeid(T).name());
 		std::wstring wmsg(msg.begin(), msg.end());
@@ -105,7 +106,7 @@ namespace Zenyth {
 		// Describe and create a constant buffer view.
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = sizeof(T);
+		cbvDesc.SizeInBytes = m_size;
 		const CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(
 			m_pResourceHeap->GetCPUDescriptorHandleForHeapStart(),
 			m_offset, // Offset from start

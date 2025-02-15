@@ -2,10 +2,10 @@
 
 namespace Zenyth {
 	Buffer::Buffer(ID3D12Device *device, size_t size)
-		: m_pDevice(device)
+		: m_pDevice(device), m_size(size)
 	{
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		const auto ibResDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
+		const auto ibResDesc = CD3DX12_RESOURCE_DESC::Buffer(m_size);
 		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,

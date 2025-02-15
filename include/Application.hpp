@@ -47,7 +47,6 @@ private:
 	struct SceneConstantBuffer
 	{
 		SimpleMath::Matrix model;
-		SimpleMath::Vector4 offset[12];
 	};
 
 	ComPtr<ID3D12Debug> debug;

@@ -15,7 +15,6 @@ namespace Zenyth
 	struct CameraData {
 		Matrix mView;
 		Matrix mProjection;
-		Matrix padding[2];
 	};
 
 	class Camera {
