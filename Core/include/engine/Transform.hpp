@@ -1,5 +1,5 @@
 #pragma once
-#include <directxtk12/SimpleMath.h>
+#include <SimpleMath.h>
 
 namespace Zenyth
 {

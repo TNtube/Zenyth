@@ -1,0 +1,9 @@
+[submodule "Core/Deps/DirectXTK12"]
+	path = Core/Deps/DirectXTK12
+	url = https://github.com/microsoft/DirectXTK12.git
+[submodule "Core/Deps/DirectX-Headers"]
+	path = Core/Deps/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "Core/Deps/DirectXTex"]
+	path = Core/Deps/DirectXTex
+	url = https://github.com/microsoft/DirectXTex.git

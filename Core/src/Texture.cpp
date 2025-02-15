@@ -1,6 +1,6 @@
 #include <format>
 #include "Texture.hpp"
-#include "DirectXTex.h"
+#include <DirectXTex.h>
 #include "Core.hpp"
 
 namespace Zenyth

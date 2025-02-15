@@ -2,8 +2,7 @@
 #include "Application.hpp"
 #include "Core.hpp"
 #include "Vertex.hpp"
-#include <directxtk12/SimpleMath.h>
-#include <directxtk12/DDSTextureLoader.h>
+#include <SimpleMath.h>
 
 using namespace DirectX::SimpleMath;
 
@@ -124,7 +123,7 @@ void Application::LoadPipeline()
 
 	UINT dxgiFactoryFlags = 0;
 
-#if defined(DEBUG)
+#if defined(_DEBUG)
 	{
 		ComPtr<ID3D12Debug> spDebugController0;
 		ComPtr<ID3D12Debug1> spDebugController1;

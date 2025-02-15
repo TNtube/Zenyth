@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
-#include <directxtk12/SimpleMath.h>
-#include <directxtk12/Mouse.h>
-#include <directxtk12/Keyboard.h>
+#include <SimpleMath.h>
+#include <Mouse.h>
+#include <Keyboard.h>
 
 #include "Buffers.hpp"
 

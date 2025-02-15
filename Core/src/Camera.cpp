@@ -1,5 +1,5 @@
 #include "Camera.hpp"
-#include "directxtk12/SimpleMath.h"
+#include "SimpleMath.h"
 
 namespace Zenyth
 {
