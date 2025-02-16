@@ -4,10 +4,12 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS include/*.hpp src/*.cpp)
 
 add_executable(Sandbox WIN32
         ${SOURCES}
+        include/Minicraft.hpp
+        src/Minicraft.cpp
 )
 
 target_include_directories(Sandbox PUBLIC ${CMAKE_SOURCE_DIR}/Core/include)
-target_include_directories(Sandbox PUBLIC ${CMAKE_SOURCE_DIR}/Sandbox)
+target_include_directories(Sandbox PUBLIC ${CMAKE_SOURCE_DIR}/Sandbox/include)
 
 target_precompile_headers(Sandbox REUSE_FROM Core)
 

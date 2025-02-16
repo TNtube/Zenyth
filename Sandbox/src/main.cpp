@@ -1,12 +1,13 @@
 #include "pch.hpp"
 
-#include "Application.hpp"
+#include "Win32Application.hpp"
+#include "Minicraft.hpp"
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, const int nShowCmd)
 {
-	Application app(hInstance, false);
-	app.Run();
+	Minicraft app(1280, 720, false);
+	Zenyth::Win32Application::Run(&app, hInstance, nShowCmd);
 
 	return 0;
 }
