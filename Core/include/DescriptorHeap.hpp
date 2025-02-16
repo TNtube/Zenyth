@@ -36,7 +36,7 @@ namespace Zenyth
 		~DescriptorHeap() { Destroy(); }
 
 		void Create(ID3D12Device *device, const std::wstring& debugHeapName, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
-		void Destroy() { m_heap = nullptr; }
+		void Destroy() { m_heap.Reset(); }
 
 		bool HasAvailableSpace( uint32_t count ) const;
 		DescriptorHandle Alloc( uint32_t count = 1 );
