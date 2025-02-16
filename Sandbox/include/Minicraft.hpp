@@ -32,23 +32,21 @@ private:
 		DirectX::SimpleMath::Matrix model;
 	};
 
-	ComPtr<ID3D12Debug> debug;
-	ComPtr<ID3D12Debug1> dxgiDebug;
-	ComPtr<ID3D12InfoQueue> dxgiInfoQueue;
+	ComPtr<ID3D12Debug> m_debug;
 
 	DWORD m_callbackCookie{};
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
-	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12Device> m_device;
-	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-	ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
-	ComPtr<ID3D12RootSignature> m_rootSignature;
+	ComPtr<IDXGISwapChain3> m_swapChain;
 	Zenyth::DescriptorHeap m_rtvHeap {};
 	Zenyth::DescriptorHeap m_resourceHeap {};
+	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+	ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
+	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
@@ -58,7 +56,8 @@ private:
 	std::unique_ptr<Zenyth::IndexBuffer> m_indexBuffer{};
 	std::unique_ptr<Zenyth::Texture> m_texture{};
 	Zenyth::Transform m_faceTransform {};
-	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer{};
+	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer1{};
+	std::unique_ptr<Zenyth::ConstantBuffer<SceneConstantBuffer>> m_constantBuffer2{};
 	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer{};
 
 

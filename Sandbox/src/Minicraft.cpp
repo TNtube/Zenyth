@@ -43,9 +43,17 @@ void Minicraft::OnUpdate()
 {
 	m_faceTransform.SetPosition(2 * static_cast<float>(cos(m_timer.GetTotalSeconds())), 3 * static_cast<float>(sin(m_timer.GetTotalSeconds())), 0);
 
+	const auto currentPos = m_faceTransform.GetPosition();
+
 	SceneConstantBuffer scb;
 	scb.model = m_faceTransform.GetTransformMatrix().Transpose();
-	m_constantBuffer->SetData(scb);
+	m_constantBuffer1->SetData(scb);
+
+	m_faceTransform.SetPosition(currentPos.x + 2, currentPos.y, currentPos.z);
+	scb.model = m_faceTransform.GetTransformMatrix().Transpose();
+	m_constantBuffer2->SetData(scb);
+
+	m_faceTransform.SetPosition(currentPos);
 
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
@@ -82,16 +90,13 @@ void Minicraft::OnDestroy()
 
 void Minicraft::LoadPipeline()
 {
-	ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
-
 	UINT dxgiFactoryFlags = 0;
 
 #if defined(_DEBUG)
 	{
-		ComPtr<ID3D12Debug> spDebugController;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&spDebugController))))
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&m_debug))))
 		{
-			spDebugController->EnableDebugLayer();
+			m_debug->EnableDebugLayer();
 		}
 
 		// Enable additional debug layers.
@@ -159,7 +164,7 @@ void Minicraft::LoadPipeline()
 	{
 		// Describe and create a render target view (RTV) descriptor heap.
 		m_rtvHeap.Create(m_device.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
-		m_resourceHeap.Create(m_device.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3);
+		m_resourceHeap.Create(m_device.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10);
 	}
 
 	// Create frame resources.
@@ -231,7 +236,7 @@ void Minicraft::LoadAssets()
 		ComPtr<ID3DBlob> vertexShader;
 		ComPtr<ID3DBlob> pixelShader;
 
-#if defined(DEBUG)
+#if defined(_DEBUG)
 		// Enable better shader debugging with the graphics debugging tools.
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
@@ -337,7 +342,8 @@ void Minicraft::LoadAssets()
 	// Create the texture.
 	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), textureUploadHeap.Get(), m_resourceHeap, m_commandList.Get());
 
-	m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap);
+	m_constantBuffer1 = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap);
+	m_constantBuffer2 = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap);
 	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>(m_device.Get(), m_resourceHeap);
 
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -348,6 +354,7 @@ void Minicraft::LoadAssets()
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
 		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		SUCCEEDED(m_fence->SetName(L"Minicraft Fence"));
 		m_fenceValues[m_frameIndex]++;
 
 		// Create an event handle to use for frame synchronization.
@@ -382,14 +389,6 @@ void Minicraft::PopulateCommandList() const
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap.GetHeapPointer() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	// apply cbv
-	m_texture->Apply(m_commandList.Get(), 0);
-	m_constantBuffer->Apply(m_commandList.Get(), 1);
-	m_cameraConstantBuffer->Apply(m_commandList.Get(), 2);
-//
-//	m_constantBuffer->Apply(m_commandList.Get());
-//	m_texture->Apply(m_commandList.Get());
-//	m_cameraConstantBuffer->Apply(m_commandList.Get());
 
 
 	m_commandList->RSSetViewports(1, &m_viewport);
@@ -408,6 +407,15 @@ void Minicraft::PopulateCommandList() const
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_vertexBuffer->Apply(m_commandList.Get());
 	m_indexBuffer->Apply(m_commandList.Get());
+
+	// apply cbv
+	m_texture->Apply(m_commandList.Get(), 0);
+	m_cameraConstantBuffer->Apply(m_commandList.Get(), 2);
+
+	m_constantBuffer1->Apply(m_commandList.Get(), 1);
+	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+	m_constantBuffer2->Apply(m_commandList.Get(), 1);
 	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 	// Indicate that the back buffer will now be used to present.

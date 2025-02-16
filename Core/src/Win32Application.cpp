@@ -1,20 +1,42 @@
 #include "pch.hpp"
 
+#include "Core.hpp"
+
 #include "Win32Application.hpp"
 #include "Mouse.h"
 #include "Keyboard.h"
 
+
+#include <shlobj.h>
+#include <strsafe.h>
+
 namespace Zenyth
 {
+	std::wstring GetLatestWinPixGpuCapturerPath();
+
 	HWND Win32Application::m_hwnd = nullptr;
 
-	int Win32Application::Run(Application* pApp, const HINSTANCE hInstance, const int nCmdShow)
+	int Win32Application::Run(Application* pApp, HINSTANCE hInstance, const int nCmdShow)
 	{
 		// Parse the command line parameters
 		int argc;
 		LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
+		if (argc > 1 && std::wcscmp(argv[1], L"pix") == 0)
+		{
+			if (GetModuleHandle(L"WinPixGpuCapturer.dll") == nullptr)
+			{
+				const std::wstring winPixGpuCapturerPath = GetLatestWinPixGpuCapturerPath();
+				if (!winPixGpuCapturerPath.empty())
+				{
+					LoadLibrary(winPixGpuCapturerPath.c_str());
+				}
+			}
+		}
+
 		LocalFree(argv);
+
+		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 
 		WNDCLASSEX windowClass = { 0 };
 		windowClass.cbSize = sizeof(WNDCLASSEX);
@@ -58,12 +80,14 @@ namespace Zenyth
 
 		pApp->OnDestroy();
 
+		CoUninitialize();
+
 		// Return this part of the WM_QUIT message to Windows.
 		return static_cast<char>(msg.wParam);
 	}
 
 	// Main message handler for the sample.
-	LRESULT CALLBACK Win32Application::WindowProc(const HWND hWnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
+	LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
 	{
 		auto* pApp = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
@@ -123,5 +147,50 @@ namespace Zenyth
 
 		// Handle any messages the switch statement didn't.
 		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+
+
+	static std::wstring GetLatestWinPixGpuCapturerPath()
+	{
+		LPWSTR programFilesPath = nullptr;
+		SUCCEEDED(SHGetKnownFolderPath(FOLDERID_ProgramFiles, KF_FLAG_DEFAULT, nullptr, &programFilesPath));
+
+		const std::wstring pixSearchPath = programFilesPath + std::wstring(L"\\Microsoft PIX\\*");
+
+		WIN32_FIND_DATA findData;
+		bool foundPixInstallation = false;
+		wchar_t newestVersionFound[MAX_PATH];
+
+		void* const hFind = FindFirstFile(pixSearchPath.c_str(), &findData);
+		if (hFind != INVALID_HANDLE_VALUE)
+		{
+			do
+			{
+				if (((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) &&
+					 (findData.cFileName[0] != '.'))
+				{
+					if (!foundPixInstallation || wcscmp(newestVersionFound, findData.cFileName) <= 0)
+					{
+						foundPixInstallation = true;
+						SUCCEEDED(StringCchCopy(newestVersionFound, _countof(newestVersionFound), findData.cFileName));
+					}
+				}
+			}
+			while (FindNextFile(hFind, &findData) != 0);
+		}
+
+		FindClose(hFind);
+
+		if (!foundPixInstallation)
+		{
+			return L"";
+		}
+
+		wchar_t output[MAX_PATH];
+		SUCCEEDED(StringCchCopy(output, pixSearchPath.length(), pixSearchPath.data()));
+		SUCCEEDED(StringCchCat(output, MAX_PATH, &newestVersionFound[0]));
+		SUCCEEDED(StringCchCat(output, MAX_PATH, L"\\WinPixGpuCapturer.dll"));
+
+		return &output[0];
 	}
 }
