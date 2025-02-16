@@ -15,17 +15,6 @@ namespace Zenyth
 	};
 
 	class Camera {
-		float fov;
-		float nearPlane = 0.01f;
-		float farPlane = 1000.0f;
-
-		Vector3 camPos = Vector3(0, 0, 0);
-		Quaternion camRot = Quaternion::Identity;
-		Matrix projection;
-		Matrix view;
-
-		int lastMouseX = 0;
-		int lastMouseY = 0;
 	public:
 		Camera(float fov, float aspectRatio);
 		~Camera();
@@ -33,8 +22,17 @@ namespace Zenyth
 		void UpdateAspectRatio(float aspectRatio);
 		void Update(float dt, const Keyboard::State &kb, Mouse* mouse);
 
-		void SetPosition(const Vector3& pos) { camPos = pos; }
+		void SetPosition(const Vector3& pos) { m_camPos = pos; }
 
 		CameraData GetCameraData() const;
+	private:
+		float m_fov;
+		float m_nearPlane = 0.01f;
+		float m_farPlane = 1000.0f;
+
+		Vector3 m_camPos = Vector3(0, 0, 0);
+		Quaternion m_camRot = Quaternion::Identity;
+		Matrix m_projection;
+		Matrix m_view;
 	};
 }

@@ -5,17 +5,17 @@ namespace Zenyth
 {
 	using namespace DirectX::SimpleMath;
 
-	Camera::Camera(float fov, float aspectRatio) : fov(fov) {
-		Vector3 forward = Vector3::Transform(Vector3::Forward, camRot);
-		view = Matrix::CreateLookAt(camPos, camPos + forward, Vector3::Up);
+	Camera::Camera(float fov, float aspectRatio) : m_fov(fov) {
+		Vector3 forward = Vector3::Transform(Vector3::Forward, m_camRot);
+		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, Vector3::Up);
 
-		projection = Matrix::CreatePerspectiveFieldOfView(fov, aspectRatio, nearPlane, farPlane);
+		m_projection = Matrix::CreatePerspectiveFieldOfView(fov, aspectRatio, m_nearPlane, m_farPlane);
 	}
 
 	Camera::~Camera() = default;
 
 	void Camera::UpdateAspectRatio(const float aspectRatio) {
-		projection = Matrix::CreatePerspectiveFieldOfView(fov, aspectRatio, nearPlane, farPlane);
+		m_projection = Matrix::CreatePerspectiveFieldOfView(m_fov, aspectRatio, m_nearPlane, m_farPlane);
 	}
 
 	void Camera::Update(const float dt, const Keyboard::State &kb, Mouse* mouse) {
@@ -23,7 +23,7 @@ namespace Zenyth
 		if (kb.LeftShift) camSpeed *= 2.0f;
 
 		const Mouse::State mstate = mouse->GetState();
-		const Matrix im = view.Invert();
+		const Matrix im = m_view.Invert();
 
 		Vector3 delta;
 		// TP: deplacement par clavier
@@ -34,7 +34,7 @@ namespace Zenyth
 		if (kb.A) delta += Vector3::Down;
 		if (kb.E) delta += Vector3::Up;
 
-		camPos += Vector3::TransformNormal(delta, im) * camSpeed * dt;
+		m_camPos += Vector3::TransformNormal(delta, im) * camSpeed * dt;
 
 		// astuce: Vector3::TransformNormal(vecteur, im); transforme un vecteur de l'espace cameravers l'espace monde
 
@@ -45,14 +45,14 @@ namespace Zenyth
 			if (mstate.rightButton) {
 				constexpr float camSpeedMouse = 10.0f;
 
-				camPos += Vector3::TransformNormal(Vector3::Right, im) * -dx * camSpeedMouse * dt;
-				camPos += Vector3::TransformNormal(Vector3::Up, im) * dy * camSpeedMouse * dt;
+				m_camPos += Vector3::TransformNormal(Vector3::Right, im) * -dx * camSpeedMouse * dt;
+				m_camPos += Vector3::TransformNormal(Vector3::Up, im) * dy * camSpeedMouse * dt;
 
 			} else if (mstate.leftButton) {
 				constexpr float camSpeedRot = 0.25f;
 
-				camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Up, im), -dx * camSpeedRot * dt);
-				camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Right, im), -dy * camSpeedRot * dt);
+				m_camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Up, im), -dx * camSpeedRot * dt);
+				m_camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Right, im), -dy * camSpeedRot * dt);
 			} else {
 				mouse->SetMode(Mouse::MODE_ABSOLUTE);
 			}
@@ -60,15 +60,15 @@ namespace Zenyth
 			mouse->SetMode(Mouse::MODE_RELATIVE);
 		}
 
-		const Vector3 forward = Vector3::Transform(Vector3::Forward, camRot);
-		view = Matrix::CreateLookAt(camPos, camPos + forward, Vector3::Up);
+		const Vector3 forward = Vector3::Transform(Vector3::Forward, m_camRot);
+		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, Vector3::Up);
 	}
 
 	CameraData Camera::GetCameraData() const {
 
 		CameraData md;
-		md.mView = view.Transpose();
-		md.mProjection = projection.Transpose();
+		md.mView = m_view.Transpose();
+		md.mProjection = m_projection.Transpose();
 //		md.camPos = Vector4(camPos);
 //		md.camPos.w = 1.0f;
 		return md;
