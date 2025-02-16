@@ -50,17 +50,17 @@ namespace DX
 		uint32_t GetFramesPerSecond() const noexcept { return m_framesPerSecond; }
 
 		// Set whether to use fixed or variable timestep mode.
-		void SetFixedTimeStep(bool isFixedTimestep) noexcept { m_isFixedTimeStep = isFixedTimestep; }
+		void SetFixedTimeStep(const bool isFixedTimestep) noexcept { m_isFixedTimeStep = isFixedTimestep; }
 
 		// Set how often to call Update when in fixed timestep mode.
-		void SetTargetElapsedTicks(uint64_t targetElapsed) noexcept { m_targetElapsedTicks = targetElapsed; }
-		void SetTargetElapsedSeconds(double targetElapsed) noexcept { m_targetElapsedTicks = SecondsToTicks(targetElapsed); }
+		void SetTargetElapsedTicks(const uint64_t targetElapsed) noexcept { m_targetElapsedTicks = targetElapsed; }
+		void SetTargetElapsedSeconds(const double targetElapsed) noexcept { m_targetElapsedTicks = SecondsToTicks(targetElapsed); }
 
 		// Integer format represents time using 10,000,000 ticks per second.
 		static constexpr uint64_t TicksPerSecond = 10000000;
 
-		static constexpr double TicksToSeconds(uint64_t ticks) noexcept { return static_cast<double>(ticks) / TicksPerSecond; }
-		static constexpr uint64_t SecondsToTicks(double seconds) noexcept { return static_cast<uint64_t>(seconds * TicksPerSecond); }
+		static constexpr double TicksToSeconds(const uint64_t ticks) noexcept { return static_cast<double>(ticks) / TicksPerSecond; }
+		static constexpr uint64_t SecondsToTicks(const double seconds) noexcept { return static_cast<uint64_t>(seconds * TicksPerSecond); }
 
 		// After an intentional timing discontinuity (for instance a blocking IO operation)
 		// call this to avoid having the fixed timestep logic attempt a set of catch-up

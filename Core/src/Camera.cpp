@@ -14,17 +14,15 @@ namespace Zenyth
 
 	Camera::~Camera() = default;
 
-	void Camera::UpdateAspectRatio(float aspectRatio) {
+	void Camera::UpdateAspectRatio(const float aspectRatio) {
 		projection = Matrix::CreatePerspectiveFieldOfView(fov, aspectRatio, nearPlane, farPlane);
 	}
 
-	void Camera::Update(float dt, Keyboard::State kb, Mouse* mouse) {
-		float camSpeedRot = 0.25f;
-		float camSpeedMouse = 10.0f;
+	void Camera::Update(const float dt, const Keyboard::State &kb, Mouse* mouse) {
 		float camSpeed = 15.0f;
 		if (kb.LeftShift) camSpeed *= 2.0f;
 
-		Mouse::State mstate = mouse->GetState();
+		const Mouse::State mstate = mouse->GetState();
 		const Matrix im = view.Invert();
 
 		Vector3 delta;
@@ -41,14 +39,18 @@ namespace Zenyth
 		// astuce: Vector3::TransformNormal(vecteur, im); transforme un vecteur de l'espace cameravers l'espace monde
 
 		if (mstate.positionMode == Mouse::MODE_RELATIVE) {
-			float dx = mstate.x;
-			float dy = mstate.y;
+			const float dx = mstate.x;
+			const float dy = mstate.y;
 
 			if (mstate.rightButton) {
+				constexpr float camSpeedMouse = 10.0f;
+
 				camPos += Vector3::TransformNormal(Vector3::Right, im) * -dx * camSpeedMouse * dt;
 				camPos += Vector3::TransformNormal(Vector3::Up, im) * dy * camSpeedMouse * dt;
 
 			} else if (mstate.leftButton) {
+				constexpr float camSpeedRot = 0.25f;
+
 				camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Up, im), -dx * camSpeedRot * dt);
 				camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Right, im), -dy * camSpeedRot * dt);
 			} else {
@@ -58,7 +60,7 @@ namespace Zenyth
 			mouse->SetMode(Mouse::MODE_RELATIVE);
 		}
 
-		Vector3 forward = Vector3::Transform(Vector3::Forward, camRot);
+		const Vector3 forward = Vector3::Transform(Vector3::Forward, camRot);
 		view = Matrix::CreateLookAt(camPos, camPos + forward, Vector3::Up);
 	}
 

@@ -1,12 +1,8 @@
 #include "pch.hpp"
+
 #include "Minicraft.hpp"
 
-#include "Buffers.hpp"
-#include "Camera.hpp"
-#include "Vertex.hpp"
-#include "Texture.hpp"
-#include "StepTimer.h"
-
+#include "Core.hpp"
 #include "Win32Application.hpp"
 
 using namespace DirectX;
@@ -333,7 +329,7 @@ void Minicraft::LoadAssets()
 				{ {  0.25f,  0.25f, 0.0f, 1.0f }, { u + one, v } },
 			};
 
-		const UINT vertexBufferSize = sizeof(triangleVertices);
+		constexpr UINT vertexBufferSize = sizeof(triangleVertices);
 
 		m_vertexBuffer = std::make_unique<Zenyth::VertexBuffer<Vertex>>(m_device.Get(), triangleVertices, vertexBufferSize);
 	}
@@ -341,7 +337,7 @@ void Minicraft::LoadAssets()
 	// Create the Index Buffer
 	{
 		uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
-		const UINT indexBufferSize = sizeof(indices);
+		constexpr UINT indexBufferSize = sizeof(indices);
 
 		m_indexBuffer = std::make_unique<Zenyth::IndexBuffer>(m_device.Get(), indices, indexBufferSize);
 	}
@@ -422,11 +418,11 @@ void Minicraft::PopulateCommandList() const
 	auto resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &resourceBarrier);
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(m_frameIndex), m_rtvDescriptorSize);
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(m_frameIndex), m_rtvDescriptorSize);
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 	// Record commands.
-	const float clearColor[] = { 0.2f, 0.2f, 0.4f, 1.0f };
+	constexpr float clearColor[] = { 0.2f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_vertexBuffer->Apply(m_commandList.Get());
@@ -479,7 +475,7 @@ std::wstring Minicraft::GetAssetFullPath(const std::wstring &assetName)
 	return L"resources/" + assetName;
 }
 
-void Minicraft::OnWindowSizeChanged(int width, int height)
+void Minicraft::OnWindowSizeChanged(const int width, const int height)
 {
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	LoadAssets();

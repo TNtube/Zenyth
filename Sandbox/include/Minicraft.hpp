@@ -76,7 +76,7 @@ private:
 	void WaitForGpu();
 	void MoveToNextFrame();
 
-	std::wstring GetAssetFullPath(const std::wstring& assetName);
+	static std::wstring GetAssetFullPath(const std::wstring& assetName);
 	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> cbCamera = nullptr;
 
 	Zenyth::Camera m_camera;

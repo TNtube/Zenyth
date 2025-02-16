@@ -8,7 +8,7 @@ namespace Zenyth
 {
 	HWND Win32Application::m_hwnd = nullptr;
 
-	int Win32Application::Run(Application* pApp, HINSTANCE hInstance, int nCmdShow)
+	int Win32Application::Run(Application* pApp, const HINSTANCE hInstance, const int nCmdShow)
 	{
 		// Parse the command line parameters
 		int argc;
@@ -63,16 +63,16 @@ namespace Zenyth
 	}
 
 	// Main message handler for the sample.
-	LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Win32Application::WindowProc(const HWND hWnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
 	{
 		auto* pApp = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
-		switch (msg)
+		switch (message)
 		{
 			case WM_CREATE:
 			{
 				// Save the Application* passed in to CreateWindow.
-				auto pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+				const auto pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
 				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
 			}
 			return 0;
@@ -98,14 +98,14 @@ namespace Zenyth
 			case WM_XBUTTONDOWN:
 			case WM_XBUTTONUP:
 			case WM_MOUSEHOVER:
-				DirectX::Mouse::ProcessMessage(msg, wParam, lParam);
+				DirectX::Mouse::ProcessMessage(message, wParam, lParam);
 			break;
 
 			case WM_KEYDOWN:
 			case WM_KEYUP:
 			case WM_SYSKEYUP:
 			case WM_SYSKEYDOWN:
-				DirectX::Keyboard::ProcessMessage(msg, wParam, lParam);
+				DirectX::Keyboard::ProcessMessage(message, wParam, lParam);
 			break;
 
 			case WM_EXITSIZEMOVE:
@@ -122,6 +122,6 @@ namespace Zenyth
 		}
 
 		// Handle any messages the switch statement didn't.
-		return DefWindowProc(hWnd, msg, wParam, lParam);
+		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 }

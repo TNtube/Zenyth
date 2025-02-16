@@ -1,5 +1,4 @@
 #pragma once
-#include "Core.hpp"
 
 namespace Zenyth {
 	using Microsoft::WRL::ComPtr;
@@ -56,7 +55,7 @@ namespace Zenyth {
 		ConstantBuffer& operator=(ConstantBuffer&&) = default;
 
 		void SetData(const T& data);
-		void Apply(ID3D12GraphicsCommandList* commandList);
+		void Apply(ID3D12GraphicsCommandList* commandList) const;
 
 	private:
 		ID3D12DescriptorHeap* m_pResourceHeap {};
@@ -74,8 +73,8 @@ namespace Zenyth {
 		: Buffer(device, size)
 	{
 		auto msg = std::format("Vertex buffer of size {} bytes and type {}", size, typeid(T).name());
-		std::wstring wmsg(msg.begin(), msg.end());
-		m_buffer->SetName(wmsg.c_str());
+		const std::wstring wmsg(msg.begin(), msg.end());
+		SUCCEEDED(m_buffer->SetName(wmsg.c_str()));
 		UINT8* pVertexDataBegin;
 
 		Map(&pVertexDataBegin);
@@ -99,8 +98,8 @@ namespace Zenyth {
 		: Buffer(device, (sizeof(T) + 255) & ~255), m_pResourceHeap(descriptorHeap), m_offset(offset)
 	{
 		auto msg = std::format("Constant buffer of offset {} bytes and type {}", offset, typeid(T).name());
-		std::wstring wmsg(msg.begin(), msg.end());
-		m_buffer->SetName(wmsg.c_str());
+		const std::wstring wmsg(msg.begin(), msg.end());
+		SUCCEEDED(m_buffer->SetName(wmsg.c_str()));
 		// Describe and create a constant buffer view.
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
@@ -128,7 +127,8 @@ namespace Zenyth {
 	}
 
 	template<class T>
-	void ConstantBuffer<T>::Apply(ID3D12GraphicsCommandList *commandList) {
+	void ConstantBuffer<T>::Apply(ID3D12GraphicsCommandList *commandList) const
+	{
 		commandList->SetGraphicsRootDescriptorTable(m_offset, m_cbvGpuHandle);
 	}
 }

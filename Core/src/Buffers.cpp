@@ -1,4 +1,6 @@
 #include "pch.hpp"
+
+#include "Core.hpp"
 #include "Buffers.hpp"
 
 namespace Zenyth {

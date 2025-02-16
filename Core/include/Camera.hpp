@@ -1,10 +1,7 @@
 #pragma once
-#include <memory>
-#include <SimpleMath.h>
+
 #include <Mouse.h>
 #include <Keyboard.h>
-
-#include "Buffers.hpp"
 
 
 namespace Zenyth
@@ -34,9 +31,9 @@ namespace Zenyth
 		~Camera();
 
 		void UpdateAspectRatio(float aspectRatio);
-		void Update(float dt, Keyboard::State kb, Mouse* mouse);
+		void Update(float dt, const Keyboard::State &kb, Mouse* mouse);
 
-		void SetPosition(Vector3 pos) { camPos = pos; }
+		void SetPosition(const Vector3& pos) { camPos = pos; }
 
 		CameraData GetCameraData() const;
 	};

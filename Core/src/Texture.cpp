@@ -6,7 +6,7 @@
 namespace Zenyth
 {
 
-	Texture::Texture(ID3D12Device* device, ID3D12DescriptorHeap* resourceHeap, uint8_t offset) : m_pDevice(device), m_offset(offset)
+	Texture::Texture(ID3D12Device* device, ID3D12DescriptorHeap* resourceHeap, const uint8_t offset) : m_pDevice(device), m_offset(offset)
 	{
 		m_gpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
 			resourceHeap->GetGPUDescriptorHandleForHeapStart(),
@@ -26,7 +26,7 @@ namespace Zenyth
 		// from the upload heap to the Texture2D.
 		// std::vector<UINT8> texture = GenerateTextureData();
 
-		std::unique_ptr<Texture> output = std::make_unique<Texture>(device, resourceHeap, offset);
+		auto output = std::make_unique<Texture>(device, resourceHeap, offset);
 
 		DirectX::TexMetadata info {};
 		auto image = std::make_unique<DirectX::ScratchImage>();
@@ -82,9 +82,9 @@ namespace Zenyth
 		device->CreateShaderResourceView(output->m_texture.Get(), &srvDesc, cpuHandle);
 
 
-		auto msg = std::format("Texture buffer: {}", (const char*)filename);
-		std::wstring wmsg(msg.begin(), msg.end());
-		output->m_texture->SetName(wmsg.c_str());
+		auto msg = std::format("Texture buffer: {}", reinterpret_cast<const char *>(filename));
+		const std::wstring wmsg(msg.begin(), msg.end());
+		SUCCEEDED(output->m_texture->SetName(wmsg.c_str()));
 
 		return std::move(output);
 	}

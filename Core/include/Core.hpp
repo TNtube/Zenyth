@@ -1,7 +1,7 @@
 #pragma once
 
 
-inline void ThrowIfFailed(HRESULT hr, const char* msg = "")
+inline void ThrowIfFailed(const HRESULT hr, const char* msg = "")
 {
 	if (FAILED(hr))
 	{

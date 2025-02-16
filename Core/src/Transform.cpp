@@ -1,5 +1,4 @@
 #include "pch.hpp"
-
 #include "Transform.hpp"
 
 namespace Zenyth
@@ -9,19 +8,19 @@ namespace Zenyth
 
 	}
 
-	void Transform::SetEulerAngles(float x, float y, float z)
+	void Transform::SetEulerAngles(const float x, const float y, const float z)
 	{
 		m_rotation = Quaternion::CreateFromYawPitchRoll(y, x, z);
 		UpdateTransform();
 	}
 
-	void Transform::SetPosition(float x, float y, float z)
+	void Transform::SetPosition(const float x, const float y, const float z)
 	{
 		m_position = Vector3{ x, y, z };
 		UpdateTransform();
 	}
 
-	void Transform::SetScale(float x, float y, float z)
+	void Transform::SetScale(const float x, const float y, const float z)
 	{
 		m_scale = Vector3{ x, y, z };
 		UpdateTransform();

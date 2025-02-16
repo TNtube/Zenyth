@@ -1,5 +1,4 @@
 #pragma once
-#include <SimpleMath.h>
 
 namespace Zenyth
 {
@@ -11,13 +10,13 @@ namespace Zenyth
 		Transform();
 
 		void SetEulerAngles(float x, float y, float z);
-		void SetEulerAngles(Vector3 angles) { SetEulerAngles(angles.x, angles.y, angles.z); }
+		void SetEulerAngles(const Vector3& angles) { SetEulerAngles(angles.x, angles.y, angles.z); }
 
 		void SetPosition(float x, float y, float z);
-		void SetPosition(const Vector3 position) { SetPosition(position.x, position.y, position.z); }
+		void SetPosition(const Vector3& position) { SetPosition(position.x, position.y, position.z); }
 
 		void SetScale(float x, float y, float z);
-		void SetScale(const Vector3 scale) { SetScale(scale.x, scale.y, scale.z); }
+		void SetScale(const Vector3& scale) { SetScale(scale.x, scale.y, scale.z); }
 
 		Vector3 GetForward() const;
 		Vector3 GetRight() const;
