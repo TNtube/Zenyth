@@ -1,8 +1,8 @@
-#include <iostream>
+#include "pch.hpp"
+
 #include "Application.hpp"
 #include "Core.hpp"
 #include "Vertex.hpp"
-#include <SimpleMath.h>
 
 using namespace DirectX::SimpleMath;
 

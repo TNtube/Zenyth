@@ -1,14 +1,12 @@
 #pragma once
 
-#include "stdafx.h"
-
 #include "Buffers.hpp"
 #include "Camera.hpp"
 #include "Window.hpp"
 #include "Vertex.hpp"
 #include "Texture.hpp"
 #include "StepTimer.h"
-#include "engine/Transform.hpp"
+#include "Transform.hpp"
 
 namespace Zenyth {
 	struct CameraData;

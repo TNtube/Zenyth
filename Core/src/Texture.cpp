@@ -1,6 +1,6 @@
-#include <format>
+#include "pch.hpp"
+
 #include "Texture.hpp"
-#include <DirectXTex.h>
 #include "Core.hpp"
 
 namespace Zenyth

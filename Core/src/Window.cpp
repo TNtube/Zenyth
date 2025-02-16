@@ -1,5 +1,6 @@
-#include "Window.hpp"
+#include "pch.hpp"
 
+#include "Window.hpp"
 #include "Application.hpp"
 
 

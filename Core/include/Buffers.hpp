@@ -1,7 +1,5 @@
 #pragma once
 #include "Core.hpp"
-#include "stdafx.h"
-#include <format>
 
 namespace Zenyth {
 	using Microsoft::WRL::ComPtr;

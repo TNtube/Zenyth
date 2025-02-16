@@ -3,30 +3,15 @@ add_subdirectory(Deps/DirectXTK12)
 add_subdirectory(Deps/DirectXTex)
 
 
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp include/*.hpp)
+
 add_library(Core STATIC
-        include/Window.hpp
-        src/Window.cpp
-        include/Application.hpp
-        src/Application.cpp
-        include/Core.hpp
-        include/Vertex.hpp
-        include/Buffers.hpp
-        src/Buffers.cpp
-        include/Texture.hpp
-        src/Texture.cpp
-        include/Camera.hpp
-        src/Camera.cpp
-        include/engine/Transform.hpp
-        src/engine/Transform.cpp
+        ${SOURCES}
 )
 
-#if(CMAKE_BUILD_TYPE MATCHES Debug)
-#    target_compile_definitions(Core PUBLIC _DEBUG=1)
-#elseif(CMAKE_BUILD_TYPE MATCHES Release)
-#    target_compile_definitions(Core PUBLIC _DEBUG=0)
-#endif()
-
 target_include_directories(Core PUBLIC ${CMAKE_SOURCE_DIR}/Core/include)
+
+target_precompile_headers(Core PUBLIC include/pch.hpp)
 
 target_link_libraries(Core
     PUBLIC

@@ -1,5 +1,5 @@
+#include "pch.hpp"
 #include "Camera.hpp"
-#include "SimpleMath.h"
 
 namespace Zenyth
 {

@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <cmath>
-#include <cstdint>
-#include <exception>
-
-
 namespace DX
 {
 	// Helper class for animation and simulation timing.
