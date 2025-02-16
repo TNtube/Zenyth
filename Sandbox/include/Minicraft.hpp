@@ -5,6 +5,7 @@
 #include "Vertex.hpp"
 #include "Texture.hpp"
 #include "Camera.hpp"
+#include "DescriptorHeap.hpp"
 #include "StepTimer.h"
 
 using Microsoft::WRL::ComPtr;
@@ -46,11 +47,10 @@ private:
 	ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
-	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	ComPtr<ID3D12DescriptorHeap> m_resourceHeap;
+	Zenyth::DescriptorHeap m_rtvHeap {};
+	Zenyth::DescriptorHeap m_resourceHeap {};
 	ComPtr<ID3D12PipelineState> m_pipelineState;
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
-	UINT m_rtvDescriptorSize;
 
 
 	// App resources.

@@ -6,27 +6,24 @@
 namespace Zenyth
 {
 
-	Texture::Texture(ID3D12Device* device, ID3D12DescriptorHeap* resourceHeap, const uint8_t offset) : m_pDevice(device), m_offset(offset)
+	Texture::Texture(ID3D12Device* device, DescriptorHeap& resourceHeap)
+		:	m_pDevice(device), m_descriptorHandle(resourceHeap.Alloc())
 	{
-		m_gpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-			resourceHeap->GetGPUDescriptorHandleForHeapStart(),
-			m_offset, // Offset from start
-			device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-		);
+
 	}
 
-	void Texture::Apply(ID3D12GraphicsCommandList *commandList) const
+	void Texture::Apply(ID3D12GraphicsCommandList *commandList, const uint32_t tableIndex) const
 	{
-		commandList->SetGraphicsRootDescriptorTable(m_offset, m_gpuHandle);
+		commandList->SetGraphicsRootDescriptorTable(tableIndex, m_descriptorHandle.GPU());
 	}
 
-	std::unique_ptr<Texture> Texture::LoadTextureFromFile(const wchar_t *filename, ID3D12Device* device, ID3D12Resource* uploadHeap, ID3D12DescriptorHeap* resourceHeap, ID3D12GraphicsCommandList* commandList, uint8_t offset)
+	std::unique_ptr<Texture> Texture::LoadTextureFromFile(const wchar_t *filename, ID3D12Device* device, ID3D12Resource* uploadHeap, DescriptorHeap& resourceHeap, ID3D12GraphicsCommandList* commandList)
 	{
 		// Copy data to the intermediate upload heap and then schedule a copy
 		// from the upload heap to the Texture2D.
 		// std::vector<UINT8> texture = GenerateTextureData();
 
-		auto output = std::make_unique<Texture>(device, resourceHeap, offset);
+		auto output = std::make_unique<Texture>(device, resourceHeap);
 
 		DirectX::TexMetadata info {};
 		auto image = std::make_unique<DirectX::ScratchImage>();
@@ -74,13 +71,7 @@ namespace Zenyth
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
 
-
-		auto cpuHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
-			resourceHeap->GetCPUDescriptorHandleForHeapStart(),
-			offset, // Same offset as in CPU handle creation
-			device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-		device->CreateShaderResourceView(output->m_texture.Get(), &srvDesc, cpuHandle);
-
+		device->CreateShaderResourceView(output->m_texture.Get(), &srvDesc, output->GetDescriptorHandle().CPU());
 
 		auto msg = std::format("Texture buffer: {}", reinterpret_cast<const char *>(filename));
 		const std::wstring wmsg(msg.begin(), msg.end());

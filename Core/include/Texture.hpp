@@ -1,4 +1,5 @@
 #pragma once
+#include "DescriptorHeap.hpp"
 
 namespace Zenyth
 {
@@ -7,7 +8,7 @@ namespace Zenyth
 	class Texture
 	{
 	public:
-		explicit Texture(ID3D12Device* device, ID3D12DescriptorHeap* resourceHeap, uint8_t offset);
+		explicit Texture(ID3D12Device* device, DescriptorHeap& resourceHeap);
 
 		~Texture() = default;
 
@@ -17,18 +18,15 @@ namespace Zenyth
 		Texture(Texture&&) = default;
 		Texture& operator=(Texture&&) = default;
 
+		const DescriptorHandle& GetDescriptorHandle() const { return m_descriptorHandle; }
 
-		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, ID3D12Device* device, ID3D12Resource* uploadHeap, ID3D12DescriptorHeap* resourceHeap, ID3D12GraphicsCommandList* commandList, uint8_t offset = 0);
-		void Apply(ID3D12GraphicsCommandList* commandList) const;
+		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, ID3D12Device* device, ID3D12Resource* uploadHeap, DescriptorHeap& resourceHeap, ID3D12GraphicsCommandList* commandList);
+		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
 
 	private:
 		ID3D12Device* m_pDevice;
-
-		D3D12_GPU_DESCRIPTOR_HANDLE m_gpuHandle{};
-
+		DescriptorHandle m_descriptorHandle;
 		ComPtr<ID3D12Resource> m_texture;
-
-		uint8_t m_offset;
 	};
 
 

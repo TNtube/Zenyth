@@ -1,4 +1,5 @@
 #pragma once
+#include "DescriptorHeap.hpp"
 
 namespace Zenyth {
 	using Microsoft::WRL::ComPtr;
@@ -44,7 +45,7 @@ namespace Zenyth {
 	class ConstantBuffer final : public Buffer
 	{
 	public:
-		ConstantBuffer(ID3D12Device* device, ID3D12DescriptorHeap* descriptorHeap, int8_t offset = 0);
+		ConstantBuffer(ID3D12Device* device, DescriptorHeap& descriptorHeap);
 
 		~ConstantBuffer() = default;
 
@@ -55,16 +56,13 @@ namespace Zenyth {
 		ConstantBuffer& operator=(ConstantBuffer&&) = default;
 
 		void SetData(const T& data);
-		void Apply(ID3D12GraphicsCommandList* commandList) const;
+		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
 
 	private:
-		ID3D12DescriptorHeap* m_pResourceHeap {};
-		D3D12_GPU_DESCRIPTOR_HANDLE m_cbvGpuHandle {};
-
+		DescriptorHandle m_cbvHandle {};
 		UINT8* m_pCbvDataBegin {};
 
 		bool m_mapped = false;
-		int8_t m_offset = 0;
 	};
 
 
@@ -94,27 +92,19 @@ namespace Zenyth {
 
 
 	template<class T>
-	ConstantBuffer<T>::ConstantBuffer(ID3D12Device *device, ID3D12DescriptorHeap *descriptorHeap, const int8_t offset)
-		: Buffer(device, (sizeof(T) + 255) & ~255), m_pResourceHeap(descriptorHeap), m_offset(offset)
+	ConstantBuffer<T>::ConstantBuffer(ID3D12Device *device, DescriptorHeap& descriptorHeap)
+		: Buffer(device, (sizeof(T) + 255) & ~255)
 	{
-		auto msg = std::format("Constant buffer of offset {} bytes and type {}", offset, typeid(T).name());
+		auto msg = std::format("Constant buffer of type {}", typeid(T).name());
 		const std::wstring wmsg(msg.begin(), msg.end());
 		SUCCEEDED(m_buffer->SetName(wmsg.c_str()));
 		// Describe and create a constant buffer view.
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = m_size;
-		const CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(
-			m_pResourceHeap->GetCPUDescriptorHandleForHeapStart(),
-			m_offset, // Offset from start
-			m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-		);
-		device->CreateConstantBufferView(&cbvDesc, cbvHandle);
 
-		m_cbvGpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-				m_pResourceHeap->GetGPUDescriptorHandleForHeapStart(),
-				m_offset, // Same offset as in CPU handle creation
-				m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		m_cbvHandle = descriptorHeap.Alloc(1);
+		device->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
 	}
 
 	template<class T>
@@ -127,8 +117,8 @@ namespace Zenyth {
 	}
 
 	template<class T>
-	void ConstantBuffer<T>::Apply(ID3D12GraphicsCommandList *commandList) const
+	void ConstantBuffer<T>::Apply(ID3D12GraphicsCommandList *commandList, const uint32_t tableIndex) const
 	{
-		commandList->SetGraphicsRootDescriptorTable(m_offset, m_cbvGpuHandle);
+		commandList->SetGraphicsRootDescriptorTable(tableIndex, m_cbvHandle.GPU());
 	}
 }

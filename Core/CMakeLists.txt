@@ -7,8 +7,6 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp include/*.hpp)
 
 add_library(Core STATIC
         ${SOURCES}
-        include/Win32Application.hpp
-        src/Win32Application.cpp
 )
 
 target_include_directories(Core PUBLIC ${CMAKE_SOURCE_DIR}/Core/include)
