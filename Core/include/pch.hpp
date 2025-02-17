@@ -31,6 +31,8 @@
 #include <filesystem>
 #include <format>
 #include <exception>
+#include <concepts>
+#include <type_traits>
 
 #include <wrl.h>
 #include <shellapi.h>

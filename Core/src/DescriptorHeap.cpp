@@ -63,7 +63,10 @@ namespace Zenyth
 		m_numFreeDescriptors = m_heapDesc.NumDescriptors;
 		m_firstHandle = DescriptorHandle(
 			m_heap->GetCPUDescriptorHandleForHeapStart(),
-			m_heap->GetGPUDescriptorHandleForHeapStart());
+			m_heapDesc.Flags == D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
+				? m_heap->GetGPUDescriptorHandleForHeapStart()
+				: D3D12_GPU_DESCRIPTOR_HANDLE{ 0 }
+);
 		m_nextFreeHandle = m_firstHandle;
 	}
 

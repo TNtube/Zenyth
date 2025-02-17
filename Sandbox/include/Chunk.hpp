@@ -6,7 +6,7 @@
 
 struct ModelData
 {
-	Matrix model;
+	DirectX::SimpleMath::Matrix model;
 };
 
 #define CHUNK_SIZE 16
@@ -17,36 +17,35 @@ class World;
 class Chunk
 {
 public:
-	Zenyth::Transform transform;
 
 	Chunk();
 
-	Chunk(World* world, Vector3 position);
+	Chunk(World* world, DirectX::SimpleMath::Vector3 position);
 
-	BlockId* GetBlock(Vector3 worldPosition);
-	[[nodiscard]] const BlockId* GetBlock(Vector3 worldPosition) const;
+	BlockId* GetBlock(DirectX::SimpleMath::Vector3 worldPosition);
+	[[nodiscard]] const BlockId* GetBlock(DirectX::SimpleMath::Vector3 worldPosition) const;
 
 
-	void Create(ID3D12Device* device);
+	void Create(ID3D12Device *device, Zenyth::DescriptorHeap &resourceHeap);
 	void Draw(ID3D12GraphicsCommandList* commandList, ShaderPass shaderPass) const;
 
 private:
 	friend class World;
-	void AddFace(Vector3 position, Vector3 up, Vector3 right, Vector4 normal, Vector2 textCoord, ShaderPass shaderPass);
+	void AddFace(DirectX::SimpleMath::Vector3 position, DirectX::SimpleMath::Vector3 up, DirectX::SimpleMath::Vector3 right, DirectX::SimpleMath::Vector4 normal, DirectX::SimpleMath::Vector2 textCoord, ShaderPass shaderPass);
 
-	[[nodiscard]] bool ShouldRenderFace(Vector3 position, Vector3 direction, const BlockData& data) const;
+	[[nodiscard]] bool ShouldRenderFace(DirectX::SimpleMath::Vector3 position, DirectX::SimpleMath::Vector3 direction, const BlockData& data) const;
 
 	World* m_world;
 	ID3D12Device* m_device;
 
-	bool m_hasBlocks = false;
+	bool m_hasBlocks[static_cast<int>(ShaderPass::Size)] = {false};
 
-	Zenyth::Buffer m_vertexBuffer[static_cast<int>(ShaderPass::Size)];
-	std::vector<Vertex> m_vertices[static_cast<int>(ShaderPass::Size)];
-	Zenyth::Buffer m_indexBuffer[static_cast<int>(ShaderPass::Size)];
-	std::vector<uint32_t> m_indices[static_cast<int>(ShaderPass::Size)];
+	Zenyth::VertexBuffer<Vertex> m_vertexBuffer[static_cast<int>(ShaderPass::Size)];
+	Zenyth::IndexBuffer<uint32_t> m_indexBuffer[static_cast<int>(ShaderPass::Size)];
+	Zenyth::ConstantBuffer<ModelData> m_constantBuffer; // shared between all passes
 
-	Vector3 m_chunkPosition;
+	DirectX::SimpleMath::Vector3 m_chunkPosition;
 
 	std::vector<BlockId> m_blocks;
+	Zenyth::Transform m_transform;
 };

@@ -20,7 +20,7 @@ namespace Zenyth {
 			&ibResDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&m_buffer)));
+			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf()))); // ensure buffer suppression
 
 		SUCCEEDED(m_buffer->SetName(name.c_str()));
 
@@ -37,44 +37,16 @@ namespace Zenyth {
 		return m_buffer->GetGPUVirtualAddress();
 	}
 
-	D3D12_VERTEX_BUFFER_VIEW Buffer::CreateVertexBufferView() const {
-		D3D12_VERTEX_BUFFER_VIEW vbv;
-
-		vbv.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		vbv.StrideInBytes = m_elementSize;
-		vbv.SizeInBytes = m_bufferSize;
-
-		return vbv;
-	}
-
-	D3D12_INDEX_BUFFER_VIEW Buffer::CreateIndexBufferView() const {
-		D3D12_INDEX_BUFFER_VIEW ibv;
-
-		ibv.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		ibv.Format = DXGI_FORMAT_R32_UINT;
-		ibv.SizeInBytes = m_bufferSize;
-
-		return ibv;
-	}
-
-	DescriptorHandle Buffer::CreateDescriptor(DescriptorHeap &descriptorHeap) const {
-		// Describe and create a constant buffer view.
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = m_bufferSize;
-
-		const auto cbvHandle = descriptorHeap.Alloc(1);
-		m_pDevice->CreateConstantBufferView(&cbvDesc, cbvHandle.CPU());
-
-		return cbvHandle;
-	}
-
-	void Buffer::Map(UINT8** pDataBegin) const {
+	void Buffer::Map(UINT8** pDataBegin) {
+		assert(!m_mapped);
 		const CD3DX12_RANGE readRange(0, 0);
 		ThrowIfFailed(m_buffer->Map(0, &readRange, reinterpret_cast<void**>(pDataBegin)));
+		m_mapped = true;
 	}
 
-	void Buffer::Unmap() const {
+	void Buffer::Unmap() {
+		assert(m_mapped);
 		m_buffer->Unmap(0, nullptr);
+		m_mapped = false;
 	}
 }

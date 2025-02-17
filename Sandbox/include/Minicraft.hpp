@@ -5,6 +5,7 @@
 #include "Vertex.hpp"
 #include "Texture.hpp"
 #include "Camera.hpp"
+#include "Chunk.hpp"
 #include "DescriptorHeap.hpp"
 #include "StepTimer.hpp"
 
@@ -50,23 +51,10 @@ private:
 
 
 	// App resources.
-	std::unique_ptr<Zenyth::Buffer> m_vertexBuffer {};
-	std::unique_ptr<Zenyth::Buffer> m_indexBuffer {};
 	std::unique_ptr<Zenyth::Texture> m_texture {};
-	Zenyth::Transform m_faceTransform {};
+	Zenyth::ConstantBuffer<Zenyth::CameraData> m_cameraConstantBuffer {};
 
-	std::unique_ptr<Zenyth::Buffer> m_constantBuffer1 {};
-	uint8_t* m_constantBuffer1Begin {};
-	Zenyth::DescriptorHandle m_cbv1Handle {};
-
-	std::unique_ptr<Zenyth::Buffer> m_constantBuffer2 {};
-	uint8_t* m_constantBuffer2Begin {};
-	Zenyth::DescriptorHandle m_cbv2Handle {};
-
-	std::unique_ptr<Zenyth::Buffer> m_cameraConstantBuffer {};
-	uint8_t* m_cameraConstantBufferBegin {};
-	Zenyth::DescriptorHandle m_cameraCbvHandle {};
-
+	Chunk m_chunk {};
 
 	// Synchronization objects.
 	UINT m_frameIndex;

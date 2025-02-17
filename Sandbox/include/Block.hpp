@@ -2,7 +2,7 @@
 
 enum class ShaderPass
 {
-	Normal,
+	Opaque,
 	Transparent,
 	Water,
 	Size
@@ -65,14 +65,14 @@ public:
 
 	ShaderPass pass;
 public:
-	BlockData(const BlockId id, const int texId, const ShaderPass pass = ShaderPass::Normal) :
+	BlockData(const BlockId id, const int texId, const ShaderPass pass = ShaderPass::Opaque) :
 		id(id),
 		texIdSide(texId),
 		texIdTop(texId),
 		texIdBottom(texId),
 		pass(pass) {}
 
-	BlockData(const BlockId id, const int texIdSide, const int texIdTop, const int texIdBottom, const ShaderPass pass = ShaderPass::Normal) :
+	BlockData(const BlockId id, const int texIdSide, const int texIdTop, const int texIdBottom, const ShaderPass pass = ShaderPass::Opaque) :
 		id(id),
 		texIdSide(texIdSide),
 		texIdTop(texIdTop),
