@@ -1,15 +1,17 @@
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS include/*.hpp src/*.cpp)
 
 add_executable(Sandbox WIN32
         ${SOURCES}
-        include/Minicraft.hpp
-        src/Minicraft.cpp
 )
 
-target_include_directories(Sandbox PUBLIC ${CMAKE_SOURCE_DIR}/Core/include)
-target_include_directories(Sandbox PUBLIC ${CMAKE_SOURCE_DIR}/Sandbox/include)
+target_compile_features(Sandbox PRIVATE cxx_std_20)
+
+target_include_directories(Sandbox PUBLIC
+        ${CMAKE_SOURCE_DIR}/Core/include
+        ${CMAKE_SOURCE_DIR}/Sandbox/include
+)
 
 target_precompile_headers(Sandbox REUSE_FROM Core)
 
@@ -22,13 +24,13 @@ else()
 endif()
 
 # Copy resources to build directory
-add_custom_target(copy_resources ALL
+add_custom_command(
+        TARGET Sandbox
+        POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Sandbox/resources
-        ${RESOURCES_BUILD_DIR}
+        "${CMAKE_SOURCE_DIR}/Sandbox/resources"
+        "${RESOURCES_BUILD_DIR}"
         COMMENT "Copying resources to build directory"
 )
-
-add_dependencies(Sandbox copy_resources)
 
 target_link_libraries(Sandbox Core)

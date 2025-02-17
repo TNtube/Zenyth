@@ -77,6 +77,6 @@ namespace Zenyth
 		const std::wstring wmsg(msg.begin(), msg.end());
 		SUCCEEDED(output->m_texture->SetName(wmsg.c_str()));
 
-		return std::move(output);
+		return output;
 	}
 }
