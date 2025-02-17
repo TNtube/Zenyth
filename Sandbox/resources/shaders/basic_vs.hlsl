@@ -13,6 +13,7 @@ cbuffer CameraConstantBuffer : register(b1)
 struct Input
 {
 	float4 position : POSITION;
+	float4 normal : NORMAL0;
 	float2 uv : TEXCOORD;
 };
 

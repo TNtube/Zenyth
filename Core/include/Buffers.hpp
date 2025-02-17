@@ -7,118 +7,24 @@ namespace Zenyth {
 	class Buffer
 	{
 	public:
-		Buffer(ID3D12Device* device, size_t size);
+		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const;
+
+		[[nodiscard]] D3D12_VERTEX_BUFFER_VIEW CreateVertexBufferView() const;
+		[[nodiscard]] D3D12_INDEX_BUFFER_VIEW CreateIndexBufferView() const;
+		DescriptorHandle CreateDescriptor(DescriptorHeap& descriptorHeap) const;
 
 		void Map(UINT8** pDataBegin) const;
 		void Unmap() const;
 
+		uint32_t GetElementCount() const { return m_elementCount; };
+
 	protected:
-		ComPtr<ID3D12Resource> m_buffer;
-		ID3D12Device* m_pDevice {};
-		size_t m_size {};
+		ComPtr<ID3D12Resource>	m_buffer {};
+		ID3D12Device*			m_pDevice {};
+		size_t					m_bufferSize {};
+		uint32_t				m_elementCount {};
+		uint32_t				m_elementSize {};
 	};
-
-	template<typename T>
-	class VertexBuffer final : public Buffer
-	{
-	public:
-		VertexBuffer(ID3D12Device* device, const T* data, size_t size);
-		void Apply(ID3D12GraphicsCommandList* commandList) const;
-
-	private:
-		D3D12_VERTEX_BUFFER_VIEW m_bufferView {};
-	};
-
-	class IndexBuffer final : public Buffer
-	{
-	public:
-		IndexBuffer(ID3D12Device* device, const uint32_t* data, size_t size);
-		void Apply(ID3D12GraphicsCommandList* commandList) const;
-
-	private:
-		D3D12_INDEX_BUFFER_VIEW m_bufferView {};
-	};
-
-	template<typename T>
-	class ConstantBuffer final : public Buffer
-	{
-	public:
-		ConstantBuffer(ID3D12Device* device, DescriptorHeap& descriptorHeap);
-
-		~ConstantBuffer() = default;
-
-		ConstantBuffer(const ConstantBuffer&) = delete;
-		ConstantBuffer& operator=(const ConstantBuffer&) = delete;
-
-		ConstantBuffer(ConstantBuffer&&) = default;
-		ConstantBuffer& operator=(ConstantBuffer&&) = default;
-
-		void SetData(const T& data);
-		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
-
-	private:
-		DescriptorHandle m_cbvHandle {};
-		UINT8* m_pCbvDataBegin {};
-
-		bool m_mapped = false;
-	};
-
-
-	template<typename T>
-	VertexBuffer<T>::VertexBuffer(ID3D12Device* device, const T* data, size_t size)
-		: Buffer(device, size)
-	{
-		auto msg = std::format("Vertex buffer of size {} bytes and type {}", size, typeid(T).name());
-		const std::wstring wmsg(msg.begin(), msg.end());
-		SUCCEEDED(m_buffer->SetName(wmsg.c_str()));
-		UINT8* pVertexDataBegin;
-
-		Map(&pVertexDataBegin);
-		memcpy(pVertexDataBegin, data, size);
-		Unmap();
-
-		m_bufferView.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		m_bufferView.StrideInBytes = sizeof(T);
-		m_bufferView.SizeInBytes = size;
-	}
-
-	template<typename T>
-	void VertexBuffer<T>::Apply(ID3D12GraphicsCommandList* commandList) const
-	{
-		commandList->IASetVertexBuffers(0, 1, &m_bufferView);
-	}
-
-
-	template<class T>
-	ConstantBuffer<T>::ConstantBuffer(ID3D12Device *device, DescriptorHeap& descriptorHeap)
-		: Buffer(device, (sizeof(T) + 255) & ~255)
-	{
-		auto msg = std::format("Constant buffer of type {}", typeid(T).name());
-		const std::wstring wmsg(msg.begin(), msg.end());
-		SUCCEEDED(m_buffer->SetName(wmsg.c_str()));
-		// Describe and create a constant buffer view.
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = m_size;
-
-		m_cbvHandle = descriptorHeap.Alloc(1);
-		device->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
-	}
-
-	template<class T>
-	void ConstantBuffer<T>::SetData(const T &data) {
-		if (!m_mapped) {
-			Map(&m_pCbvDataBegin);
-			m_mapped = true;
-		}
-		memcpy(m_pCbvDataBegin, &data, sizeof(data));
-	}
-
-	template<class T>
-	void ConstantBuffer<T>::Apply(ID3D12GraphicsCommandList *commandList, const uint32_t tableIndex) const
-	{
-		commandList->SetGraphicsRootDescriptorTable(tableIndex, m_cbvHandle.GPU());
-	}
 }

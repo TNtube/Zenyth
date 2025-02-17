@@ -7,6 +7,7 @@
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
+using Microsoft::WRL::ComPtr;
 
 
 Minicraft::Minicraft(const uint32_t width, const uint32_t height, const bool useWrapDevice)
@@ -47,17 +48,18 @@ void Minicraft::OnUpdate()
 
 	SceneConstantBuffer scb;
 	scb.model = m_faceTransform.GetTransformMatrix().Transpose();
-	m_constantBuffer1->SetData(scb);
+	memcpy(m_constantBuffer1Begin, &scb, sizeof(scb));
 
 	m_faceTransform.SetPosition(currentPos.x + 2, currentPos.y, currentPos.z);
 	scb.model = m_faceTransform.GetTransformMatrix().Transpose();
-	m_constantBuffer2->SetData(scb);
+	memcpy(m_constantBuffer2Begin, &scb, sizeof(scb));
 
 	m_faceTransform.SetPosition(currentPos);
 
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
-	m_cameraConstantBuffer->SetData(m_camera.GetCameraData());
+	const auto cameraData = m_camera.GetCameraData();
+	memcpy(m_cameraConstantBufferBegin, &cameraData, sizeof(cameraData));
 }
 
 void Minicraft::OnRender()
@@ -280,7 +282,8 @@ void Minicraft::LoadAssets()
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 			{
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+				{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			};
 
 		// Describe and create the graphics pipeline state object (PSO).
@@ -312,25 +315,24 @@ void Minicraft::LoadAssets()
 		float u = textCoord.x / 16.0f;
 		float v = textCoord.y / 16.0f;
 		float one = 1.0f / 16.0f;
-		Vertex triangleVertices[] =
+		std::vector<Vertex> triangleVertices =
 			{
-				{ {  0.25f, -0.25f, 0.0f, 1.0f }, { u + one, v + one } },
-				{ { -0.25f, -0.25f, 0.0f, 1.0f }, { u, v + one } },
-				{ { -0.25f,  0.25f, 0.0f, 1.0f }, { u, v } },
-				{ {  0.25f,  0.25f, 0.0f, 1.0f }, { u + one, v } },
+				{ {  0.25f, -0.25f, 0.0f, 1.0f }, Vector4{}, { u + one, v + one } },
+				{ { -0.25f, -0.25f, 0.0f, 1.0f }, Vector4{}, { u, v + one } },
+				{ { -0.25f,  0.25f, 0.0f, 1.0f }, Vector4{}, { u, v } },
+				{ {  0.25f,  0.25f, 0.0f, 1.0f }, Vector4{}, { u + one, v } },
 			};
 
-		constexpr UINT vertexBufferSize = sizeof(triangleVertices);
-
-		m_vertexBuffer = std::make_unique<Zenyth::VertexBuffer<Vertex>>(m_device.Get(), triangleVertices, vertexBufferSize);
+		m_vertexBuffer = std::make_unique<Zenyth::Buffer>();
+		m_vertexBuffer->Create(m_device.Get(), L"Vertex buffer", triangleVertices.size(), sizeof(triangleVertices[0]), triangleVertices.data());
 	}
 
 	// Create the Index Buffer
 	{
-		uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
-		constexpr UINT indexBufferSize = sizeof(indices);
+		std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
 
-		m_indexBuffer = std::make_unique<Zenyth::IndexBuffer>(m_device.Get(), indices, indexBufferSize);
+		m_indexBuffer = std::make_unique<Zenyth::Buffer>();
+		m_indexBuffer->Create(m_device.Get(), L"Vertex buffer", indices.size(), sizeof(indices[0]), indices.data());
 	}
 
 	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
@@ -342,9 +344,20 @@ void Minicraft::LoadAssets()
 	// Create the texture.
 	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), textureUploadHeap.Get(), m_resourceHeap, m_commandList.Get());
 
-	m_constantBuffer1 = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap);
-	m_constantBuffer2 = std::make_unique<Zenyth::ConstantBuffer<SceneConstantBuffer>>(m_device.Get(), m_resourceHeap);
-	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>(m_device.Get(), m_resourceHeap);
+	m_constantBuffer1 = std::make_unique<Zenyth::Buffer>();
+	m_constantBuffer1->Create(m_device.Get(), L"Constant Buffer 1", 1, (sizeof(SceneConstantBuffer) + 255) & ~255);
+	m_constantBuffer1->Map(&m_constantBuffer1Begin);
+	m_cbv1Handle = m_constantBuffer1->CreateDescriptor(m_resourceHeap);
+
+	m_constantBuffer2 = std::make_unique<Zenyth::Buffer>();
+	m_constantBuffer2->Create(m_device.Get(), L"Constant Buffer 2", 1, (sizeof(SceneConstantBuffer) + 255) & ~255);
+	m_constantBuffer2->Map(&m_constantBuffer2Begin);
+	m_cbv2Handle = m_constantBuffer2->CreateDescriptor(m_resourceHeap);
+
+	m_cameraConstantBuffer = std::make_unique<Zenyth::Buffer>();
+	m_cameraConstantBuffer->Create(m_device.Get(), L"Camera constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255);
+	m_cameraConstantBuffer->Map(&m_cameraConstantBufferBegin);
+	m_cameraCbvHandle = m_cameraConstantBuffer->CreateDescriptor(m_resourceHeap);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -405,17 +418,20 @@ void Minicraft::PopulateCommandList() const
 	constexpr float clearColor[] = { 0.2f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_vertexBuffer->Apply(m_commandList.Get());
-	m_indexBuffer->Apply(m_commandList.Get());
+
+	const auto vbv = m_vertexBuffer->CreateVertexBufferView();
+	const auto ibv = m_indexBuffer->CreateIndexBufferView();
+	m_commandList->IASetVertexBuffers(0, 1, &vbv);
+	m_commandList->IASetIndexBuffer(&ibv);
 
 	// apply cbv
 	m_texture->Apply(m_commandList.Get(), 0);
-	m_cameraConstantBuffer->Apply(m_commandList.Get(), 2);
 
-	m_constantBuffer1->Apply(m_commandList.Get(), 1);
+	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraCbvHandle.GPU());
+	m_commandList->SetGraphicsRootDescriptorTable(1, m_cbv1Handle.GPU());
 	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
-	m_constantBuffer2->Apply(m_commandList.Get(), 1);
+	m_commandList->SetGraphicsRootDescriptorTable(1, m_cbv2Handle.GPU());
 	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 	// Indicate that the back buffer will now be used to present.

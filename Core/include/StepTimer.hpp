@@ -1,5 +1,5 @@
 //
-// StepTimer.h - A simple timer that provides elapsed time information
+// StepTimer.hpp - A simple timer that provides elapsed time information
 //
 
 #pragma once
@@ -163,8 +163,8 @@ namespace DX
 
 	private:
 		// Source timing data uses QPC units.
-		LARGE_INTEGER m_qpcFrequency;
-		LARGE_INTEGER m_qpcLastTime;
+		LARGE_INTEGER m_qpcFrequency{};
+		LARGE_INTEGER m_qpcLastTime{};
 		uint64_t m_qpcMaxDelta;
 
 		// Derived timing data uses a canonical tick format.
