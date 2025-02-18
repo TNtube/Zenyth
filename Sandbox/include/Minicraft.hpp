@@ -32,6 +32,7 @@ private:
 	};
 
 	Microsoft::WRL::ComPtr<ID3D12Debug> m_debug;
+	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> m_infoQueue;
 
 	DWORD m_callbackCookie{};
 
@@ -41,8 +42,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-	Zenyth::DescriptorHeap m_rtvHeap {};
-	Zenyth::DescriptorHeap m_resourceHeap {};
+	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
+	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -52,9 +53,9 @@ private:
 
 	// App resources.
 	std::unique_ptr<Zenyth::Texture> m_texture {};
-	Zenyth::ConstantBuffer<Zenyth::CameraData> m_cameraConstantBuffer {};
+	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer {};
 
-	Chunk m_chunk {};
+	std::unique_ptr<Chunk> m_chunk {};
 
 	// Synchronization objects.
 	UINT m_frameIndex;

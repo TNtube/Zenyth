@@ -24,13 +24,13 @@ else()
 endif()
 
 # Copy resources to build directory
-add_custom_command(
-        TARGET Sandbox
-        POST_BUILD
+add_custom_target(copy_resources ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/Sandbox/resources"
         "${RESOURCES_BUILD_DIR}"
         COMMENT "Copying resources to build directory"
 )
+
+add_dependencies(Sandbox copy_resources)
 
 target_link_libraries(Sandbox Core)

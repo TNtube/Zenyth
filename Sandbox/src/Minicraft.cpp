@@ -15,11 +15,11 @@ Minicraft::Minicraft(const uint32_t width, const uint32_t height, const bool use
 		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 		m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 		m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
-		m_chunk(nullptr, Vector3{0, 0, 0}),
 		m_frameIndex(0),
 		m_camera(XMConvertToRadians(80), m_aspectRatio)
 {
 	m_camera.SetPosition({ 0, 0, 2 });
+	m_chunk = std::make_unique<Chunk>(nullptr, Vector3{0, 0, 0});
 }
 
 void Minicraft::OnInit()
@@ -46,7 +46,7 @@ void Minicraft::OnUpdate()
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
 	const auto cameraData = m_camera.GetCameraData();
-	m_cameraConstantBuffer.SetData(cameraData);
+	m_cameraConstantBuffer->SetData(cameraData);
 }
 
 void Minicraft::OnRender()
@@ -63,7 +63,7 @@ void Minicraft::OnRender()
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(0, 0));
+	ThrowIfFailed(m_swapChain->Present(1, 0));
 
 	MoveToNextFrame();
 }
@@ -152,8 +152,10 @@ void Minicraft::LoadPipeline()
 	// Create descriptor heaps.
 	{
 		// Describe and create a render target view (RTV) descriptor heap.
-		m_rtvHeap.Create(m_device.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
-		m_resourceHeap.Create(m_device.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048);
+		m_rtvHeap = std::make_unique<Zenyth::DescriptorHeap>();
+		m_resourceHeap = std::make_unique<Zenyth::DescriptorHeap>();
+		m_rtvHeap->Create(m_device.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
+		m_resourceHeap->Create(m_device.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048);
 	}
 
 	// Create frame resources.
@@ -162,7 +164,7 @@ void Minicraft::LoadPipeline()
 		for (UINT n = 0; n < FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])), "Failed to get buffer");
-			auto rtvHandle = m_rtvHeap.Alloc(1);
+			auto rtvHandle = m_rtvHeap->Alloc(1);
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle.CPU());
 
 			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])), "Failed to create command allocator");
@@ -309,12 +311,12 @@ void Minicraft::LoadAssets()
 					if (y < 9) type = STONE;
 					if (y < 1) type = BEDROCK;
 
-					*m_chunk.GetBlock(Vector3(x, y, z)) = type;
+					*m_chunk->GetBlock(Vector3(x, y, z)) = type;
 				}
 			}
 		}
 
-		m_chunk.Create(m_device.Get(), m_resourceHeap);
+		m_chunk->Create(m_device.Get(), *m_resourceHeap);
 	}
 
 	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
@@ -324,8 +326,9 @@ void Minicraft::LoadAssets()
 	ComPtr<ID3D12Resource> textureUploadHeap;
 
 	// Create the texture.
-	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), textureUploadHeap.Get(), m_resourceHeap, m_commandList.Get());
-	m_cameraConstantBuffer.Create(m_device.Get(), L"Camera Constant Buffer", m_resourceHeap);
+	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), m_commandQueue.Get(), *m_resourceHeap, m_commandList.Get());
+	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>();
+	m_cameraConstantBuffer->Create(m_device.Get(), L"Camera Constant Buffer", *m_resourceHeap);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -368,7 +371,7 @@ void Minicraft::PopulateCommandList() const
 	// Set necessary state.
 	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap.GetHeapPointer() };
+	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap->GetHeapPointer() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 
@@ -379,7 +382,7 @@ void Minicraft::PopulateCommandList() const
 	auto resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &resourceBarrier);
 
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap.GetStartHandle().CPU(), static_cast<INT>(m_frameIndex), m_rtvHeap.GetDescriptorSize());
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU(), static_cast<INT>(m_frameIndex), m_rtvHeap->GetDescriptorSize());
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 	// Record commands.
@@ -389,9 +392,9 @@ void Minicraft::PopulateCommandList() const
 
 	// apply cbv
 	m_texture->Apply(m_commandList.Get(), 0);
-	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer.GetDescriptorHandle().GPU());
+	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetDescriptorHandle().GPU());
 
-	m_chunk.Draw(m_commandList.Get(), ShaderPass::Opaque);
+	m_chunk->Draw(m_commandList.Get(), ShaderPass::Opaque);
 
 
 	// Indicate that the back buffer will now be used to present.

@@ -20,7 +20,8 @@ namespace Zenyth
 
 		const DescriptorHandle& GetDescriptorHandle() const { return m_descriptorHandle; }
 
-		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, ID3D12Device* device, ID3D12Resource* uploadHeap, DescriptorHeap& resourceHeap, ID3D12GraphicsCommandList* commandList);
+		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, ID3D12Device *device, ID3D12CommandQueue *commandQueue, DescriptorHeap &resourceHeap, ID3D12GraphicsCommandList
+		                                                    *commandList);
 		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
 
 	private:

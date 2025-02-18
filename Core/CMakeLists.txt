@@ -1,6 +1,5 @@
 add_subdirectory(Deps/DirectX-Headers)
 add_subdirectory(Deps/DirectXTK12)
-add_subdirectory(Deps/DirectXTex)
 
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp include/*.hpp)
@@ -19,7 +18,6 @@ target_link_libraries(Core
     PUBLIC
         Microsoft::DirectX-Headers
         DirectXTK12
-        DirectXTex
         d3d12
         dxgi
         D3DCompiler.lib

@@ -12,7 +12,6 @@
 #include <DirectXMath.h>
 #include <SimpleMath.h>
 #include <directx/d3dx12.h>
-#include <DirectXTex.h>
 
 
 // STL
