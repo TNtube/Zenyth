@@ -2,6 +2,8 @@
 
 #include "Minicraft.hpp"
 
+#include <DirectXColors.h>
+
 #include "Core.hpp"
 #include "Win32Application.hpp"
 
@@ -386,8 +388,7 @@ void Minicraft::PopulateCommandList() const
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 	// Record commands.
-	constexpr float clearColor[] = { 0.2f, 0.2f, 0.4f, 1.0f };
-	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	m_commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// apply cbv
