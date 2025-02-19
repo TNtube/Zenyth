@@ -5,7 +5,7 @@
 #include "Vertex.hpp"
 #include "Texture.hpp"
 #include "Camera.hpp"
-#include "Chunk.hpp"
+#include "World.hpp"
 #include "DescriptorHeap.hpp"
 #include "StepTimer.hpp"
 
@@ -43,8 +43,10 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
 	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
+	std::unique_ptr<Zenyth::DescriptorHeap> m_dsvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffers[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
@@ -55,7 +57,7 @@ private:
 	std::unique_ptr<Zenyth::Texture> m_texture {};
 	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer {};
 
-	std::unique_ptr<Chunk> m_chunk {};
+	std::unique_ptr<World> m_world {};
 
 	// Synchronization objects.
 	UINT m_frameIndex;

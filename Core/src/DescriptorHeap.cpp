@@ -46,7 +46,7 @@ namespace Zenyth
 	{
 		m_heapDesc.Type = type;
 		m_heapDesc.NumDescriptors = maxCount;
-		m_heapDesc.Flags = type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+		m_heapDesc.Flags = type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV || type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV
 			? D3D12_DESCRIPTOR_HEAP_FLAG_NONE
 			: D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		m_heapDesc.NodeMask = 1;

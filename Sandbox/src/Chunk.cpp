@@ -1,5 +1,6 @@
 #include "pch.hpp"
 
+#include "World.hpp"
 #include "Chunk.hpp"
 using namespace DirectX::SimpleMath;
 
@@ -29,13 +30,13 @@ bool Chunk::ShouldRenderFace(Vector3 position, Vector3 direction, const BlockDat
 {
 	Vector3 next = {position.x + direction.x, position.y + direction.y, position.z + direction.z};
 
-	// auto chunkPosition = World::WorldToChunkPosition(next);
-	// auto chunk = chunkPosition == m_chunkPosition ? this : m_world->GetChunk(chunkPosition);
+	auto chunkPosition = World::WorldToChunkPosition(next);
+	auto chunk = chunkPosition == m_chunkPosition ? this : m_world->GetChunk(chunkPosition);
 
 
-	auto chunk = this;
-	if (next.x < 0 || next.y < 0 || next.z < 0 || next.x >= CHUNK_SIZE || next.y >= CHUNK_SIZE || next.z >= CHUNK_SIZE)
-		chunk = nullptr;
+	// auto chunk = this;
+	// if (next.x < 0 || next.y < 0 || next.z < 0 || next.x >= CHUNK_SIZE || next.y >= CHUNK_SIZE || next.z >= CHUNK_SIZE)
+	// 	chunk = nullptr;
 
 	if (chunk == nullptr)
 		return true;
@@ -96,6 +97,7 @@ void Chunk::Create(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 			static_cast<float>((i / CHUNK_SIZE) % CHUNK_SIZE),
 			static_cast<float>(i / (CHUNK_SIZE * CHUNK_SIZE))
 		};
+		blockPosition += m_chunkPosition * CHUNK_SIZE;
 
 		const BlockData& data = BlockData::Get(blockId);
 

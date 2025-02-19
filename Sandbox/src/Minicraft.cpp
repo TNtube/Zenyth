@@ -20,8 +20,8 @@ Minicraft::Minicraft(const uint32_t width, const uint32_t height, const bool use
 		m_frameIndex(0),
 		m_camera(XMConvertToRadians(80), m_aspectRatio)
 {
-	m_camera.SetPosition({ 0, 0, 2 });
-	m_chunk = std::make_unique<Chunk>(nullptr, Vector3{0, 0, 0});
+	m_camera.SetPosition({0, 100, 10});
+	m_world = std::make_unique<World>();
 }
 
 void Minicraft::OnInit()
@@ -65,7 +65,7 @@ void Minicraft::OnRender()
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(1, 0));
+	ThrowIfFailed(m_swapChain->Present(0, 0));
 
 	MoveToNextFrame();
 }
@@ -155,8 +155,10 @@ void Minicraft::LoadPipeline()
 	{
 		// Describe and create a render target view (RTV) descriptor heap.
 		m_rtvHeap = std::make_unique<Zenyth::DescriptorHeap>();
+		m_dsvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_resourceHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_rtvHeap->Create(m_device.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
+		m_dsvHeap->Create(m_device.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
 		m_resourceHeap->Create(m_device.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048);
 	}
 
@@ -170,6 +172,9 @@ void Minicraft::LoadPipeline()
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle.CPU());
 
 			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])), "Failed to create command allocator");
+
+			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>();
+			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), *m_dsvHeap, GetWidth(), GetHeight());
 		}
 	}
 
@@ -277,6 +282,8 @@ void Minicraft::LoadAssets()
 				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			};
 
+		CD3DX12_DEPTH_STENCIL_DESC depthStencilDesc(D3D12_DEFAULT);
+
 		// Describe and create the graphics pipeline state object (PSO).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
@@ -285,8 +292,7 @@ void Minicraft::LoadAssets()
 		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState.DepthEnable = FALSE;
-		psoDesc.DepthStencilState.StencilEnable = FALSE;
+		psoDesc.DepthStencilState = depthStencilDesc;
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		psoDesc.NumRenderTargets = 1;
@@ -301,24 +307,7 @@ void Minicraft::LoadAssets()
 	// Create the chunk
 	{
 
-		for (int x = 0; x < CHUNK_SIZE; ++x)
-		{
-			for (int z = 0; z < CHUNK_SIZE; ++z)
-			{
-				for (int y = 0; y < CHUNK_SIZE; ++y)
-				{
-					BlockId type = EMPTY;
-					if (y < 13) type = GRASS;
-					if (y < 12) type = DIRT;
-					if (y < 9) type = STONE;
-					if (y < 1) type = BEDROCK;
-
-					*m_chunk->GetBlock(Vector3(x, y, z)) = type;
-				}
-			}
-		}
-
-		m_chunk->Create(m_device.Get(), *m_resourceHeap);
+		m_world->Generate(m_device.Get(), *m_resourceHeap);
 	}
 
 	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
@@ -385,7 +374,10 @@ void Minicraft::PopulateCommandList() const
 	m_commandList->ResourceBarrier(1, &resourceBarrier);
 
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU(), static_cast<INT>(m_frameIndex), m_rtvHeap->GetDescriptorSize());
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+	const auto dsvHandle = m_depthStencilBuffers[m_frameIndex]->GetDescriptorHandle().CPU();
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Record commands.
 	m_commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
@@ -395,7 +387,7 @@ void Minicraft::PopulateCommandList() const
 	m_texture->Apply(m_commandList.Get(), 0);
 	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetDescriptorHandle().GPU());
 
-	m_chunk->Draw(m_commandList.Get(), ShaderPass::Opaque);
+	m_world->Draw(m_commandList.Get(), ShaderPass::Opaque);
 
 
 	// Indicate that the back buffer will now be used to present.

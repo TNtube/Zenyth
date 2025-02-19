@@ -89,6 +89,17 @@ namespace Zenyth {
 		DescriptorHandle m_cbvHandle {};
 		uint8_t* m_mappedData {};
 	};
+
+	class DepthStencilBuffer : protected Buffer
+	{
+	public:
+		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, int width, int height);
+
+		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle() const { return m_dsvHandle; }
+
+	private:
+		DescriptorHandle m_dsvHandle {};
+	};
 }
 
 #include "Buffers.inl"
