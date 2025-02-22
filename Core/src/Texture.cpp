@@ -38,9 +38,8 @@ namespace Zenyth
 
 		uploadResourcesFinished.wait();
 
-		auto msg = std::format(L"Texture buffer: {}", std::wstring(filename));
-		const std::wstring wmsg(msg.begin(), msg.end());
-		SUCCEEDED(output->m_texture->SetName(wmsg.c_str()));
+		const auto msg = std::format(L"Texture buffer: {}", std::wstring(filename));
+		SUCCEEDED(output->m_texture->SetName(msg.c_str()));
 
 		return output;
 	}

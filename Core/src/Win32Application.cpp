@@ -10,6 +10,10 @@
 #include <shlobj.h>
 #include <strsafe.h>
 
+#include <backends/imgui_impl_win32.h>
+// Forward declare message handler from imgui_impl_win32.cpp
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 namespace Zenyth
 {
 	std::wstring GetLatestWinPixGpuCapturerPath();
@@ -87,11 +91,13 @@ namespace Zenyth
 	}
 
 	// Main message handler for the sample.
-	LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
+	LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 	{
+		if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+			return true;
 		auto* pApp = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
-		switch (message)
+		switch (msg)
 		{
 			case WM_CREATE:
 			{
@@ -122,14 +128,18 @@ namespace Zenyth
 			case WM_XBUTTONDOWN:
 			case WM_XBUTTONUP:
 			case WM_MOUSEHOVER:
-				DirectX::Mouse::ProcessMessage(message, wParam, lParam);
+			{
+				const auto& io = ImGui::GetIO();
+				if (!io.WantCaptureMouse)
+					DirectX::Mouse::ProcessMessage(msg, wParam, lParam);
+			}
 			break;
 
 			case WM_KEYDOWN:
 			case WM_KEYUP:
 			case WM_SYSKEYUP:
 			case WM_SYSKEYDOWN:
-				DirectX::Keyboard::ProcessMessage(message, wParam, lParam);
+				DirectX::Keyboard::ProcessMessage(msg, wParam, lParam);
 			break;
 
 			case WM_EXITSIZEMOVE:
@@ -155,7 +165,7 @@ namespace Zenyth
 		}
 
 		// Handle any messages the switch statement didn't.
-		return DefWindowProc(hWnd, message, wParam, lParam);
+		return DefWindowProc(hWnd, msg, wParam, lParam);
 	}
 
 

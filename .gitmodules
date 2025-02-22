@@ -7,3 +7,7 @@
 [submodule "Core/Deps/DirectXTex"]
 	path = Core/Deps/DirectXTex
 	url = https://github.com/microsoft/DirectXTex.git
+[submodule "Core/Deps/imgui"]
+	path = Core/Deps/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
