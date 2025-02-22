@@ -141,6 +141,15 @@ namespace Zenyth
 			}
 			break;
 
+			case WM_SIZE:
+			if (pApp)
+			{
+				RECT rc;
+				GetClientRect(hWnd, &rc);
+
+				pApp->OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
+			}
+
 			default:
 				break;
 		}

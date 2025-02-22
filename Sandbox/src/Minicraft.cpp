@@ -445,5 +445,64 @@ std::wstring Minicraft::GetAssetFullPath(const std::wstring &assetName)
 void Minicraft::OnWindowSizeChanged(const int width, const int height)
 {
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+
+	m_viewport.Width = static_cast<float>(width);
+	m_viewport.Height = static_cast<float>(height);
+
+	m_scissorRect.right = static_cast<LONG>(width);
+	m_scissorRect.bottom = static_cast<LONG>(height);
+
+	// Determine if the swap buffers and other resources need to be resized or not.
+	if ((width != m_width || height != m_height))
+	{
+		m_width = width;
+		m_height = height;
+		// Flush all current GPU commands.
+		WaitForGpu();
+
+		// Release the resources holding references to the swap chain (requirement of
+		// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
+		// current fence value.
+		for (UINT n = 0; n < FrameCount; n++)
+		{
+			m_renderTargets[n].Reset();
+			m_fenceValues[n] = m_fenceValues[m_frameIndex];
+		}
+
+		// Resize the swap chain to the desired dimensions.
+		DXGI_SWAP_CHAIN_DESC desc = {};
+		m_swapChain->GetDesc(&desc);
+		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, desc.BufferDesc.Format, desc.Flags));
+
+		BOOL fullscreenState;
+		ThrowIfFailed(m_swapChain->GetFullscreenState(&fullscreenState, nullptr));
+
+		// Reset the frame index to the current back buffer index.
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+		LoadSizeDependentResources();
+	}
 	// LoadAssets();
+}
+
+
+void Minicraft::LoadSizeDependentResources()
+{
+	// Create frame resources.
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU());
+		m_dsvHeap->Destroy();
+		m_dsvHeap->Create(m_device.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
+
+		// Create a RTV for each frame.
+		for (UINT n = 0; n < FrameCount; n++)
+		{
+			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+			rtvHandle.Offset(1, m_rtvHeap->GetDescriptorSize());
+
+			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>();
+			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), *m_dsvHeap, m_width, m_height);
+		}
+	}
 }

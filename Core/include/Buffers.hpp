@@ -93,7 +93,7 @@ namespace Zenyth {
 	class DepthStencilBuffer : protected Buffer
 	{
 	public:
-		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, int width, int height);
+		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, uint32_t width, uint32_t height);
 
 		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle() const { return m_dsvHandle; }
 

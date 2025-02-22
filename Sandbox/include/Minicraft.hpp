@@ -74,6 +74,8 @@ private:
 	void WaitForGpu();
 	void MoveToNextFrame();
 
+	void LoadSizeDependentResources();
+
 	static std::wstring GetAssetFullPath(const std::wstring& assetName);
 
 	Zenyth::Camera m_camera;

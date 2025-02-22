@@ -50,7 +50,7 @@ namespace Zenyth {
 		m_mapped = false;
 	}
 
-	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, DescriptorHeap &resourceHeap, const int width, const int height)
+>	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, DescriptorHeap &resourceHeap, const uint32_t width, const uint32_t height)
 	{
 		D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
 		depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
