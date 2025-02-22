@@ -2,7 +2,6 @@
 
 #include "Application.hpp"
 #include "Buffers.hpp"
-#include "Vertex.hpp"
 #include "Texture.hpp"
 #include "Camera.hpp"
 #include "World.hpp"
@@ -79,9 +78,9 @@ private:
 
 	Zenyth::Camera m_camera;
 	// Rendering loop timer.
-	DX::StepTimer                           m_timer;
+	DX::StepTimer							m_timer;
 
 	// Input devices.
-	std::unique_ptr<DirectX::Keyboard>      m_keyboard;
-	std::unique_ptr<DirectX::Mouse>         m_mouse;
+	std::unique_ptr<DirectX::Keyboard>		m_keyboard;
+	std::unique_ptr<DirectX::Mouse>			m_mouse;
 };
