@@ -9,9 +9,9 @@ namespace Zenyth
 		explicit DescriptorHandle( D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle );
 		DescriptorHandle( D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle );
 
-		DescriptorHandle operator+ (INT offsetScaledByDescriptorSize ) const;
+		DescriptorHandle operator+ (uint32_t offsetScaledByDescriptorSize ) const;
 
-		void operator += (INT offsetScaledByDescriptorSize );
+		void operator += (uint32_t offsetScaledByDescriptorSize );
 
 		explicit operator D3D12_CPU_DESCRIPTOR_HANDLE() const { return m_cpuHandle; }
 		explicit operator D3D12_GPU_DESCRIPTOR_HANDLE() const { return m_gpuHandle; }
@@ -37,8 +37,9 @@ namespace Zenyth
 		void Create(ID3D12Device *device, const std::wstring& debugHeapName, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
 		void Destroy() { m_heap.Reset(); }
 
-		[[nodiscard]] bool HasAvailableSpace( uint32_t count ) const;
-		DescriptorHandle Alloc( uint32_t count = 1 );
+		[[nodiscard]] bool HasAvailableSpace() const;
+		DescriptorHandle Alloc();
+		void Free( const DescriptorHandle& dHandle );
 
 		[[nodiscard]] DescriptorHandle GetStartHandle() const { return m_firstHandle; }
 
@@ -53,8 +54,9 @@ namespace Zenyth
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_heap;
 		D3D12_DESCRIPTOR_HEAP_DESC m_heapDesc {};
 		uint32_t m_descriptorSize {};
-		uint32_t m_numFreeDescriptors {};
 		DescriptorHandle m_firstHandle;
 		DescriptorHandle m_nextFreeHandle;
+
+		std::vector<uint32_t> m_freeList;
 	};
 }

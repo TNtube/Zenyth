@@ -7,16 +7,13 @@
 namespace Zenyth
 {
 	using namespace DirectX;
-	DescriptorHandle::DescriptorHandle()
+	DescriptorHandle::DescriptorHandle() : m_cpuHandle{ 0 }, m_gpuHandle{ 0 }
 	{
-		m_cpuHandle.ptr = 0;
-		m_gpuHandle.ptr = 0;
 	}
 
 	DescriptorHandle::DescriptorHandle(const D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
-		: m_cpuHandle(cpuHandle)
+		: m_cpuHandle(cpuHandle), m_gpuHandle{ 0 }
 	{
-		m_gpuHandle.ptr = 0;
 	}
 
 	DescriptorHandle::DescriptorHandle(const D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle, const D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
@@ -24,14 +21,14 @@ namespace Zenyth
 	{
 	}
 
-	DescriptorHandle DescriptorHandle::operator+(const INT offsetScaledByDescriptorSize) const
+	DescriptorHandle DescriptorHandle::operator+(const uint32_t offsetScaledByDescriptorSize) const
 	{
 		DescriptorHandle ret = *this;
 		ret += offsetScaledByDescriptorSize;
 		return ret;
 	}
 
-	void DescriptorHandle::operator+=(const INT offsetScaledByDescriptorSize)
+	void DescriptorHandle::operator+=(const uint32_t offsetScaledByDescriptorSize)
 	{
 		if (m_cpuHandle.ptr != 0)
 			m_cpuHandle.ptr += offsetScaledByDescriptorSize;
@@ -60,7 +57,6 @@ namespace Zenyth
 #endif
 
 		m_descriptorSize = device->GetDescriptorHandleIncrementSize(m_heapDesc.Type);
-		m_numFreeDescriptors = m_heapDesc.NumDescriptors;
 		m_firstHandle = DescriptorHandle(
 			m_heap->GetCPUDescriptorHandleForHeapStart(),
 			m_heapDesc.Flags == D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
@@ -68,20 +64,34 @@ namespace Zenyth
 				: D3D12_GPU_DESCRIPTOR_HANDLE{ 0 }
 );
 		m_nextFreeHandle = m_firstHandle;
+
+		m_freeList.reserve(static_cast<int>(m_heapDesc.NumDescriptors));
+		for (int n = static_cast<int>(m_heapDesc.NumDescriptors); n > 0; n--)
+			m_freeList.push_back(n - 1);
 	}
 
-	bool DescriptorHeap::HasAvailableSpace(const uint32_t count) const
+	bool DescriptorHeap::HasAvailableSpace() const
 	{
-		return count <= m_numFreeDescriptors;
+		return !m_freeList.empty();
 	}
 
-	DescriptorHandle DescriptorHeap::Alloc(const uint32_t count)
+	DescriptorHandle DescriptorHeap::Alloc()
 	{
-		assert(HasAvailableSpace(count), "Descriptor Heap out of space.  Increase heap size.");
-		const DescriptorHandle ret = m_nextFreeHandle;
-		m_nextFreeHandle += count * m_descriptorSize;
-		m_numFreeDescriptors -= count;
+		assert(HasAvailableSpace(), "Descriptor Heap out of space.  Increase heap size.");
+
+		const auto idx = m_freeList.back();
+		m_freeList.pop_back();
+		const DescriptorHandle ret = m_firstHandle + idx * m_descriptorSize;
 		return ret;
+	}
+
+	void DescriptorHeap::Free(const DescriptorHandle &dHandle)
+	{
+		const int cpu_idx = static_cast<int>((dHandle.GetCpuPtr() - m_firstHandle.GetCpuPtr()) / m_descriptorSize);
+		const int gpu_idx = static_cast<int>((dHandle.GetGpuPtr() - m_firstHandle.GetGpuPtr()) / m_descriptorSize);
+		assert(cpu_idx == gpu_idx, "CPU and GPU indices do not match.");
+
+		m_freeList.push_back(cpu_idx);
 	}
 
 	DescriptorHandle DescriptorHeap::operator[](const uint32_t arrayIdx) const

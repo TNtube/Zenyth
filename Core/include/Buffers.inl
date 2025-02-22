@@ -79,7 +79,7 @@ namespace Zenyth
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = m_bufferSize;
 
-		m_cbvHandle = resourceHeap.Alloc(1);
+		m_cbvHandle = resourceHeap.Alloc();
 		m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
 
 		Map(&m_mappedData);
@@ -94,7 +94,7 @@ namespace Zenyth
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = m_bufferSize;
 
-		m_cbvHandle = resourceHeap.Alloc(1);
+		m_cbvHandle = resourceHeap.Alloc();
 		m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
 
 		Map(&m_mappedData);

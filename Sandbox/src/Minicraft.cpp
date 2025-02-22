@@ -168,7 +168,7 @@ void Minicraft::LoadPipeline()
 		for (UINT n = 0; n < FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])), "Failed to get buffer");
-			auto rtvHandle = m_rtvHeap->Alloc(1);
+			auto rtvHandle = m_rtvHeap->Alloc();
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle.CPU());
 
 			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])), "Failed to create command allocator");
