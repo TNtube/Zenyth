@@ -282,7 +282,12 @@ void Minicraft::LoadAssets()
 				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			};
 
-		CD3DX12_DEPTH_STENCIL_DESC depthStencilDesc(D3D12_DEFAULT);
+		CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
+
+		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
+		m_depthBoundsTestSupported = SUCCEEDED(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
+
+		depthStencilDesc.DepthBoundsTestEnable = m_depthBoundsTestSupported;
 
 		// Describe and create the graphics pipeline state object (PSO).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
