@@ -6,6 +6,7 @@
 #include "Camera.hpp"
 #include "World.hpp"
 #include "DescriptorHeap.hpp"
+#include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
 
 class Minicraft final : public Zenyth::Application
@@ -55,8 +56,10 @@ private:
 
 
 	// App resources.
+	std::unique_ptr<Zenyth::ImGuiLayer> m_imguiLayer {};
+
 	std::unique_ptr<Zenyth::Texture> m_texture {};
-	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer {};
+	std::unique_ptr<Zenyth::ConstantBuffer<Zenyth::CameraData>> m_cameraConstantBuffer[FrameCount] {};
 
 	std::unique_ptr<World> m_world {};
 

@@ -24,6 +24,8 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp include/*.hpp)
 
 add_library(Core STATIC
     ${SOURCES}
+        include/ImGuiLayer.hpp
+        src/ImGuiLayer.cpp
 )
 
 target_compile_features(Core PRIVATE cxx_std_20)

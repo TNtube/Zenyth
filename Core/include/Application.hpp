@@ -19,13 +19,13 @@ namespace Zenyth {
 		virtual void OnDestroy() = 0;
 
 		virtual void OnWindowSizeChanged(int width, int height) = 0;
+
+		static constexpr UINT FrameCount = 3;
 	protected:
 		static void GetHardwareAdapter(
 			IDXGIFactory1* pFactory,
 			IDXGIAdapter1** ppAdapter,
 			bool requestHighPerformanceAdapter = false);
-
-		static constexpr UINT FrameCount = 3;
 
 		uint32_t m_width;
 		uint32_t m_height;

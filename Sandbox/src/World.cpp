@@ -55,7 +55,7 @@ void World::Generate(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 	// 	}
 	// }
 
-	constexpr int chunkCount = 4;
+	constexpr int chunkCount = 8;
 
 	siv::PerlinNoise perlin(1234);
 
