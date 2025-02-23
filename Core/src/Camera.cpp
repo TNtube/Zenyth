@@ -39,20 +39,21 @@ namespace Zenyth
 		// astuce: Vector3::TransformNormal(vecteur, im); transforme un vecteur de l'espace cameravers l'espace monde
 
 		if (mstate.positionMode == Mouse::MODE_RELATIVE) {
-			const float dx = mstate.x;
-			const float dy = mstate.y;
+			const auto dx = static_cast<float>(mstate.x);
+			const auto dy = static_cast<float>(mstate.y);
 
 			if (mstate.rightButton) {
-				constexpr float camSpeedMouse = 10.0f;
-
-				m_camPos += Vector3::TransformNormal(Vector3::Right, im) * -dx * camSpeedMouse * dt;
-				m_camPos += Vector3::TransformNormal(Vector3::Up, im) * dy * camSpeedMouse * dt;
+				Vector3 deltaMouse;
+				if(kb.LeftShift || kb.RightShift)
+					deltaMouse = Vector3(0, 0, dy);
+				else
+					deltaMouse = Vector3(-dx, dy, 0);
+				m_camPos += Vector3::TransformNormal(deltaMouse, im) * camSpeed * dt;
 
 			} else if (mstate.leftButton) {
 				constexpr float camSpeedRot = 0.25f;
-
-				m_camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Up, im), -dx * camSpeedRot * dt);
-				m_camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Right, im), -dy * camSpeedRot * dt);
+				m_camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Right, im), -dy * dt * camSpeedRot);
+				m_camRot *= Quaternion::CreateFromAxisAngle(Vector3::Up, -dx * dt * camSpeedRot);
 			} else {
 				mouse->SetMode(Mouse::MODE_ABSOLUTE);
 			}
@@ -61,7 +62,8 @@ namespace Zenyth
 		}
 
 		const Vector3 forward = Vector3::Transform(Vector3::Forward, m_camRot);
-		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, Vector3::Up);
+		const Vector3 up = Vector3::Transform(Vector3::Up, m_camRot);
+		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, up);
 	}
 
 	CameraData Camera::GetCameraData() const {
