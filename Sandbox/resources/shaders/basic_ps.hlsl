@@ -11,11 +11,13 @@ struct Input {
 
 float4 main(Input input) : SV_TARGET {
 	float4 color = g_texture.Sample(g_sampler, input.uv);
-	float4 lightDir = float4(0.2f, 0.3f, 0.8f, 1.0f);
-	float4 dir = normalize(lightDir);
-	float diff = saturate(dot(input.normal, dir));
 
-	float3 col = pow(diff * color.rgb, 1.0 / 2.2); // gamma correction
+	clip(color.a < 0.1 ? -1 : 1);
+
+	float NdotL = saturate(dot(input.normal, float4(1, 1, 1, 0)));
+	color.rgb = color.rgb * (0.5 + NdotL * 0.5);
+
+	float3 col = pow(color.rgb, 1.0 / 2.2); // gamma correction
 
 	return float4(col, color.a);
 }
