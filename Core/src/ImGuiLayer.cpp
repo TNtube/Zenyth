@@ -100,6 +100,9 @@ namespace Zenyth
 	{
 		(void)this;
 
+		if (width == 0 || height == 0)
+			return;
+
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
 	}

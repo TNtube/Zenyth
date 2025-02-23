@@ -463,6 +463,9 @@ std::wstring Minicraft::GetAssetFullPath(const std::wstring &assetName)
 
 void Minicraft::OnWindowSizeChanged(const int width, const int height)
 {
+	if (width == 0 || height == 0)
+		return;
+
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
 
