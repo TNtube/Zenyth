@@ -71,40 +71,41 @@ namespace Zenyth
 	}
 
 	template<typename TConstant>
-	void ConstantBuffer<TConstant>::Create(ID3D12Device* device, const std::wstring& name, DescriptorHeap& resourceHeap)
+	ConstantBuffer<TConstant>::~ConstantBuffer()
 	{
-		Buffer::Create(device, name, 1, (sizeof(TConstant) + 255) & ~255, nullptr);
+		if (m_resourceHeap)
+		{
+			for (auto& handle : m_cbvHandles)
+				m_resourceHeap->Free(handle);
+		}
+	}
+
+	template<typename TConstant>
+	void ConstantBuffer<TConstant>::Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, const uint32_t numElements)
+	{
+		m_resourceHeap = &resourceHeap;
+		Buffer::Create(device, name, numElements, (sizeof(TConstant) + 255) & ~255, nullptr);
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		cbvDesc.SizeInBytes = m_bufferSize;
 
-		m_cbvHandle = resourceHeap.Alloc();
-		m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
+		m_cbvHandles.resize(numElements);
+		for (int i = 0; i < numElements; ++i)
+		{
+			if (m_cbvHandles[i].IsNull())
+				m_cbvHandles[i] = m_resourceHeap->Alloc();
+
+			m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandles[i].CPU());
+		}
 
 		Map(&m_mappedData);
 	}
 
 	template<typename TConstant>
-	void ConstantBuffer<TConstant>::Create(ID3D12Device* device, const std::wstring& name, DescriptorHeap& resourceHeap, const TConstant& initialData)
-	{
-		Buffer::Create(device, name, 1, (sizeof(TConstant) + 255) & ~255, nullptr);
-
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = m_bufferSize;
-
-		m_cbvHandle = resourceHeap.Alloc();
-		m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
-
-		Map(&m_mappedData);
-		SetData(initialData);
-	}
-
-	template<typename TConstant>
-	void ConstantBuffer<TConstant>::SetData(const TConstant& data)
+	void ConstantBuffer<TConstant>::SetData(const TConstant& data, const uint32_t frameIndex)
 	{
 		assert(m_mapped);
-		memcpy(m_mappedData, &data, m_bufferSize);
+		memcpy(m_mappedData + frameIndex * m_elementSize, &data, m_bufferSize);
 	}
 }

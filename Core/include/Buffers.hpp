@@ -74,30 +74,35 @@ namespace Zenyth {
 	class ConstantBuffer : protected Buffer
 	{
 	public:
-		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap);
-		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, const TConstant& initialData);
+		~ConstantBuffer();
+		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, uint32_t numElements = 1);
 
-		void SetData(const TConstant& data);
+		void SetData(const TConstant& data, uint32_t frameIndex = 0);
 
-		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle() const { return m_cbvHandle; }
+		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle(const uint32_t frameIndex = 0) const { return m_cbvHandles[frameIndex]; }
 
 
 		using Buffer::Map;
 		using Buffer::Unmap;
 
 	private:
-		DescriptorHandle m_cbvHandle {};
+		DescriptorHeap* m_resourceHeap {};
+		std::vector<DescriptorHandle> m_cbvHandles {};
 		uint8_t* m_mappedData {};
 	};
 
 	class DepthStencilBuffer : protected Buffer
 	{
 	public:
-		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, uint32_t width, uint32_t height);
+		~DepthStencilBuffer();
+
+		// no need to re-instantiate the buffer for resizing it
+		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& dsvHeap, uint32_t width, uint32_t height);
 
 		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle() const { return m_dsvHandle; }
 
 	private:
+		DescriptorHeap* m_dsvHeap {};
 		DescriptorHandle m_dsvHandle {};
 	};
 }

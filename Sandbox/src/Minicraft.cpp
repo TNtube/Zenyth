@@ -52,7 +52,7 @@ void Minicraft::OnUpdate()
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
 	const auto cameraData = m_camera.GetCameraData();
-	m_cameraConstantBuffer[m_frameIndex]->SetData(cameraData);
+	m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
 }
 
 void Minicraft::OnRender()
@@ -337,11 +337,8 @@ void Minicraft::LoadAssets()
 
 	// Create the texture.
 	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), m_commandQueue.Get(), *m_resourceHeap, m_commandList.Get());
-	for (int n = 0; n < FrameCount; n++)
-	{
-		m_cameraConstantBuffer[n]= std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>();
-		m_cameraConstantBuffer[n]->Create(m_device.Get(), std::format(L"Camera Constant Buffer #{}", n), *m_resourceHeap);
-	}
+	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>();
+	m_cameraConstantBuffer->Create(m_device.Get(), L"Camera Constant Buffer", *m_resourceHeap, FrameCount);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -407,7 +404,7 @@ void Minicraft::PopulateCommandList() const
 
 	// apply cbv
 	m_texture->Apply(m_commandList.Get(), 0);
-	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer[m_frameIndex]->GetDescriptorHandle().GPU());
+	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetDescriptorHandle(m_frameIndex).GPU());
 
 	m_world->Draw(m_commandList.Get(), ShaderPass::Opaque);
 
@@ -513,8 +510,6 @@ void Minicraft::LoadSizeDependentResources()
 	// Create frame resources.
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU());
-		m_dsvHeap->Destroy();
-		m_dsvHeap->Create(m_device.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
 
 		// Create a RTV for each frame.
 		for (UINT n = 0; n < FrameCount; n++)
@@ -523,7 +518,6 @@ void Minicraft::LoadSizeDependentResources()
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 			rtvHandle.Offset(1, m_rtvHeap->GetDescriptorSize());
 
-			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>();
 			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), *m_dsvHeap, m_width, m_height);
 		}
 	}

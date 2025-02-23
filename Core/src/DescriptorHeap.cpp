@@ -88,8 +88,14 @@ namespace Zenyth
 	void DescriptorHeap::Free(const DescriptorHandle &dHandle)
 	{
 		const int cpu_idx = static_cast<int>((dHandle.GetCpuPtr() - m_firstHandle.GetCpuPtr()) / m_descriptorSize);
-		const int gpu_idx = static_cast<int>((dHandle.GetGpuPtr() - m_firstHandle.GetGpuPtr()) / m_descriptorSize);
-		assert(cpu_idx == gpu_idx, "CPU and GPU indices do not match.");
+
+#ifndef NDEBUG
+		if (dHandle.IsShaderVisible())
+		{
+			const int gpu_idx = static_cast<int>((dHandle.GetGpuPtr() - m_firstHandle.GetGpuPtr()) / m_descriptorSize);
+			assert(cpu_idx == gpu_idx, "CPU and GPU indices do not match.");
+		}
+#endif
 
 		m_freeList.push_back(cpu_idx);
 	}

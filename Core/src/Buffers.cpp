@@ -50,8 +50,17 @@ namespace Zenyth {
 		m_mapped = false;
 	}
 
-	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, DescriptorHeap &resourceHeap, const uint32_t width, const uint32_t height)
+	DepthStencilBuffer::~DepthStencilBuffer()
 	{
+		if (m_dsvHandle.IsNull())
+			return;
+
+		m_dsvHeap->Free(m_dsvHandle);
+	}
+
+	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, DescriptorHeap &dsvHeap, const uint32_t width, const uint32_t height)
+	{
+		m_dsvHeap = &dsvHeap;
 		D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
 		depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
 		depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
@@ -72,7 +81,9 @@ namespace Zenyth {
 		depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 		depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
 
-		m_dsvHandle = resourceHeap.Alloc();
+		if (m_dsvHandle.IsNull()) {
+			m_dsvHandle = dsvHeap.Alloc();
+		}
 
 		device->CreateDepthStencilView(m_buffer.Get(), &depthStencilDesc, m_dsvHandle.CPU());
 
