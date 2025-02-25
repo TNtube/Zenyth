@@ -5,7 +5,7 @@
 
 namespace Zenyth {
 
-	void Buffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t numElements, const uint32_t elementSize, const void *initialData)
+	void GpuBuffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t numElements, const uint32_t elementSize, const void *initialData)
 	{
 		m_pDevice = device;
 		m_elementSize = elementSize;
@@ -33,18 +33,18 @@ namespace Zenyth {
 		}
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS Buffer::GetGPUVirtualAddress() const {
+	D3D12_GPU_VIRTUAL_ADDRESS GpuBuffer::GetGPUVirtualAddress() const {
 		return m_buffer->GetGPUVirtualAddress();
 	}
 
-	void Buffer::Map(UINT8** pDataBegin) {
+	void GpuBuffer::Map(UINT8** pDataBegin) {
 		assert(!m_mapped);
 		const CD3DX12_RANGE readRange(0, 0);
 		ThrowIfFailed(m_buffer->Map(0, &readRange, reinterpret_cast<void**>(pDataBegin)));
 		m_mapped = true;
 	}
 
-	void Buffer::Unmap() {
+	void GpuBuffer::Unmap() {
 		assert(m_mapped);
 		m_buffer->Unmap(0, nullptr);
 		m_mapped = false;

@@ -3,15 +3,15 @@
 #include "Core.hpp"
 
 namespace Zenyth {
-	class Buffer
+	class GpuBuffer
 	{
 	public:
-		Buffer() = default;
+		GpuBuffer() = default;
 
-		DELETE_COPY_CTOR(Buffer)
-		DEFAULT_MOVE_CTOR(Buffer)
+		DELETE_COPY_CTOR(GpuBuffer)
+		DEFAULT_MOVE_CTOR(GpuBuffer)
 
-		~Buffer() = default;
+		~GpuBuffer() = default;
 
 		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const;
@@ -33,7 +33,7 @@ namespace Zenyth {
 
 
 	template<std::unsigned_integral TIndex>
-	class IndexBuffer : public Buffer
+	class IndexBuffer : public GpuBuffer
 	{
 	public:
 		IndexBuffer() = default;
@@ -50,7 +50,7 @@ namespace Zenyth {
 		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 		void PushTriangle(TIndex v0, TIndex v1, TIndex v2);
 
-		[[nodiscard]] bool IsValid() const { return m_indices.size() > 0 && Buffer::IsValid(); }
+		[[nodiscard]] bool IsValid() const { return m_indices.size() > 0 && GpuBuffer::IsValid(); }
 		[[nodiscard]] const std::vector<TIndex>& GetIndices() const { return m_indices; }
 		[[nodiscard]] const D3D12_INDEX_BUFFER_VIEW* GetIndexBufferView() const { return &m_ibv; }
 
@@ -63,7 +63,7 @@ namespace Zenyth {
 
 
 	template<typename TVertex>
-	class VertexBuffer : public Buffer
+	class VertexBuffer : public GpuBuffer
 	{
 	public:
 		VertexBuffer() = default;
@@ -78,7 +78,7 @@ namespace Zenyth {
 		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 		uint32_t PushVertex(const TVertex& vertice);
 
-		[[nodiscard]] bool IsValid() const { return m_vertices.size() > 0 && Buffer::IsValid(); }
+		[[nodiscard]] bool IsValid() const { return m_vertices.size() > 0 && GpuBuffer::IsValid(); }
 		[[nodiscard]] const D3D12_VERTEX_BUFFER_VIEW* GetVertexBufferView() const { return &m_vbv; }
 
 		void Destroy() { m_vertices.clear(); m_buffer.Reset(); }
@@ -89,7 +89,7 @@ namespace Zenyth {
 	};
 
 	template<typename TConstant>
-	class ConstantBuffer : protected Buffer
+	class ConstantBuffer : protected GpuBuffer
 	{
 	public:
 		ConstantBuffer() = default;
@@ -106,8 +106,8 @@ namespace Zenyth {
 		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle(const uint32_t frameIndex = 0) const { return m_cbvHandles[frameIndex]; }
 
 
-		using Buffer::Map;
-		using Buffer::Unmap;
+		using GpuBuffer::Map;
+		using GpuBuffer::Unmap;
 
 	private:
 		DescriptorHeap*					m_resourceHeap {};
@@ -115,7 +115,7 @@ namespace Zenyth {
 		uint8_t*						m_mappedData {};
 	};
 
-	class DepthStencilBuffer : protected Buffer
+	class DepthStencilBuffer : protected GpuBuffer
 	{
 	public:
 		DepthStencilBuffer() = default;

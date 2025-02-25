@@ -7,7 +7,7 @@ namespace Zenyth
 	void IndexBuffer<TIndex>::Create(ID3D12Device* device, const std::wstring& name)
 	{
 		assert(m_indices.size() > 0);
-		Buffer::Create(device, name, m_indices.size(), sizeof(TIndex), m_indices.data());
+		GpuBuffer::Create(device, name, m_indices.size(), sizeof(TIndex), m_indices.data());
 
 		m_ibv.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		if constexpr (std::is_same_v<TIndex, uint16_t>)
@@ -21,7 +21,7 @@ namespace Zenyth
 	void IndexBuffer<TIndex>::Create(ID3D12Device* device, const std::wstring& name, const uint32_t numElements, const uint32_t elementSize, const void* initialData)
 	{
 		assert(numElements > 0);
-		Buffer::Create(device, name, numElements, elementSize, initialData);
+		GpuBuffer::Create(device, name, numElements, elementSize, initialData);
 
 		m_ibv.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		if constexpr (std::is_same_v<TIndex, uint16_t>)
@@ -44,7 +44,7 @@ namespace Zenyth
 	void VertexBuffer<TVertex>::Create(ID3D12Device* device, const std::wstring& name)
 	{
 		assert(m_vertices.size() > 0);
-		Buffer::Create(device, name, m_vertices.size(), sizeof(TVertex), m_vertices.data());
+		GpuBuffer::Create(device, name, m_vertices.size(), sizeof(TVertex), m_vertices.data());
 
 		m_vbv.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		m_vbv.StrideInBytes = m_elementSize;
@@ -56,7 +56,7 @@ namespace Zenyth
 	{
 		assert(numElements > 0);
 		assert(m_vertices.size() == 0); // if vertices are set, most likely a mistake
-		Buffer::Create(device, name, numElements, elementSize, initialData);
+		GpuBuffer::Create(device, name, numElements, elementSize, initialData);
 
 		m_vbv.BufferLocation = m_buffer->GetGPUVirtualAddress();
 		m_vbv.StrideInBytes = m_elementSize;
@@ -84,7 +84,7 @@ namespace Zenyth
 	void ConstantBuffer<TConstant>::Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, const uint32_t numElements)
 	{
 		m_resourceHeap = &resourceHeap;
-		Buffer::Create(device, name, numElements, (sizeof(TConstant) + 255) & ~255, nullptr);
+		GpuBuffer::Create(device, name, numElements, (sizeof(TConstant) + 255) & ~255, nullptr);
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
