@@ -77,7 +77,7 @@ namespace Zenyth
 
 	DescriptorHandle DescriptorHeap::Alloc()
 	{
-		assert(HasAvailableSpace(), "Descriptor Heap out of space.  Increase heap size.");
+		assert(HasAvailableSpace() && "Descriptor Heap out of space.  Increase heap size.");
 
 		const auto idx = m_freeList.back();
 		m_freeList.pop_back();
@@ -93,7 +93,7 @@ namespace Zenyth
 		if (dHandle.IsShaderVisible())
 		{
 			const int gpu_idx = static_cast<int>((dHandle.GetGpuPtr() - m_firstHandle.GetGpuPtr()) / m_descriptorSize);
-			assert(cpu_idx == gpu_idx, "CPU and GPU indices do not match.");
+			assert(cpu_idx == gpu_idx && "CPU and GPU indices do not match.");
 		}
 #endif
 
