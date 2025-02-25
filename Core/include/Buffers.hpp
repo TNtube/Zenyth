@@ -1,12 +1,18 @@
 #pragma once
 #include "DescriptorHeap.hpp"
+#include "Core.hpp"
 
 namespace Zenyth {
-	using Microsoft::WRL::ComPtr;
-
 	class Buffer
 	{
 	public:
+		Buffer() = default;
+
+		DELETE_COPY_CTOR(Buffer)
+		DEFAULT_MOVE_CTOR(Buffer)
+
+		~Buffer() = default;
+
 		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const;
 
@@ -17,12 +23,12 @@ namespace Zenyth {
 		[[nodiscard]] uint32_t GetElementCount() const { return m_elementCount; }
 
 	protected:
-		ComPtr<ID3D12Resource>	m_buffer {};
-		ID3D12Device*			m_pDevice {};
-		size_t					m_bufferSize {};
-		uint32_t				m_elementCount {};
-		uint32_t				m_elementSize {};
-		bool					m_mapped {};
+		Microsoft::WRL::ComPtr<ID3D12Resource>	m_buffer {};
+		ID3D12Device*							m_pDevice {};
+		size_t									m_bufferSize {};
+		uint32_t								m_elementCount {};
+		uint32_t								m_elementSize {};
+		bool									m_mapped {};
 	};
 
 
@@ -31,6 +37,13 @@ namespace Zenyth {
 	{
 	public:
 		IndexBuffer() = default;
+
+		DELETE_COPY_CTOR(IndexBuffer)
+		DEFAULT_MOVE_CTOR(IndexBuffer)
+
+		~IndexBuffer() = default;
+
+
 		explicit IndexBuffer(std::vector<TIndex> indices) : m_indices(std::move(indices)) {}
 
 		void Create(ID3D12Device *device, const std::wstring& name);
@@ -44,8 +57,8 @@ namespace Zenyth {
 		void Destroy() { m_indices.clear(); m_buffer.Reset(); }
 
 	private:
-		D3D12_INDEX_BUFFER_VIEW m_ibv {};
-		std::vector<TIndex> m_indices {};
+		D3D12_INDEX_BUFFER_VIEW		m_ibv {};
+		std::vector<TIndex>			m_indices {};
 	};
 
 
@@ -54,6 +67,11 @@ namespace Zenyth {
 	{
 	public:
 		VertexBuffer() = default;
+		DELETE_COPY_CTOR(VertexBuffer)
+		DEFAULT_MOVE_CTOR(VertexBuffer)
+
+		~VertexBuffer() = default;
+
 		explicit VertexBuffer(std::vector<TVertex> vertices) : m_vertices(std::move(vertices)) {}
 
 		void Create(ID3D12Device *device, const std::wstring& name);
@@ -66,15 +84,21 @@ namespace Zenyth {
 		void Destroy() { m_vertices.clear(); m_buffer.Reset(); }
 
 	private:
-		D3D12_VERTEX_BUFFER_VIEW m_vbv {};
-		std::vector<TVertex> m_vertices {};
+		D3D12_VERTEX_BUFFER_VIEW	m_vbv {};
+		std::vector<TVertex>		m_vertices {};
 	};
 
 	template<typename TConstant>
 	class ConstantBuffer : protected Buffer
 	{
 	public:
+		ConstantBuffer() = default;
+
+		DELETE_COPY_CTOR(ConstantBuffer)
+		DEFAULT_MOVE_CTOR(ConstantBuffer)
+
 		~ConstantBuffer();
+
 		void Create(ID3D12Device *device, const std::wstring& name, DescriptorHeap& resourceHeap, uint32_t numElements = 1);
 
 		void SetData(const TConstant& data, uint32_t frameIndex = 0);
@@ -86,14 +110,19 @@ namespace Zenyth {
 		using Buffer::Unmap;
 
 	private:
-		DescriptorHeap* m_resourceHeap {};
-		std::vector<DescriptorHandle> m_cbvHandles {};
-		uint8_t* m_mappedData {};
+		DescriptorHeap*					m_resourceHeap {};
+		std::vector<DescriptorHandle>	m_cbvHandles {};
+		uint8_t*						m_mappedData {};
 	};
 
 	class DepthStencilBuffer : protected Buffer
 	{
 	public:
+		DepthStencilBuffer() = default;
+
+		DELETE_COPY_CTOR(DepthStencilBuffer)
+		DEFAULT_MOVE_CTOR(DepthStencilBuffer)
+
 		~DepthStencilBuffer();
 
 		// no need to re-instantiate the buffer for resizing it
@@ -102,8 +131,8 @@ namespace Zenyth {
 		[[nodiscard]] const DescriptorHandle& GetDescriptorHandle() const { return m_dsvHandle; }
 
 	private:
-		DescriptorHeap* m_dsvHeap {};
-		DescriptorHandle m_dsvHandle {};
+		DescriptorHeap*		m_dsvHeap {};
+		DescriptorHandle	m_dsvHandle {};
 	};
 }
 

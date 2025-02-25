@@ -1,5 +1,21 @@
 #pragma once
 
+#define DELETE_COPY_CTOR(ClassName) \
+	ClassName(const ClassName&) = delete; \
+	ClassName& operator=(const ClassName&) = delete;
+
+#define DELETE_MOVE_CTOR(ClassName) \
+	ClassName(ClassName&&) = delete; \
+	ClassName& operator=(ClassName&&) = delete;
+
+#define DEFAULT_COPY_CTOR(ClassName) \
+	ClassName(const ClassName&) = default; \
+	ClassName& operator=(const ClassName&) = default;
+
+#define DEFAULT_MOVE_CTOR(ClassName) \
+	ClassName(ClassName&&) = default; \
+	ClassName& operator=(ClassName&&) = default;
+
 
 inline void ThrowIfFailed(const HRESULT hr, const char* msg = "")
 {

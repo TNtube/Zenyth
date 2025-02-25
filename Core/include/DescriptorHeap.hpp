@@ -1,4 +1,5 @@
 #pragma once
+#include "Core.hpp"
 
 namespace Zenyth
 {
@@ -32,6 +33,10 @@ namespace Zenyth
 	{
 	public:
 		DescriptorHeap() = default;
+
+		DELETE_COPY_CTOR(DescriptorHeap)
+		DEFAULT_MOVE_CTOR(DescriptorHeap)
+
 		~DescriptorHeap() { Destroy(); }
 
 		void Create(ID3D12Device *device, const std::wstring& debugHeapName, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t maxCount);
