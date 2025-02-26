@@ -51,7 +51,7 @@ void Minicraft::OnUpdate()
 {
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
-	const auto cameraData = m_camera.GetCameraData();
+	const auto cameraData = m_camera.GetCameraData(m_timer);
 	m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
 }
 

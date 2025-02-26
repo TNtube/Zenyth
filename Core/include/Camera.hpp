@@ -3,6 +3,8 @@
 #include <Mouse.h>
 #include <Keyboard.h>
 
+#include "StepTimer.hpp"
+
 
 namespace Zenyth
 {
@@ -12,6 +14,8 @@ namespace Zenyth
 	struct CameraData {
 		Matrix mView;
 		Matrix mProjection;
+		Vector3 mPosition;
+		float time;
 	};
 
 	class Camera {
@@ -24,7 +28,7 @@ namespace Zenyth
 
 		void SetPosition(const Vector3& pos) { m_camPos = pos; }
 
-		CameraData GetCameraData() const;
+		CameraData GetCameraData(const DX::StepTimer& timer) const;
 	private:
 		float m_fov;
 		float m_nearPlane = 0.01f;
