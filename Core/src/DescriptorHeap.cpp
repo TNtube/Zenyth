@@ -116,6 +116,9 @@ namespace Zenyth
 			dHandle.GetCpuPtr() >= m_firstHandle.GetCpuPtr() + m_heapDesc.NumDescriptors * m_descriptorSize)
 			return false;
 
+		if (!dHandle.IsShaderVisible())
+			return true;
+
 		if (dHandle.GetGpuPtr() - m_firstHandle.GetGpuPtr() !=
 			dHandle.GetCpuPtr() - m_firstHandle.GetCpuPtr())
 			return false;
