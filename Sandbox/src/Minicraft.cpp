@@ -52,7 +52,8 @@ void Minicraft::OnUpdate()
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
 	const auto cameraData = m_camera.GetCameraData(m_timer);
-	m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
+	// m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
+	memcpy(m_cameraConstantBuffer->MappedData(), &cameraData, sizeof(Zenyth::CameraData));
 }
 
 void Minicraft::OnRender()
@@ -181,8 +182,8 @@ void Minicraft::LoadPipeline()
 
 			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])), "Failed to create command allocator");
 
-			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>();
-			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), *m_dsvHeap, GetWidth(), GetHeight());
+			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
+			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), GetWidth(), GetHeight());
 		}
 	}
 
@@ -337,8 +338,10 @@ void Minicraft::LoadAssets()
 
 	// Create the texture.
 	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), m_commandQueue.Get(), *m_resourceHeap, m_commandList.Get());
-	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer<Zenyth::CameraData>>();
-	m_cameraConstantBuffer->Create(m_device.Get(), L"Camera Constant Buffer", *m_resourceHeap, FrameCount);
+
+	const auto cameraData = m_camera.GetCameraData(m_timer);
+	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+	m_cameraConstantBuffer->Create(m_device.Get(), L"Camera Constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255, &cameraData);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -393,7 +396,7 @@ void Minicraft::PopulateCommandList() const
 	m_commandList->ResourceBarrier(1, &resourceBarrier);
 
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU(), static_cast<INT>(m_frameIndex), m_rtvHeap->GetDescriptorSize());
-	const auto dsvHandle = m_depthStencilBuffers[m_frameIndex]->GetDescriptorHandle().CPU();
+	const auto dsvHandle = m_depthStencilBuffers[m_frameIndex]->GetDSV().CPU();
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
@@ -404,7 +407,7 @@ void Minicraft::PopulateCommandList() const
 
 	// apply cbv
 	m_texture->Apply(m_commandList.Get(), 0);
-	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetDescriptorHandle(m_frameIndex).GPU());
+	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetCBV().GPU());
 
 	m_world->Draw(m_commandList.Get(), ShaderPass::Opaque);
 
@@ -518,7 +521,7 @@ void Minicraft::LoadSizeDependentResources()
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 			rtvHandle.Offset(1, m_rtvHeap->GetDescriptorSize());
 
-			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), *m_dsvHeap, m_width, m_height);
+			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), m_width, m_height);
 		}
 	}
 }

@@ -25,8 +25,10 @@ namespace Zenyth
 
 		void UpdateAspectRatio(float aspectRatio);
 		void Update(float dt, const Keyboard::State &kb, Mouse* mouse);
+		void UpdateView();
 
 		void SetPosition(const Vector3& pos) { m_camPos = pos; }
+		void SetRotation(const Quaternion& rot) { m_camRot = rot; }
 
 		CameraData GetCameraData(const DX::StepTimer& timer) const;
 	private:

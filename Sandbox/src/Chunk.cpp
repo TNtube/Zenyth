@@ -9,21 +9,27 @@ Vector4 ToVec4(Vector3 v)
 	return {v.x, v.y, v.z, 1.0f};
 }
 
-void Chunk::AddFace(Vector3 position, Vector3 up, Vector3 right, Vector4 normal, Vector2 textCoord, ShaderPass shaderPass)
+void Chunk::AddFace(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Vector3 position, Vector3 up, Vector3 right, Vector4 normal, Vector2 textCoord, ShaderPass pass)
 {
 	float u = textCoord.x / 16.0f;
 	float v = textCoord.y / 16.0f;
 	constexpr float one = 1.0f / 16.0f;
-	const int pass = static_cast<int>(shaderPass);
 
-	auto a = m_vertexBuffer[pass].PushVertex({ToVec4(position), normal, {u, v + one}});
-	auto b = m_vertexBuffer[pass].PushVertex({ToVec4(position + up), normal, {u, v}});
-	auto c = m_vertexBuffer[pass].PushVertex({ToVec4(position+ right), normal, { u + one, v + one}});
-	auto d = m_vertexBuffer[pass].PushVertex({ToVec4(position+ up + right), normal, {u + one, v}});
+	const auto idx = static_cast<uint32_t>(vertices.size());
 
-	m_indexBuffer[pass].PushTriangle(a, b, c);
-	m_indexBuffer[pass].PushTriangle(c, b, d);
-	m_hasBlocks[pass] = true;
+	vertices.reserve(vertices.size() + 4);
+	vertices.push_back({ToVec4(position), normal, {u, v + one}});
+	vertices.push_back({ToVec4(position + up), normal, {u, v}});
+	vertices.push_back({ToVec4(position + right), normal, { u + one, v + one}});
+	vertices.push_back({ToVec4(position + up + right), normal, {u + one, v}});
+
+	indices.reserve(indices.size() + 6);
+	indices.insert(indices.end(), {
+		idx + 0, idx + 1, idx + 2,
+		idx + 2, idx + 1, idx + 3
+	});
+
+	m_hasBlocks[static_cast<int>(pass)] = true;
 }
 
 bool Chunk::ShouldRenderFace(Vector3 position, Vector3 direction, const BlockData& data) const
@@ -83,8 +89,8 @@ void Chunk::Create(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 
 	std::fill_n(m_hasBlocks, static_cast<int>(ShaderPass::Size), false);
 
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
+	std::vector<Vertex> vertices[static_cast<int>(ShaderPass::Size)];
+	std::vector<uint32_t> indices[static_cast<int>(ShaderPass::Size)];
 
 	for (int i = 0; i < m_blocks.size(); i++)
 	{
@@ -112,18 +118,20 @@ void Chunk::Create(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 		auto top =		Vector3{-0.5f,  0.5f,  0.5f};
 		auto bottom =	Vector3{-0.5f, -0.5f, -0.5f};
 
+		const int pass = static_cast<int>(data.pass);
+
 		if (ShouldRenderFace(blockPosition, Vector3::Backward, data))
-			AddFace(blockPosition + back, Vector3::Up, Vector3::Right, {0.0f, 0.0f, 1.0f, 1.0f}, sideTexCoord, data.pass);
+			AddFace(vertices[pass], indices[pass], blockPosition + back, Vector3::Up, Vector3::Right, {0.0f, 0.0f, 1.0f, 1.0f}, sideTexCoord, data.pass);
 		if (ShouldRenderFace(blockPosition, Vector3::Right, data))
-			AddFace(blockPosition + right, Vector3::Up, Vector3::Forward, {1.0f, 0.0f, 0.0f, 1.0f}, sideTexCoord, data.pass);
+			AddFace(vertices[pass], indices[pass], blockPosition + right, Vector3::Up, Vector3::Forward, {1.0f, 0.0f, 0.0f, 1.0f}, sideTexCoord, data.pass);
 		if (ShouldRenderFace(blockPosition, Vector3::Forward, data))
-			AddFace(blockPosition + front, Vector3::Up, Vector3::Left, {0.0f, 0.0f, -1.0f, 1.0f}, sideTexCoord, data.pass);
+			AddFace(vertices[pass], indices[pass], blockPosition + front, Vector3::Up, Vector3::Left, {0.0f, 0.0f, -1.0f, 1.0f}, sideTexCoord, data.pass);
 		if (ShouldRenderFace(blockPosition, Vector3::Left, data))
-			AddFace(blockPosition + left, Vector3::Up, Vector3::Backward, {-1.0f, 0.0f, 0.0f, 1.0f}, sideTexCoord, data.pass);
+			AddFace(vertices[pass], indices[pass], blockPosition + left, Vector3::Up, Vector3::Backward, {-1.0f, 0.0f, 0.0f, 1.0f}, sideTexCoord, data.pass);
 		if (ShouldRenderFace(blockPosition, Vector3::Up, data))
-			AddFace(blockPosition + top, Vector3::Forward, Vector3::Right, {0.0f, 1.0f, 0.0f, 1.0f}, topTexCoord, data.pass);
+			AddFace(vertices[pass], indices[pass], blockPosition + top, Vector3::Forward, Vector3::Right, {0.0f, 1.0f, 0.0f, 1.0f}, topTexCoord, data.pass);
 		if (ShouldRenderFace(blockPosition, Vector3::Down, data))
-			AddFace(blockPosition + bottom, Vector3::Backward, Vector3::Right, {0.0f, -1.0f, 0.0f, 1.0f}, bottomTexCoord, data.pass);
+			AddFace(vertices[pass], indices[pass], blockPosition + bottom, Vector3::Backward, Vector3::Right, {0.0f, -1.0f, 0.0f, 1.0f}, bottomTexCoord, data.pass);
 
 		// AddFace({-0.5f, -0.5f, 0.5f}, Vector3::Up, Vector3::Right, sideTexCoord);			/ front
 		// AddFace({0.5f,  -0.5f, 0.5f}, Vector3::Up, Vector3::Forward, sideTexCoord);			// back
@@ -139,15 +147,16 @@ void Chunk::Create(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 	{
 		if (!m_hasBlocks[i])
 			continue;
-		m_vertexBuffer[i].Create(device, std::format(L"Vertex Buffer #{}", i));
-		m_indexBuffer[i].Create(device, std::format(L"Index buffer #{}", i));
+		m_vertexBuffer[i].Create(device, std::format(L"Vertex Buffer #{}", i), vertices[i].size(), sizeof(Vertex), vertices[i].data());
+		m_indexBuffer[i].Create(device, std::format(L"Index buffer #{}", i), indices[i].size(), sizeof(uint32_t), indices[i].data());
 		passes++;
 	}
 
 	if (passes > 0)
 	{
-		m_constantBuffer.Create(device, L"Model Constant Buffer", resourceHeap);
-		m_constantBuffer.SetData({m_transform.GetTransformMatrix().Transpose()});
+		m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer>(resourceHeap);
+		const ModelData modelData = {m_transform.GetTransformMatrix().Transpose()};
+		m_constantBuffer->Create(device, L"Model Constant Buffer", 1, (sizeof(ModelData) + 255) & ~255, &modelData);
 	}
 }
 
@@ -156,10 +165,10 @@ void Chunk::Draw(ID3D12GraphicsCommandList* commandList, ShaderPass shaderPass) 
 	if (!m_hasBlocks[pass])
 		return;
 
-	commandList->IASetVertexBuffers(0, 1, m_vertexBuffer[pass].GetVertexBufferView());
-	commandList->IASetIndexBuffer(m_indexBuffer[pass].GetIndexBufferView());
+	commandList->IASetVertexBuffers(0, 1, m_vertexBuffer[pass].GetVBV());
+	commandList->IASetIndexBuffer(m_indexBuffer[pass].GetIBV());
 
-	commandList->SetGraphicsRootDescriptorTable(1, m_constantBuffer.GetDescriptorHandle().GPU());
+	commandList->SetGraphicsRootDescriptorTable(1, m_constantBuffer->GetCBV().GPU());
 
 	commandList->DrawIndexedInstanced(m_indexBuffer[pass].GetElementCount(), 1, 0, 0, 0);
 }

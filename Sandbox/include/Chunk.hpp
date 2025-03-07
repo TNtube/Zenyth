@@ -31,7 +31,9 @@ public:
 
 private:
 	friend class World;
-	void AddFace(DirectX::SimpleMath::Vector3 position, DirectX::SimpleMath::Vector3 up, DirectX::SimpleMath::Vector3 right, DirectX::SimpleMath::Vector4 normal, DirectX::SimpleMath::Vector2 textCoord, ShaderPass shaderPass);
+	void AddFace(std::vector<Vertex> &vertices, std::vector<uint32_t> &indices, DirectX::SimpleMath::Vector3 position, DirectX::
+	             SimpleMath::Vector3 up, DirectX::SimpleMath::Vector3 right, DirectX::SimpleMath::Vector4 normal, DirectX::SimpleMath::
+	             Vector2 textCoord, ShaderPass pass);
 
 	[[nodiscard]] bool ShouldRenderFace(DirectX::SimpleMath::Vector3 position, DirectX::SimpleMath::Vector3 direction, const BlockData& data) const;
 
@@ -40,9 +42,9 @@ private:
 
 	bool m_hasBlocks[static_cast<int>(ShaderPass::Size)] = {false};
 
-	Zenyth::VertexBuffer<Vertex> m_vertexBuffer[static_cast<int>(ShaderPass::Size)];
-	Zenyth::IndexBuffer<uint32_t> m_indexBuffer[static_cast<int>(ShaderPass::Size)];
-	Zenyth::ConstantBuffer<ModelData> m_constantBuffer; // shared between all passes
+	Zenyth::VertexBuffer m_vertexBuffer[static_cast<int>(ShaderPass::Size)];
+	Zenyth::IndexBuffer m_indexBuffer[static_cast<int>(ShaderPass::Size)];
+	std::unique_ptr<Zenyth::ConstantBuffer> m_constantBuffer; // shared between all passes
 
 	DirectX::SimpleMath::Vector3 m_chunkPosition;
 

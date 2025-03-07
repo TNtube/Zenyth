@@ -60,7 +60,11 @@ namespace Zenyth
 		} else if (mstate.rightButton || mstate.leftButton) {
 			mouse->SetMode(Mouse::MODE_RELATIVE);
 		}
+		UpdateView();
+	}
 
+	void Camera::UpdateView()
+	{
 		const Vector3 forward = Vector3::Transform(Vector3::Forward, m_camRot);
 		const Vector3 up = Vector3::Transform(Vector3::Up, m_camRot);
 		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, up);

@@ -4,15 +4,21 @@
 #include "Buffers.hpp"
 
 namespace Zenyth {
+	GpuBuffer::~GpuBuffer()
+	{
+		Destroy();
+	}
 
 	void GpuBuffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t numElements, const uint32_t elementSize, const void *initialData)
 	{
+		Destroy();
+
 		m_pDevice = device;
 		m_elementSize = elementSize;
 		m_elementCount = numElements;
 		m_bufferSize = elementSize * numElements;
 
-		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD); // todo: change to default
 		const auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize);
 		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
@@ -30,11 +36,10 @@ namespace Zenyth {
 			Map(&pDataBegin);
 			memcpy(pDataBegin, initialData, m_bufferSize);
 			Unmap();
+			// CommandContext::InitializeBuffer(m_buffer.Get(), initialData, m_bufferSize);
 		}
-	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GpuBuffer::GetGPUVirtualAddress() const {
-		return m_buffer->GetGPUVirtualAddress();
+		CreateViews();
 	}
 
 	void GpuBuffer::Map(UINT8** pDataBegin) {
@@ -50,6 +55,47 @@ namespace Zenyth {
 		m_mapped = false;
 	}
 
+
+	void VertexBuffer::CreateViews()
+	{
+		m_vbv.BufferLocation = m_buffer->GetGPUVirtualAddress();
+		m_vbv.StrideInBytes = m_elementSize;
+		m_vbv.SizeInBytes = m_bufferSize;
+	}
+
+
+	void IndexBuffer::CreateViews()
+	{
+		m_ibv.BufferLocation = m_buffer->GetGPUVirtualAddress();
+		m_ibv.Format = DXGI_FORMAT_R32_UINT;
+		m_ibv.SizeInBytes = m_bufferSize;
+	}
+
+
+	ConstantBuffer::~ConstantBuffer()
+	{
+		if (m_resourceHeap)
+		{
+			m_resourceHeap->Free(m_cbvHandle);
+		}
+	}
+
+	void ConstantBuffer::CreateViews()
+	{
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_buffer->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = m_bufferSize;
+
+		if (m_cbvHandle.IsNull())
+			m_cbvHandle = m_resourceHeap->Alloc();
+
+		m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
+
+		Map(&m_mappedData);
+	}
+
+
 	DepthStencilBuffer::~DepthStencilBuffer()
 	{
 		if (m_dsvHandle.IsNull())
@@ -58,9 +104,10 @@ namespace Zenyth {
 		m_dsvHeap->Free(m_dsvHandle);
 	}
 
-	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, DescriptorHeap &dsvHeap, const uint32_t width, const uint32_t height)
+	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t width, const uint32_t height)
 	{
-		m_dsvHeap = &dsvHeap;
+		m_pDevice = device;
+
 		D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
 		depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
 		depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
@@ -76,17 +123,45 @@ namespace Zenyth {
 			&depthOptimizedClearValue,
 			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())));
 
+		SUCCEEDED(m_buffer->SetName(name.c_str()));
+
+		CreateViews();
+	}
+
+	void DepthStencilBuffer::CreateViews()
+	{
+
 		D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
 		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
 		depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 		depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
 
 		if (m_dsvHandle.IsNull()) {
-			m_dsvHandle = dsvHeap.Alloc();
+			m_dsvHandle = m_dsvHeap->Alloc();
 		}
 
-		device->CreateDepthStencilView(m_buffer.Get(), &depthStencilDesc, m_dsvHandle.CPU());
+		m_pDevice->CreateDepthStencilView(m_buffer.Get(), &depthStencilDesc, m_dsvHandle.CPU());
+	}
 
-		SUCCEEDED(m_buffer->SetName(name.c_str()));
+
+	StructuredBuffer::~StructuredBuffer()
+	{
+		if (!m_srvHandle.IsNull())
+			m_resourceHeap->Free(m_srvHandle);
+	}
+
+	void StructuredBuffer::CreateViews()
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Buffer.FirstElement = 0;
+		srvDesc.Buffer.NumElements = m_elementCount;
+		srvDesc.Buffer.StructureByteStride = m_elementSize;
+		srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+		m_srvHandle = m_resourceHeap->Alloc();
+		m_pDevice->CreateShaderResourceView(m_buffer.Get(), &srvDesc, m_srvHandle.CPU());
 	}
 }
