@@ -1,6 +1,6 @@
 #include "pch.hpp"
 
-#include "Texture.hpp"
+#include "Renderer/Texture.hpp"
 #include "Core.hpp"
 #include "DDSTextureLoader.h"
 #include "DirectXHelpers.h"

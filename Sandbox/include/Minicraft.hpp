@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Application.hpp"
-#include "Buffers.hpp"
-#include "Texture.hpp"
+#include "Renderer/Buffers.hpp"
+#include "Renderer/Texture.hpp"
 #include "Camera.hpp"
 #include "World.hpp"
-#include "DescriptorHeap.hpp"
+#include "Renderer/DescriptorHeap.hpp"
 #include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
 

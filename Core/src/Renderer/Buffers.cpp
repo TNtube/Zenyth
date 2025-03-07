@@ -1,7 +1,7 @@
 #include "pch.hpp"
 
 #include "Core.hpp"
-#include "Buffers.hpp"
+#include "Renderer/Buffers.hpp"
 
 namespace Zenyth {
 	GpuBuffer::~GpuBuffer()
