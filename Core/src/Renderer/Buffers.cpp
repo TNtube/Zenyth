@@ -3,6 +3,7 @@
 #include "Core.hpp"
 #include "Renderer/Buffers.hpp"
 
+#include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth {
@@ -20,41 +21,55 @@ namespace Zenyth {
 		m_elementCount = numElements;
 		m_bufferSize = elementSize * numElements;
 
-		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD); // todo: change to default
+		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		const auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize);
 		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&resDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
+			m_resourceState,
 			nullptr,
 			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf()))); // ensure buffer suppression
 
 		SUCCEEDED(m_buffer->SetName(name.c_str()));
 
-		if (initialData != nullptr) {
-			UINT8* pDataBegin;
-
-			Map(&pDataBegin);
-			memcpy(pDataBegin, initialData, m_bufferSize);
-			Unmap();
-			// CommandContext::InitializeBuffer(m_buffer.Get(), initialData, m_bufferSize);
-		}
+		if (initialData != nullptr)
+			CommandBatch::InitializeBuffer(*this, initialData, m_bufferSize);
 
 		CreateViews();
 	}
 
-	void GpuBuffer::Map(UINT8** pDataBegin) {
-		assert(!m_mapped);
-		const CD3DX12_RANGE readRange(0, 0);
-		ThrowIfFailed(m_buffer->Map(0, &readRange, reinterpret_cast<void**>(pDataBegin)));
-		m_mapped = true;
+
+	void UploadBuffer::Create(const std::wstring &name, const size_t size)
+	{
+		Destroy();
+
+		m_bufferSize = size;
+
+		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		const auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize);
+
+		ThrowIfFailed(Renderer::pDevice->CreateCommittedResource(
+			&heapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&resDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())));
+
+		SUCCEEDED(m_buffer->SetName(name.c_str()));
 	}
 
-	void GpuBuffer::Unmap() {
-		assert(m_mapped);
+	void* UploadBuffer::Map()
+	{
+		const CD3DX12_RANGE readRange(0, 0);
+		SUCCEEDED(m_buffer->Map(0, &readRange, &m_memory));
+		return m_memory;
+	}
+
+	void UploadBuffer::Unmap() const
+	{
 		m_buffer->Unmap(0, nullptr);
-		m_mapped = false;
 	}
 
 
@@ -72,6 +87,7 @@ namespace Zenyth {
 
 		m_elementCount = width * height;
 		m_elementSize = sizeof(uint32_t) * 4;
+		m_bufferSize = m_elementCount * m_elementSize;
 
 		D3D12_CLEAR_VALUE clearValue = {};
 		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -160,8 +176,6 @@ namespace Zenyth {
 			m_cbvHandle = m_resourceHeap->Alloc();
 
 		m_pDevice->CreateConstantBufferView(&cbvDesc, m_cbvHandle.CPU());
-
-		Map(&m_mappedData);
 	}
 
 

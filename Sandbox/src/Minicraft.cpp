@@ -55,7 +55,7 @@ void Minicraft::OnUpdate()
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
 	const auto cameraData = m_camera.GetCameraData(m_timer);
 	// m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
-	memcpy(m_cameraConstantBuffer->MappedData(), &cameraData, sizeof(Zenyth::CameraData));
+	memcpy(m_cameraCpuBuffer->GetMappedData() + m_frameIndex * sizeof(Zenyth::CameraData), &cameraData, sizeof(Zenyth::CameraData));
 }
 
 void Minicraft::OnRender()
@@ -280,28 +280,18 @@ void Minicraft::LoadAssets()
 	m_world->Generate(Zenyth::Renderer::pDevice.Get(), *m_resourceHeap);
 
 	const auto cameraData = m_camera.GetCameraData(m_timer);
+	m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
+	m_cameraCpuBuffer->Create(L"Camera Upload Buffer", 3 * sizeof(Zenyth::CameraData));
+	m_cameraCpuBuffer->Map();
 	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
-	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255, &cameraData);
+	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255);
 
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
-	auto& graphicsQueue = commandManager.GetGraphicsQueue();
-
-	ID3D12CommandAllocator* allocator = nullptr;
-	ID3D12GraphicsCommandList* commandList = nullptr;
-	commandManager.GetNewCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, &commandList, &allocator);
 
 	// Create the texture.
-	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), Zenyth::Renderer::pDevice.Get(), graphicsQueue.GetCommandQueue(), *m_resourceHeap, commandList);
+	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), *m_resourceHeap);
 
-	const auto fence = graphicsQueue.ExecuteCommandList(commandList);
-
-	commandList->Release();
-
-	graphicsQueue.FreeAllocator(fence, allocator);
 	commandManager.IdleGPU();
-
-	m_fenceValues[m_frameIndex] = fence + 1;
-
 }
 
 void Minicraft::PopulateCommandList()
@@ -332,6 +322,9 @@ void Minicraft::PopulateCommandList()
 	commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, 0, *m_cameraCpuBuffer, m_frameIndex * sizeof(Zenyth::CameraData), sizeof(Zenyth::CameraData));
+	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
+
 	// apply cbv
 	m_texture->Apply(commandList, 0);
 	commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetCBV().GPU());
@@ -351,7 +344,6 @@ void Minicraft::PopulateCommandList()
 
 void Minicraft::MoveToNextFrame()
 {
-	// Schedule a Signal command in the queue.
 	auto& graphicsQueue = Zenyth::Renderer::pCommandManager->GetGraphicsQueue();
 
 	// Update the frame index.

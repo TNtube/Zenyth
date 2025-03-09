@@ -1,33 +1,28 @@
 #pragma once
+#include "Buffers.hpp"
 #include "DescriptorHeap.hpp"
 
 namespace Zenyth
 {
 	using Microsoft::WRL::ComPtr;
 
-	class Texture
+	class Texture : public GpuBuffer
 	{
 	public:
-		explicit Texture(ID3D12Device* device, DescriptorHeap& resourceHeap);
+		Texture(ID3D12Device *device, DescriptorHeap &resourceHeap);
 
-		~Texture() = default;
-
-		Texture(const Texture&) = delete;
-		Texture& operator=(const Texture&) = delete;
-
-		Texture(Texture&&) = default;
-		Texture& operator=(Texture&&) = default;
+		DELETE_COPY_CTOR(Texture)
+		DEFAULT_MOVE_CTOR(Texture)
 
 		const DescriptorHandle& GetDescriptorHandle() const { return m_descriptorHandle; }
 
-		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, ID3D12Device *device, ID3D12CommandQueue *commandQueue, DescriptorHeap &resourceHeap, ID3D12GraphicsCommandList
-		                                                    *commandList);
-		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
+		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, DescriptorHeap &resourceHeap);
 
+		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
 	private:
-		ID3D12Device* m_pDevice;
+		void CreateViews() override;
+		DescriptorHeap* m_resourceHeap;
 		DescriptorHandle m_descriptorHandle;
-		ComPtr<ID3D12Resource> m_texture;
 	};
 
 

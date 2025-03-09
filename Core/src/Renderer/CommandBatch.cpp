@@ -22,7 +22,7 @@ namespace Zenyth {
 		return guard;
 	}
 
-	uint64_t CommandBatch::End()
+	uint64_t CommandBatch::End(bool wait)
 	{
 		CommandQueue& queue = Renderer::pCommandManager->GetQueue(m_listType);
 
@@ -33,7 +33,40 @@ namespace Zenyth {
 		m_commandList.Reset();
 		m_commandList = nullptr;
 
+		if (wait)
+			queue.WaitForFence(fence);
+
 		return fence;
+	}
+
+	void CommandBatch::InitializeBuffer(GpuBuffer &buffer, const void *data, size_t size, size_t offset)
+	{
+		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+		UploadBuffer uploadBuffer;
+		uploadBuffer.Create(L"UploadBuffer", size);
+		void* mappedData = uploadBuffer.Map();
+		memcpy(mappedData, data, size);
+
+		batch.TransitionResource(buffer, D3D12_RESOURCE_STATE_COPY_DEST, true);
+		batch.CopyBufferRegion(buffer, offset, uploadBuffer, 0, size);
+		batch.TransitionResource(buffer, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+		batch.End(true);
+	}
+
+	void CommandBatch::InitializeTexture(Texture& texture, const size_t subresourceCount, const D3D12_SUBRESOURCE_DATA* subData)
+	{
+		const auto uploadBufferSize = GetRequiredIntermediateSize(texture.Get(), 0, subresourceCount);
+
+		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+		UploadBuffer uploadBuffer;
+		uploadBuffer.Create(L"UploadBuffer", uploadBufferSize);
+		UpdateSubresources(batch.m_commandList.Get(), texture.Get(), uploadBuffer.Get(), 0, 0, subresourceCount, subData);
+		batch.TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+		batch.End(true);
 	}
 
 	void CommandBatch::TransitionResource(GpuBuffer& resource, const D3D12_RESOURCE_STATES after, const bool sendBarrier)

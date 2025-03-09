@@ -2,6 +2,7 @@
 
 #include "Buffers.hpp"
 #include "Core.hpp"
+#include "Texture.hpp"
 
 namespace Zenyth {
 
@@ -14,7 +15,10 @@ namespace Zenyth {
 		~CommandBatch();
 
 		static CommandBatch Begin(D3D12_COMMAND_LIST_TYPE type);
-		uint64_t End();
+		uint64_t End(bool wait = true);
+
+		static void InitializeBuffer(GpuBuffer& buffer, const void* data, size_t size, size_t offset = 0);
+		static void InitializeTexture(Texture &texture, size_t subresourceCount, const D3D12_SUBRESOURCE_DATA *subData);
 
 		void TransitionResource(GpuBuffer &resource, D3D12_RESOURCE_STATES after, bool sendBarrier = false);
 

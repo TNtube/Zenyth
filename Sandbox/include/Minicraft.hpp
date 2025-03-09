@@ -52,6 +52,7 @@ private:
 	std::unique_ptr<Zenyth::ImGuiLayer> m_imguiLayer {};
 
 	std::unique_ptr<Zenyth::Texture> m_texture {};
+	std::unique_ptr<Zenyth::UploadBuffer> m_cameraCpuBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_cameraConstantBuffer {};
 
 	std::unique_ptr<World> m_world {};

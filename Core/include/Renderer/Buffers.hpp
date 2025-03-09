@@ -20,9 +20,6 @@ namespace Zenyth {
 		ID3D12Resource* Get() const { return m_buffer.Get(); }
 		ID3D12Resource** GetAddressOf() { return m_buffer.GetAddressOf(); }
 
-		void Map(UINT8** pDataBegin);
-		void Unmap();
-
 		[[nodiscard]] virtual bool IsValid() const { return m_buffer != nullptr; }
 		[[nodiscard]] uint32_t GetElementCount() const { return m_elementCount; }
 
@@ -36,6 +33,26 @@ namespace Zenyth {
 		uint32_t                               m_elementSize {};
 		D3D12_RESOURCE_STATES                  m_resourceState {D3D12_RESOURCE_STATE_COMMON};
 		bool                                   m_mapped {};
+	};
+
+	class UploadBuffer final : public GpuBuffer
+	{
+	public:
+		UploadBuffer() = default;
+
+		DELETE_COPY_CTOR(UploadBuffer)
+		DEFAULT_MOVE_CTOR(UploadBuffer)
+
+		void Create(const std::wstring& name, size_t size);
+
+		void *Map();
+		void Unmap() const;
+
+		[[nodiscard]] uint8_t* GetMappedData() const { return static_cast<uint8_t *>(m_memory); }
+
+	private:
+		void CreateViews() override {}
+		void* m_memory {};
 	};
 
 	class ColorBuffer final : public GpuBuffer
@@ -108,14 +125,12 @@ namespace Zenyth {
 		~ConstantBuffer() override;
 
 		[[nodiscard]] const DescriptorHandle& GetCBV() const { return m_cbvHandle; }
-		[[nodiscard]] uint8_t* MappedData() const { return m_mappedData; }
 
 	private:
 		void CreateViews() override;
 
 		DescriptorHeap*  m_resourceHeap {};
 		DescriptorHandle m_cbvHandle    {};
-		uint8_t*         m_mappedData   {};
 	};
 
 	class DepthStencilBuffer final : public GpuBuffer

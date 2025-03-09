@@ -4,15 +4,17 @@
 #include "Core.hpp"
 #include "DDSTextureLoader.h"
 #include "DirectXHelpers.h"
-#include "ResourceUploadBatch.h"
+#include "Renderer/CommandBatch.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace Zenyth
 {
 
 	Texture::Texture(ID3D12Device* device, DescriptorHeap& resourceHeap)
-		:	m_pDevice(device), m_descriptorHandle(resourceHeap.Alloc())
+		:	m_resourceHeap(&resourceHeap)
 	{
-
+		m_pDevice = device;
+		m_resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
 	}
 
 	void Texture::Apply(ID3D12GraphicsCommandList *commandList, const uint32_t tableIndex) const
@@ -20,26 +22,35 @@ namespace Zenyth
 		commandList->SetGraphicsRootDescriptorTable(tableIndex, m_descriptorHandle.GPU());
 	}
 
-	std::unique_ptr<Texture> Texture::LoadTextureFromFile(const wchar_t *filename, ID3D12Device* device, ID3D12CommandQueue* commandQueue, DescriptorHeap& resourceHeap, ID3D12GraphicsCommandList* commandList)
+	void Texture::CreateViews()
 	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = m_buffer->GetDesc().Format;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture2D.MipLevels = m_buffer->GetDesc().MipLevels;
+
+		if (m_descriptorHandle.IsNull())
+			m_descriptorHandle = m_resourceHeap->Alloc();
+
+		m_pDevice->CreateShaderResourceView(m_buffer.Get(), &srvDesc, m_descriptorHandle.CPU());
+	}
+
+	std::unique_ptr<Texture> Texture::LoadTextureFromFile(const wchar_t *filename, DescriptorHeap& resourceHeap)
+	{
+		auto* device = Renderer::pDevice.Get();
 		auto output = std::make_unique<Texture>(device, resourceHeap);
 
-		DirectX::ResourceUploadBatch resourceUpload(device);
-
-		resourceUpload.Begin();
+		std::unique_ptr<uint8_t[]> ddsData;
+		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 
 		ThrowIfFailed(
-			CreateDDSTextureFromFile(device, resourceUpload, filename,
-			output->m_texture.ReleaseAndGetAddressOf()));
+			DirectX::LoadDDSTextureFromFile(device, filename, output->m_buffer.ReleaseAndGetAddressOf(),
+				ddsData, subresources));
 
-		DirectX::CreateShaderResourceView(device, output->m_texture.Get(), output->m_descriptorHandle.CPU());
+		CommandBatch::InitializeTexture(*output, static_cast<uint32_t>(subresources.size()), subresources.data());
 
-		auto uploadResourcesFinished = resourceUpload.End(commandQueue);
-
-		uploadResourcesFinished.wait();
-
-		const auto msg = std::format(L"Texture buffer: {}", std::wstring(filename));
-		SUCCEEDED(output->m_texture->SetName(msg.c_str()));
+		output->CreateViews();
 
 		return output;
 	}
