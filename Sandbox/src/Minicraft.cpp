@@ -10,6 +10,7 @@
 #include "Win32Application.hpp"
 
 #include "imgui.h"
+#include "Renderer/Renderer.hpp"
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -62,16 +63,12 @@ void Minicraft::OnRender()
 	if (m_timer.GetFrameCount() == 0)
 		return;
 
-	m_imguiLayer->Begin();
+	// m_imguiLayer->Begin();
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
 
-	// Execute the command list.
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	m_imguiLayer->End();
+	// m_imguiLayer->End();
 
 	// Present the frame.
 	ThrowIfFailed(m_swapChain->Present(0, 0));
@@ -81,58 +78,15 @@ void Minicraft::OnRender()
 
 void Minicraft::OnDestroy()
 {
-	// Ensure that the GPU is no longer referencing resources that are about to be
-	// cleaned up by the destructor.
-	WaitForGpu();
-
-	CloseHandle(m_fenceEvent);
+	Zenyth::Renderer::Shutdown();
 }
 
 void Minicraft::LoadPipeline()
 {
-	UINT dxgiFactoryFlags = 0;
-
-#if defined(_DEBUG)
-	{
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&m_debug))))
-		{
-			m_debug->EnableDebugLayer();
-		}
-
-		// Enable additional debug layers.
-		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-	}
-#endif
+	Zenyth::Renderer::Initialize(m_useWarpDevice);
 
 	ComPtr<IDXGIFactory4> factory;
-
-	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)), "Failed to create DXGIFactory");
-
-	if (m_useWarpDevice)
-	{
-		ComPtr<IDXGIAdapter> wrapAdapter;
-		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&wrapAdapter)), "Failed to create warp adapter");
-
-		ThrowIfFailed(D3D12CreateDevice(wrapAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)), "Failed to create device");
- 	}
-	else
-	{
-		ComPtr<IDXGIAdapter1> hardwareAdapter;
-		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
-
-		ThrowIfFailed(D3D12CreateDevice(
-			hardwareAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&m_device)
-		));
-	}
-
-	// Describe and create the command queue.
-	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-	ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)), "Failed to create command queue");
+	ThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&factory)), "Failed to create DXGIFactory");
 
 	// Describe and create the swap chain.
 
@@ -148,7 +102,7 @@ void Minicraft::LoadPipeline()
 	ComPtr<IDXGISwapChain1> swapChain;
 
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		m_commandQueue.Get(),// Swap chain needs the queue so that it can force a flush on it.
+		Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue(),// Swap chain needs the queue so that it can force a flush on it.
 		Zenyth::Win32Application::GetHwnd(),
 		&swapChainDesc,
 		nullptr, nullptr,
@@ -166,9 +120,9 @@ void Minicraft::LoadPipeline()
 		m_rtvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_dsvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_resourceHeap = std::make_unique<Zenyth::DescriptorHeap>();
-		m_rtvHeap->Create(m_device.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
-		m_dsvHeap->Create(m_device.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
-		m_resourceHeap->Create(m_device.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048);
+		m_rtvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
+		m_dsvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
+		m_resourceHeap->Create(Zenyth::Renderer::pDevice.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048);
 	}
 
 	// Create frame resources.
@@ -178,18 +132,16 @@ void Minicraft::LoadPipeline()
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])), "Failed to get buffer");
 			auto rtvHandle = m_rtvHeap->Alloc();
-			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle.CPU());
-
-			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])), "Failed to create command allocator");
+			Zenyth::Renderer::pDevice->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle.CPU());
 
 			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
-			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), GetWidth(), GetHeight());
+			m_depthStencilBuffers[n]->Create(Zenyth::Renderer::pDevice.Get(), std::format(L"DepthStencilBuffer #{}", n), GetWidth(), GetHeight());
 		}
 	}
 
 	// load imgui
 	{
-		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(m_device.Get(), m_commandQueue.Get());
+		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(Zenyth::Renderer::pDevice.Get(), Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue());
 	}
 
 }
@@ -202,7 +154,7 @@ void Minicraft::LoadAssets()
 		// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-		if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+		if (FAILED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 		{
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
@@ -240,7 +192,7 @@ void Minicraft::LoadAssets()
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		ThrowIfFailed(Zenyth::Renderer::pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
@@ -299,7 +251,7 @@ void Minicraft::LoadAssets()
 		CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
 
 		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
-		m_depthBoundsTestSupported = SUCCEEDED(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
+		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
 
 		depthStencilDesc.DepthBoundsTestEnable = m_depthBoundsTestSupported;
 
@@ -318,142 +270,102 @@ void Minicraft::LoadAssets()
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
-		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		ThrowIfFailed(Zenyth::Renderer::pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
-
-	// Create the command list.
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
 	// Create the chunk
-	{
-
-		m_world->Generate(m_device.Get(), *m_resourceHeap);
-	}
-
-	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
-	// the command list that references it has finished executing on the GPU.
-	// We will flush the GPU at the end of this method to ensure the resource is not
-	// prematurely destroyed.
-	ComPtr<ID3D12Resource> textureUploadHeap;
-
-	// Create the texture.
-	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), m_device.Get(), m_commandQueue.Get(), *m_resourceHeap, m_commandList.Get());
+	m_world->Generate(Zenyth::Renderer::pDevice.Get(), *m_resourceHeap);
 
 	const auto cameraData = m_camera.GetCameraData(m_timer);
 	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
-	m_cameraConstantBuffer->Create(m_device.Get(), L"Camera Constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255, &cameraData);
+	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255, &cameraData);
 
-	// Close the command list and execute it to begin the initial GPU setup.
-	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	auto& commandManager = *Zenyth::Renderer::pCommandManager;
+	auto& graphicsQueue = commandManager.GetGraphicsQueue();
 
-	// Create synchronization objects and wait until assets have been uploaded to the GPU.
-	{
-		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		SUCCEEDED(m_fence->SetName(L"Minicraft Fence"));
-		m_fenceValues[m_frameIndex]++;
+	ID3D12CommandAllocator* allocator = nullptr;
+	ID3D12GraphicsCommandList* commandList = nullptr;
+	commandManager.GetNewCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, &commandList, &allocator);
 
-		// Create an event handle to use for frame synchronization.
-		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_fenceEvent == nullptr)
-		{
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		}
+	// Create the texture.
+	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), Zenyth::Renderer::pDevice.Get(), graphicsQueue.GetCommandQueue(), *m_resourceHeap, commandList);
 
-		// Wait for the command list to execute; we are reusing the same command
-		// list in our main loop but for now, we just want to wait for setup to
-		// complete before continuing.
-		WaitForGpu();
-	}
+	const auto fence = graphicsQueue.ExecuteCommandList(commandList);
+
+	commandList->Release();
+
+	graphicsQueue.FreeAllocator(fence, allocator);
+	commandManager.IdleGPU();
+
+	m_fenceValues[m_frameIndex] = fence + 1;
 
 }
 
-void Minicraft::PopulateCommandList() const
+void Minicraft::PopulateCommandList()
 {
-	// Command list allocators can only be reset when the associated
-	// command lists have finished execution on the GPU; apps should use
-	// fences to determine GPU execution progress.
-	ThrowIfFailed(m_commandAllocators[m_frameIndex]->Reset());
+	auto& commandManager = *Zenyth::Renderer::pCommandManager;
+	auto& graphicsQueue = commandManager.GetGraphicsQueue();
 
-	// However, when ExecuteCommandList() is called on a particular command
-	// list, that command list can then be reset at any time and must be before
-	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get()));
+	ID3D12CommandAllocator* allocator = nullptr;
+	ID3D12GraphicsCommandList* commandList = nullptr;
+	commandManager.GetNewCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, &commandList, &allocator);
+
+	commandList->SetPipelineState(m_pipelineState.Get());
 
 	// Set necessary state.
-	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+	commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap->GetHeapPointer() };
-	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+	commandList->RSSetViewports(1, &m_viewport);
+	commandList->RSSetScissorRects(1, &m_scissorRect);
 
 	// Indicate that the back buffer will be used as a render target.
 	auto resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	m_commandList->ResourceBarrier(1, &resourceBarrier);
+	commandList->ResourceBarrier(1, &resourceBarrier);
 
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU(), static_cast<INT>(m_frameIndex), m_rtvHeap->GetDescriptorSize());
 	const auto dsvHandle = m_depthStencilBuffers[m_frameIndex]->GetDSV().CPU();
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Record commands.
-	m_commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
-	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// apply cbv
-	m_texture->Apply(m_commandList.Get(), 0);
-	m_commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetCBV().GPU());
+	m_texture->Apply(commandList, 0);
+	commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetCBV().GPU());
 
-	m_world->Draw(m_commandList.Get(), ShaderPass::Opaque);
+	m_world->Draw(commandList, ShaderPass::Opaque);
 
-	ImGui::ShowDemoWindow();
-	m_imguiLayer->Render(m_commandList.Get());
+	// ImGui::ShowDemoWindow();
+	// m_imguiLayer->Render(commandList);
 
 
 	// Indicate that the back buffer will now be used to present.
 	resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	m_commandList->ResourceBarrier(1, &resourceBarrier);
+	commandList->ResourceBarrier(1, &resourceBarrier);
 
-	ThrowIfFailed(m_commandList->Close());
-}
+	const auto fence = graphicsQueue.ExecuteCommandList(commandList);
 
-// Wait for pending GPU work to complete.
-void Minicraft::WaitForGpu()
-{
-	// Schedule a Signal command in the queue.
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
+	commandList->Release();
 
-	// Wait until the fence has been processed.
-	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-
-	// Increment the fence value for the current frame.
-	m_fenceValues[m_frameIndex]++;
+	graphicsQueue.FreeAllocator(fence, allocator);
+	m_fenceValues[m_frameIndex] = fence;
 }
 
 void Minicraft::MoveToNextFrame()
 {
 	// Schedule a Signal command in the queue.
-	const UINT64 currentFenceValue = m_fenceValues[m_frameIndex];
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+	auto& graphicsQueue = Zenyth::Renderer::pCommandManager->GetGraphicsQueue();
 
 	// Update the frame index.
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-	// If the next frame is not ready to be rendered yet, wait until it is ready.
-	if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex])
-	{
-		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-	}
-
-	// Set the fence value for the next frame.
-	m_fenceValues[m_frameIndex] = currentFenceValue + 1;
+	graphicsQueue.WaitForFence(m_fenceValues[m_frameIndex]);
 }
 
 std::wstring Minicraft::GetAssetFullPath(const std::wstring &assetName)
@@ -481,7 +393,7 @@ void Minicraft::OnWindowSizeChanged(const int width, const int height)
 		m_width = width;
 		m_height = height;
 		// Flush all current GPU commands.
-		WaitForGpu();
+		Zenyth::Renderer::pCommandManager->IdleGPU();
 
 		// Release the resources holding references to the swap chain (requirement of
 		// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
@@ -518,10 +430,10 @@ void Minicraft::LoadSizeDependentResources()
 		for (UINT n = 0; n < FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+			Zenyth::Renderer::pDevice->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 			rtvHandle.Offset(1, m_rtvHeap->GetDescriptorSize());
 
-			m_depthStencilBuffers[n]->Create(m_device.Get(), std::format(L"DepthStencilBuffer #{}", n), m_width, m_height);
+			m_depthStencilBuffers[n]->Create(Zenyth::Renderer::pDevice.Get(), std::format(L"DepthStencilBuffer #{}", n), m_width, m_height);
 		}
 	}
 }

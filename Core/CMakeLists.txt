@@ -47,4 +47,4 @@ target_link_libraries(Core
         ImGui
 )
 
-target_compile_definitions(Core PUBLIC UNICODE _UNICODE)
+target_compile_definitions(Core PUBLIC UNICODE _UNICODE NOMINMAX)

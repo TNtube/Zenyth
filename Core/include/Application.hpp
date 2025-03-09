@@ -22,10 +22,6 @@ namespace Zenyth {
 
 		static constexpr UINT FrameCount = 3;
 	protected:
-		static void GetHardwareAdapter(
-			IDXGIFactory1* pFactory,
-			IDXGIAdapter1** ppAdapter,
-			bool requestHighPerformanceAdapter = false);
 
 		uint32_t m_width;
 		uint32_t m_height;

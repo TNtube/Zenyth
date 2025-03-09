@@ -31,26 +31,19 @@ private:
 		DirectX::SimpleMath::Matrix model;
 	};
 
-	Microsoft::WRL::ComPtr<ID3D12Debug> m_debug;
-	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> m_infoQueue;
-
 	DWORD m_callbackCookie{};
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
-	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
 	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_dsvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffers[FrameCount];
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> m_commandList;
 
 	bool m_depthBoundsTestSupported = false;
 
@@ -65,16 +58,16 @@ private:
 
 	// Synchronization objects.
 	UINT m_frameIndex;
-	HANDLE m_fenceEvent {};
-	Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
-	UINT64 m_fenceValues[FrameCount] {};
+	uint64_t m_fenceValues[FrameCount] {};
 
 
 	void LoadPipeline();
 	void LoadAssets();
+
+	void PopulateCommandList();
+
 	void PopulateCommandList() const;
 
-	void WaitForGpu();
 	void MoveToNextFrame();
 
 	void LoadSizeDependentResources();
