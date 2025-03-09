@@ -40,7 +40,7 @@ private:
 	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_dsvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+	std::unique_ptr<Zenyth::ColorBuffer> m_renderTargets[FrameCount];
 	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffers[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
@@ -66,11 +66,9 @@ private:
 
 	void PopulateCommandList();
 
-	void PopulateCommandList() const;
-
 	void MoveToNextFrame();
 
-	void LoadSizeDependentResources();
+	void LoadSizeDependentResources() const;
 
 	static std::wstring GetAssetFullPath(const std::wstring& assetName);
 

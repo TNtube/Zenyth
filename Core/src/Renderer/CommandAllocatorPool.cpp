@@ -26,6 +26,7 @@ namespace Zenyth
 		if (!m_availableCommandAllocators.empty())
 		{
 			auto& [fenceValue, availableAllocator] = m_availableCommandAllocators.front();
+
 			// is the allocator still in use?
 			if (fenceValue <= completedFenceValue)
 			{

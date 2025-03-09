@@ -77,9 +77,13 @@ namespace Zenyth
 
 	void CommandQueue::WaitForIdle()
 	{
-		std::lock_guard lock(m_mutex);
-		SUCCEEDED(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
-		WaitForFence(m_currentFenceValue++);
+		uint64_t fence = 0;
+		{
+			std::lock_guard lock(m_mutex);
+			SUCCEEDED(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
+			fence = m_currentFenceValue++;
+		}
+		WaitForFence(fence);
 	}
 
 	ID3D12CommandAllocator* CommandQueue::AcquireAllocator()

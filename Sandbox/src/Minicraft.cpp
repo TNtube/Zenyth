@@ -10,6 +10,7 @@
 #include "Win32Application.hpp"
 
 #include "imgui.h"
+#include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
 using namespace DirectX;
@@ -130,9 +131,11 @@ void Minicraft::LoadPipeline()
 		// Create a RTV and a command allocator for each frame.
 		for (UINT n = 0; n < FrameCount; n++)
 		{
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])), "Failed to get buffer");
-			auto rtvHandle = m_rtvHeap->Alloc();
-			Zenyth::Renderer::pDevice->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle.CPU());
+			ID3D12Resource* backBuffer = nullptr;
+			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&backBuffer)), "Failed to get buffer");
+
+			m_renderTargets[n] = std::make_unique<Zenyth::ColorBuffer>(*m_rtvHeap, *m_resourceHeap);
+			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
 
 			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
 			m_depthStencilBuffers[n]->Create(Zenyth::Renderer::pDevice.Get(), std::format(L"DepthStencilBuffer #{}", n), GetWidth(), GetHeight());
@@ -303,12 +306,8 @@ void Minicraft::LoadAssets()
 
 void Minicraft::PopulateCommandList()
 {
-	auto& commandManager = *Zenyth::Renderer::pCommandManager;
-	auto& graphicsQueue = commandManager.GetGraphicsQueue();
-
-	ID3D12CommandAllocator* allocator = nullptr;
-	ID3D12GraphicsCommandList* commandList = nullptr;
-	commandManager.GetNewCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, &commandList, &allocator);
+	auto commandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto* commandList = commandBatch.GetCommandList();
 
 	commandList->SetPipelineState(m_pipelineState.Get());
 
@@ -322,12 +321,9 @@ void Minicraft::PopulateCommandList()
 	commandList->RSSetViewports(1, &m_viewport);
 	commandList->RSSetScissorRects(1, &m_scissorRect);
 
-	// Indicate that the back buffer will be used as a render target.
-	auto resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	commandList->ResourceBarrier(1, &resourceBarrier);
-
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU(), static_cast<INT>(m_frameIndex), m_rtvHeap->GetDescriptorSize());
+	commandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	const auto dsvHandle = m_depthStencilBuffers[m_frameIndex]->GetDSV().CPU();
+	const auto rtvHandle = m_renderTargets[m_frameIndex]->GetRTV().CPU();
 	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
@@ -347,14 +343,9 @@ void Minicraft::PopulateCommandList()
 
 
 	// Indicate that the back buffer will now be used to present.
-	resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	commandList->ResourceBarrier(1, &resourceBarrier);
+	commandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT, true);
 
-	const auto fence = graphicsQueue.ExecuteCommandList(commandList);
-
-	commandList->Release();
-
-	graphicsQueue.FreeAllocator(fence, allocator);
+	const auto fence = commandBatch.End();
 	m_fenceValues[m_frameIndex] = fence;
 }
 
@@ -379,6 +370,7 @@ void Minicraft::OnWindowSizeChanged(const int width, const int height)
 		return;
 
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+	m_camera.UpdateAspectRatio(m_aspectRatio);
 
 
 	m_viewport.Width = static_cast<float>(width);
@@ -400,7 +392,7 @@ void Minicraft::OnWindowSizeChanged(const int width, const int height)
 		// current fence value.
 		for (UINT n = 0; n < FrameCount; n++)
 		{
-			m_renderTargets[n].Reset();
+			m_renderTargets[n]->Destroy();
 			m_fenceValues[n] = m_fenceValues[m_frameIndex];
 		}
 
@@ -420,18 +412,16 @@ void Minicraft::OnWindowSizeChanged(const int width, const int height)
 }
 
 
-void Minicraft::LoadSizeDependentResources()
+void Minicraft::LoadSizeDependentResources() const
 {
 	// Create frame resources.
 	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetStartHandle().CPU());
-
 		// Create a RTV for each frame.
 		for (UINT n = 0; n < FrameCount; n++)
 		{
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-			Zenyth::Renderer::pDevice->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-			rtvHandle.Offset(1, m_rtvHeap->GetDescriptorSize());
+			ID3D12Resource* backBuffer = nullptr;
+			SUCCEEDED(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&backBuffer)));
+			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
 
 			m_depthStencilBuffers[n]->Create(Zenyth::Renderer::pDevice.Get(), std::format(L"DepthStencilBuffer #{}", n), m_width, m_height);
 		}
