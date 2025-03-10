@@ -14,7 +14,8 @@ namespace Zenyth
 	struct CameraData {
 		Matrix mView;
 		Matrix mProjection;
-		Vector3 mPosition;
+		Vector3 mPosition; float pad0;
+		Vector3 mCamDir;
 		float time;
 	};
 

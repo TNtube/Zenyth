@@ -76,6 +76,7 @@ namespace Zenyth
 		md.mView = m_view.Transpose();
 		md.mProjection = m_projection.Transpose();
 		md.mPosition = m_camPos;
+		md.mCamDir = Vector3::Transform(Vector3::Forward, m_camRot);
 		md.time = static_cast<float>(timer.GetTotalSeconds());
 		return md;
 	}

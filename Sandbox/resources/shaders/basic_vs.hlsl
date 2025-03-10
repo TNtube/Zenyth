@@ -5,7 +5,8 @@ cbuffer ModelData : register(b0) {
 cbuffer CameraData : register(b1) {
 	float4x4 view;
 	float4x4 projection;
-	float3 cameraPosition;
+	float3 cameraPosition; float pad0;
+	float3 cameraDirection;
 	float time : TIME;
 }
 
@@ -21,6 +22,8 @@ struct Output {
 	float4 normal: NORMAL0;
 	float2 uv : TEXCOORD0;
 	float3 viewDir: TEXCOORD1;
+	float3 camPos: TEXCOORD2;
+	float3 camDir: TEXCOORD3;
 	float time : TIME;
 };
 
@@ -32,7 +35,9 @@ Output main(Input input) {
 	output.position = mul( output.position, projection );
 	output.normal = mul( input.normal, model );
 	output.uv = input.uv;
-	output.viewDir = cameraPosition - output.position.xyz;
+	output.viewDir = normalize(cameraPosition - output.position.xyz);
+	output.camDir = normalize(cameraDirection);
+	output.camPos = cameraPosition;
 	output.time = time;
 
 	return output;

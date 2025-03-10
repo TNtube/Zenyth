@@ -318,7 +318,7 @@ void Minicraft::PopulateCommandList()
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Record commands.
-	commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
+	commandList->ClearRenderTargetView(rtvHandle, Colors::MidnightBlue, 0, nullptr);
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));

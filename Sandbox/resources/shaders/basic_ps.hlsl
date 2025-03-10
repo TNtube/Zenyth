@@ -69,6 +69,8 @@ struct Input {
 	float4 normal: NORMAL0;
 	float2 uv : TEXCOORD0;
 	float3 viewDir: TEXCOORD1;
+	float3 camPos: TEXCOORD2;
+	float3 camDir: TEXCOORD3;
 	float time : TIME;
 };
 
@@ -76,7 +78,7 @@ struct Input {
 float4 main(Input input) : SV_TARGET {
 	float3 lightDir = normalize(float3(sin(input.time), -1, -0.5));
 	// ambient light
-	float3 ambient = 0.2;
+	float3 ambient = 0.0005;
 
 	float3 lightPos = float3(2, 72, 0);
 
@@ -93,9 +95,8 @@ float4 main(Input input) : SV_TARGET {
 	// 	normal = normalize(normal);
 	// }
 
-	float3 viewDir = normalize(input.viewDir);
 	float3 specularAlbedo = float3( 0.56, 0.56, 0.56 );
-	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, normal.rgb, viewDir, input.worldPosition.xyz, lightPos, 1000, float3(0.258182913f, 0.f, 0.258182913f), lightDir, float2(0.8, 0.8));
+	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, normal.rgb, input.viewDir, input.worldPosition.xyz, input.camPos, 1000, float3(0.4, 0.4f, 0.4), input.camDir, float2(0.8, 0.8));
 
 	float3 col = pow(colorSum, 1.0 / 2.2); // gamma correction
 
