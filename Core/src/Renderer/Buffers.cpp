@@ -44,12 +44,14 @@ namespace Zenyth {
 	{
 		Destroy();
 
+		m_pDevice = Renderer::pDevice.Get();
+
 		m_bufferSize = size;
 
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		const auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize);
 
-		ThrowIfFailed(Renderer::pDevice->CreateCommittedResource(
+		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&resDesc,
