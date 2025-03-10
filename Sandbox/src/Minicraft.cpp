@@ -55,7 +55,7 @@ void Minicraft::OnUpdate()
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
 	const auto cameraData = m_camera.GetCameraData(m_timer);
 	// m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
-	memcpy(m_cameraCpuBuffer->GetMappedData() + m_frameIndex * sizeof(Zenyth::CameraData), &cameraData, sizeof(Zenyth::CameraData));
+	memcpy(m_cameraCpuBuffer->GetMappedData(), &cameraData, sizeof(Zenyth::CameraData));
 }
 
 void Minicraft::OnRender()
@@ -64,12 +64,12 @@ void Minicraft::OnRender()
 	if (m_timer.GetFrameCount() == 0)
 		return;
 
-	// m_imguiLayer->Begin();
+	m_imguiLayer->Begin();
 
 	// Record all the commands we need to render the scene into the command list.
 	PopulateCommandList();
 
-	// m_imguiLayer->End();
+	m_imguiLayer->End();
 
 	// Present the frame.
 	ThrowIfFailed(m_swapChain->Present(0, 0));
@@ -203,7 +203,7 @@ void Minicraft::LoadAssets()
 		ComPtr<ID3DBlob> vertexShader;
 		ComPtr<ID3DBlob> pixelShader;
 
-#if defined(_DEBUG)
+#ifndef NDEBUG
 		// Enable better shader debugging with the graphics debugging tools.
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
@@ -279,12 +279,11 @@ void Minicraft::LoadAssets()
 	// Create the chunk
 	m_world->Generate(Zenyth::Renderer::pDevice.Get(), *m_resourceHeap);
 
-	const auto cameraData = m_camera.GetCameraData(m_timer);
 	m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
-	m_cameraCpuBuffer->Create(L"Camera Upload Buffer", 3 * sizeof(Zenyth::CameraData));
+	m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
 	m_cameraCpuBuffer->Map();
 	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
-	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 1, (sizeof(Zenyth::CameraData) + 255) & ~255);
+	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 3, (sizeof(Zenyth::CameraData) + 255) & ~255);
 
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
 
@@ -322,17 +321,17 @@ void Minicraft::PopulateCommandList()
 	commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, 0, *m_cameraCpuBuffer, m_frameIndex * sizeof(Zenyth::CameraData), sizeof(Zenyth::CameraData));
+	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
 	// apply cbv
-	m_texture->Apply(commandList, 0);
+	commandList->SetGraphicsRootDescriptorTable(0, m_texture->GetSRV().GPU());
 	commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetCBV().GPU());
 
 	m_world->Draw(commandList, ShaderPass::Opaque);
 
-	// ImGui::ShowDemoWindow();
-	// m_imguiLayer->Render(commandList);
+	ImGui::ShowDemoWindow();
+	m_imguiLayer->Render(commandList);
 
 
 	// Indicate that the back buffer will now be used to present.

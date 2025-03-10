@@ -17,11 +17,6 @@ namespace Zenyth
 		m_resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
 	}
 
-	void Texture::Apply(ID3D12GraphicsCommandList *commandList, const uint32_t tableIndex) const
-	{
-		commandList->SetGraphicsRootDescriptorTable(tableIndex, m_descriptorHandle.GPU());
-	}
-
 	void Texture::CreateViews()
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -30,10 +25,10 @@ namespace Zenyth
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.Texture2D.MipLevels = m_buffer->GetDesc().MipLevels;
 
-		if (m_descriptorHandle.IsNull())
-			m_descriptorHandle = m_resourceHeap->Alloc();
+		if (m_srvHandle.IsNull())
+			m_srvHandle = m_resourceHeap->Alloc();
 
-		m_pDevice->CreateShaderResourceView(m_buffer.Get(), &srvDesc, m_descriptorHandle.CPU());
+		m_pDevice->CreateShaderResourceView(m_buffer.Get(), &srvDesc, m_srvHandle.CPU());
 	}
 
 	std::unique_ptr<Texture> Texture::LoadTextureFromFile(const wchar_t *filename, DescriptorHeap& resourceHeap)

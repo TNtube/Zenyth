@@ -22,6 +22,8 @@ namespace Zenyth {
 
 		[[nodiscard]] virtual bool IsValid() const { return m_buffer != nullptr; }
 		[[nodiscard]] uint32_t GetElementCount() const { return m_elementCount; }
+		[[nodiscard]] uint32_t GetElementSize() const { return m_elementSize; }
+		[[nodiscard]] size_t GetBufferSize() const { return m_bufferSize; }
 
 	protected:
 		virtual void CreateViews() = 0;

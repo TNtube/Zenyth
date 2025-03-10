@@ -4,9 +4,7 @@
 
 namespace Zenyth
 {
-	using Microsoft::WRL::ComPtr;
-
-	class Texture : public GpuBuffer
+	class Texture final : public GpuBuffer
 	{
 	public:
 		Texture(ID3D12Device *device, DescriptorHeap &resourceHeap);
@@ -14,15 +12,13 @@ namespace Zenyth
 		DELETE_COPY_CTOR(Texture)
 		DEFAULT_MOVE_CTOR(Texture)
 
-		const DescriptorHandle& GetDescriptorHandle() const { return m_descriptorHandle; }
+		const DescriptorHandle& GetSRV() const { return m_srvHandle; }
 
 		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, DescriptorHeap &resourceHeap);
-
-		void Apply(ID3D12GraphicsCommandList* commandList, uint32_t tableIndex) const;
 	private:
 		void CreateViews() override;
 		DescriptorHeap* m_resourceHeap;
-		DescriptorHandle m_descriptorHandle;
+		DescriptorHandle m_srvHandle;
 	};
 
 
