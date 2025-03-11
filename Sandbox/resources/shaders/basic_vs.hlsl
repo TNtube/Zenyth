@@ -33,7 +33,7 @@ Output main(Input input) {
 	output.position = mul( input.position, model );
 	output.position = mul( output.position, view );
 	output.position = mul( output.position, projection );
-	output.normal = mul( input.normal, model );
+	output.normal = normalize(mul( input.normal, model ));
 	output.uv = input.uv;
 	output.viewDir = normalize(cameraPosition - output.position.xyz);
 	output.camDir = normalize(cameraDirection);

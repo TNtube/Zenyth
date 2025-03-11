@@ -331,6 +331,9 @@ void Minicraft::PopulateCommandList()
 	m_world->Draw(commandList, ShaderPass::Opaque);
 
 	ImGui::ShowDemoWindow();
+	ImGui::Begin("FPS");
+	ImGui::Text("Average FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
+	ImGui::End();
 	m_imguiLayer->Render(commandList);
 
 

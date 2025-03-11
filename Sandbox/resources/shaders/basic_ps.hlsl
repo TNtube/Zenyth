@@ -1,14 +1,3 @@
-
-void AntiAliasSpecular( inout float3 texNormal, inout float gloss )
-{
-	float normalLenSq = dot(texNormal, texNormal);
-	float invNormalLen = rsqrt(normalLenSq);
-	texNormal *= invNormalLen;
-	float normalLen = normalLenSq * invNormalLen;
-	float flatness = saturate(1 - abs(ddx(normalLen)) - abs(ddy(normalLen)));
-	gloss = exp2(lerp(0, log2(gloss), flatness));
-}
-
 void FSchlick( inout float3 specular, inout float3 diffuse, float3 lightDir, float3 halfVec )
 {
 	float fresnel = pow(1.0 - saturate(dot(lightDir, halfVec)), 5.0);
@@ -76,27 +65,17 @@ struct Input {
 
 
 float4 main(Input input) : SV_TARGET {
-	float3 lightDir = normalize(float3(sin(input.time), -1, -0.5));
 	// ambient light
 	float3 ambient = 0.0005;
 
-	float3 lightPos = float3(2, 72, 0);
-
-# define SAMPLE_TEX(texName) texName.Sample(g_sampler, input.uv)
-
-	float4 diffuseAlbedo = SAMPLE_TEX(g_texture);
+	float4 diffuseAlbedo = g_texture.Sample(g_sampler, input.uv);
 	clip(diffuseAlbedo.a < 0.1 ? -1 : 1);
 
 	float3 colorSum = ambient * diffuseAlbedo.rgb;
-	float gloss = 128.0;
-	float4 normal = normalize(input.normal);
-	// {
-	// 	AntiAliasSpecular(normal.rgb, gloss);
-	// 	normal = normalize(normal);
-	// }
 
 	float3 specularAlbedo = float3( 0.56, 0.56, 0.56 );
-	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, normal.rgb, input.viewDir, input.worldPosition.xyz, input.camPos, 1000, float3(0.4, 0.4f, 0.4), input.camDir, float2(0.8, 0.8));
+	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, input.normal.rgb, input.viewDir, input.worldPosition.xyz, input.camPos, 1000, float3(0.4, 0.4f, 0.4), input.camDir, float2(0.8, 0.8));
+
 
 	float3 col = pow(colorSum, 1.0 / 2.2); // gamma correction
 
