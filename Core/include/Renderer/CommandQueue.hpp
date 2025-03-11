@@ -1,13 +1,15 @@
 #pragma once
 #include "CommandAllocatorPool.hpp"
 #include "Core.hpp"
+#include "UploadAllocator.hpp"
 
 namespace Zenyth
 {
 	class CommandQueue
 	{
 	public:
-		explicit CommandQueue(const D3D12_COMMAND_LIST_TYPE type) : m_type(type), m_allocatorPool(type) {};
+		explicit CommandQueue(const D3D12_COMMAND_LIST_TYPE type)
+			: m_type(type), m_allocatorPool(type), m_uploadAllocatorPool(type) {}
 
 		DELETE_COPY_CTOR(CommandQueue)
 		DEFAULT_MOVE_CTOR(CommandQueue)
@@ -28,6 +30,9 @@ namespace Zenyth
 		ID3D12CommandAllocator* AcquireAllocator();
 		void FreeAllocator(uint64_t fenceValue, ID3D12CommandAllocator *commandAllocator);
 
+		BufferView AllocateUploadBufferView(size_t size, size_t alignment = 256);
+		void FreeUploadBufferView(uint64_t fenceValue, const BufferView &buffer) const;
+
 	private:
 		D3D12_COMMAND_LIST_TYPE m_type;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
@@ -39,5 +44,6 @@ namespace Zenyth
 		std::mutex m_mutex;
 
 		CommandAllocatorPool m_allocatorPool;
+		UploadAllocatorPool m_uploadAllocatorPool;
 	};
 }

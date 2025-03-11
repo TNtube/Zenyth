@@ -39,20 +39,23 @@ namespace Zenyth {
 		return fence;
 	}
 
-	void CommandBatch::InitializeBuffer(GpuBuffer &buffer, const void *data, size_t size, size_t offset)
+	void CommandBatch::InitializeBuffer(GpuBuffer &buffer, const void *data, const size_t size, const size_t offset)
 	{
 		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-		UploadBuffer uploadBuffer;
-		uploadBuffer.Create(L"UploadBuffer", size);
-		void* mappedData = uploadBuffer.Map();
-		memcpy(mappedData, data, size);
+		CommandQueue& queue = Renderer::pCommandManager->GetQueue(batch.m_listType);
+
+		const BufferView bufferView = queue.AllocateUploadBufferView(size);
+
+		memcpy(bufferView.data, data, size);
 
 		batch.TransitionResource(buffer, D3D12_RESOURCE_STATE_COPY_DEST, true);
-		batch.CopyBufferRegion(buffer, offset, uploadBuffer, 0, size);
+		batch.CopyBufferRegion(buffer, offset, *bufferView.buffer, bufferView.offset, size);
 		batch.TransitionResource(buffer, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 
-		batch.End(true);
+		const auto fence = batch.End(true);
+
+		queue.FreeUploadBufferView(fence, bufferView);
 	}
 
 	void CommandBatch::InitializeTexture(Texture& texture, const size_t subresourceCount, const D3D12_SUBRESOURCE_DATA* subData)
@@ -61,12 +64,16 @@ namespace Zenyth {
 
 		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-		UploadBuffer uploadBuffer;
-		uploadBuffer.Create(L"UploadBuffer", uploadBufferSize);
-		UpdateSubresources(batch.m_commandList.Get(), texture.Get(), uploadBuffer.Get(), 0, 0, subresourceCount, subData);
+		CommandQueue& queue = Renderer::pCommandManager->GetQueue(batch.m_listType);
+
+		const BufferView bufferView = queue.AllocateUploadBufferView(uploadBufferSize);
+
+		UpdateSubresources(batch.m_commandList.Get(), texture.Get(), bufferView.buffer->Get(), bufferView.offset, 0, subresourceCount, subData);
 		batch.TransitionResource(texture, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 
-		batch.End(true);
+		const auto fence = batch.End(true);
+
+		queue.FreeUploadBufferView(fence, bufferView);
 	}
 
 	void CommandBatch::TransitionResource(GpuBuffer& resource, const D3D12_RESOURCE_STATES after, const bool sendBarrier)
