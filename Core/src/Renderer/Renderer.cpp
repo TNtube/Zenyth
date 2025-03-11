@@ -15,7 +15,7 @@ namespace Zenyth::Renderer
 	{
 		UINT dxgiFactoryFlags = 0;
 
-#if defined(_DEBUG)
+#ifndef NDEBUG
 		{
 			ComPtr<ID3D12Debug> debug;
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug))))
