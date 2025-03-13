@@ -4,9 +4,6 @@
 [submodule "Core/Deps/DirectX-Headers"]
 	path = Core/Deps/DirectX-Headers
 	url = https://github.com/microsoft/DirectX-Headers.git
-[submodule "Core/Deps/DirectXTex"]
-	path = Core/Deps/DirectXTex
-	url = https://github.com/microsoft/DirectXTex.git
 [submodule "Core/Deps/imgui"]
 	path = Core/Deps/imgui
 	url = https://github.com/ocornut/imgui.git
