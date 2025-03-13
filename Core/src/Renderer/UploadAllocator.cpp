@@ -1,6 +1,8 @@
 #include "pch.hpp"
 
 #include "Renderer/UploadAllocator.hpp"
+
+#include "Math/Utils.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth
@@ -16,7 +18,7 @@ namespace Zenyth
 		FlushUsedViews();
 
 		View view {};
-		size = (size + (alignment - 1)) & ~(alignment - 1); // todo: make it a function
+		size = Math::AlignToMask(size, alignment);
 
 		MergeAvailableViews();
 
