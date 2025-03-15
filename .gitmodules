@@ -8,3 +8,6 @@
 	path = Core/Deps/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "Core/Deps/DirectXShaderCompiler"]
+	path = Core/Deps/DirectXShaderCompiler
+	url = https://github.com/microsoft/DirectXShaderCompiler
