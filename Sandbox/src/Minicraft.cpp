@@ -11,6 +11,7 @@
 
 #include "imgui.h"
 #include "Renderer/CommandBatch.hpp"
+#include "Renderer/PixelBuffer.hpp"
 #include "Renderer/Renderer.hpp"
 
 using namespace DirectX;
@@ -134,7 +135,7 @@ void Minicraft::LoadPipeline()
 			ID3D12Resource* backBuffer = nullptr;
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&backBuffer)), "Failed to get buffer");
 
-			m_renderTargets[n] = std::make_unique<Zenyth::ColorBuffer>(*m_rtvHeap, *m_resourceHeap);
+			m_renderTargets[n] = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
 			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
 
 			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
