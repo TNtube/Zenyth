@@ -7,7 +7,8 @@
 namespace Zenyth
 {
 
-	void PixelBuffer::Create(const std::wstring &name, const uint32_t width, const uint32_t height)
+	void PixelBuffer::Create(const std::wstring& name, const uint32_t width, const uint32_t height,
+							 const DXGI_FORMAT format, const D3D12_RESOURCE_FLAGS flags)
 	{
 		m_pDevice = Renderer::pDevice.Get();
 
@@ -16,14 +17,14 @@ namespace Zenyth
 		m_bufferSize = m_elementCount * m_elementSize;
 
 		D3D12_CLEAR_VALUE clearValue = {};
-		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearValue.Format = format;
 		clearValue.Color[0] = 0.0f;
 		clearValue.Color[1] = 0.0f;
 		clearValue.Color[2] = 0.0f;
 		clearValue.Color[3] = 1.0f;
 
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1);
+		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, flags);
 		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,
