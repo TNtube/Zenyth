@@ -57,31 +57,6 @@ namespace Zenyth {
 		void* m_memory {};
 	};
 
-	class ColorBuffer final : public GpuBuffer
-	{
-	public:
-		explicit ColorBuffer(DescriptorHeap& rtvHeap, DescriptorHeap& resourceHeap) : m_rtvHeap(&rtvHeap), m_resourceHeap(&resourceHeap) {};
-
-		DELETE_COPY_CTOR(ColorBuffer)
-		DEFAULT_MOVE_CTOR(ColorBuffer)
-
-		~ColorBuffer() override = default;
-
-		void CreateFromSwapChain(const std::wstring& name, ID3D12Resource* swapChainBuffer);
-		void Create(const std::wstring& name, uint32_t width, uint32_t height);
-
-		[[nodiscard]] const DescriptorHandle& GetRTV() const { return m_rtvHandle; }
-		[[nodiscard]] const DescriptorHandle& GetSRV() const { return m_srvHandle; }
-		void CreateViews() override;
-
-	private:
-		DescriptorHeap* m_rtvHeap;
-		DescriptorHeap* m_resourceHeap;
-
-		DescriptorHandle m_rtvHandle {};
-		DescriptorHandle m_srvHandle {};
-	};
-
 
 	class IndexBuffer final : public GpuBuffer
 	{
