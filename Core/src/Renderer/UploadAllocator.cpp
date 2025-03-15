@@ -9,19 +9,18 @@ namespace Zenyth
 {
 	BufferView UploadAllocator::Allocate(size_t size, const size_t alignment)
 	{
+		size = Math::AlignToMask(size, alignment);
+
 		if (!m_buffer.IsValid())
 		{
-			m_buffer.Create(L"UploadAllocator", BUFFER_SIZE);
+			m_buffer.Create(L"UploadAllocator", std::max(BUFFER_SIZE, size));
 			m_buffer.Map();
 		}
 
 		FlushUsedViews();
-
-		View view {};
-		size = Math::AlignToMask(size, alignment);
-
 		MergeAvailableViews();
 
+		View view {};
 		for (auto it = m_availableView.begin(); it != m_availableView.end(); ++it)
 		{
 			if (auto& availableView = *it; availableView.size >= size)
@@ -43,7 +42,7 @@ namespace Zenyth
 			}
 		}
 
-		if (!view.IsValid() && m_offset + size <= BUFFER_SIZE)
+		if (!view.IsValid() && m_offset + size <= m_buffer.GetBufferSize())
 		{
 			view = {m_offset, size};
 			m_offset += size;
@@ -96,8 +95,6 @@ namespace Zenyth
 
 	BufferView UploadAllocatorPool::Allocate(const size_t size, const size_t alignment)
 	{
-		assert(size + alignment <= UploadAllocator::BUFFER_SIZE && "Buffer size exceeds maximum buffer size");
-
 		for (const auto& allocator: m_allocators)
 		{
 			const auto bufferView = allocator->Allocate(size, alignment);
