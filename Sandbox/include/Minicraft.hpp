@@ -8,6 +8,7 @@
 #include "Renderer/DescriptorHeap.hpp"
 #include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
+#include "Renderer/Pipeline.hpp"
 #include "Renderer/PixelBuffer.hpp"
 
 class Minicraft final : public Zenyth::Application
@@ -45,6 +46,7 @@ private:
 	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffers[FrameCount];
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+	std::unique_ptr<Zenyth::Pipeline> m_pipeline;
 
 	bool m_depthBoundsTestSupported = false;
 

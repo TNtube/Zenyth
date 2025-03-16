@@ -6,3 +6,6 @@ cmake-build-*/
 
 # JetBrains
 .idea/
+
+# DXC -- downloaded by DownloadDX.cmake
+Core/Deps/dxc

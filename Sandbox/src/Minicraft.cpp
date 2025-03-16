@@ -277,6 +277,9 @@ void Minicraft::LoadAssets()
 		ThrowIfFailed(Zenyth::Renderer::pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 
+	m_pipeline = std::make_unique<Zenyth::Pipeline>();
+	m_pipeline->Create(L"Basic Pipeline");
+
 	// Create the chunk
 	m_world->Generate(Zenyth::Renderer::pDevice.Get(), *m_resourceHeap);
 

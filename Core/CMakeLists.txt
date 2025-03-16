@@ -1,6 +1,14 @@
 add_subdirectory(Deps/DirectX-Headers)
 add_subdirectory(Deps/DirectXTK12)
 
+include(DownloadDX.cmake)
+
+download_dxc("${CMAKE_SOURCE_DIR}/Core/Deps")
+set(DXC_DIR "${CMAKE_SOURCE_DIR}/Core/Deps/dxc")
+
+# DXC
+include_directories("${DXC_DIR}/inc")
+
 # ImGui
 
 file(GLOB IMGUI_SOURCES
@@ -44,7 +52,15 @@ target_link_libraries(Core
         dxgi
         D3DCompiler.lib
         dxguid.lib
+        dxcompiler
         ImGui
+        "${DXC_DIR}/lib/x64/dxcompiler.lib"
 )
+
+add_custom_command(TARGET Core POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${DXC_DIR}/bin/x64/dxcompiler.dll"
+        "${DXC_DIR}/bin/x64/dxil.dll"
+        $<TARGET_FILE_DIR:Core>)
 
 target_compile_definitions(Core PUBLIC UNICODE _UNICODE NOMINMAX)
