@@ -1,8 +1,8 @@
-cbuffer ModelData : register(b0) {
+cbuffer ModelData {
 	float4x4 model;
 };
 
-cbuffer CameraData : register(b1) {
+cbuffer CameraData {
 	float4x4 view;
 	float4x4 projection;
 	float3 cameraPosition; float pad0;

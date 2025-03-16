@@ -2,6 +2,8 @@
 
 #include "World.hpp"
 #include "Chunk.hpp"
+
+#include "Math/Utils.hpp"
 using namespace DirectX::SimpleMath;
 
 Vector4 ToVec4(Vector3 v)
@@ -155,8 +157,8 @@ void Chunk::Create(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 	if (passes > 0)
 	{
 		m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer>(resourceHeap);
-		const ModelData modelData = {m_transform.GetTransformMatrix().Transpose()};
-		m_constantBuffer->Create(device, L"Model Constant Buffer", 1, (sizeof(ModelData) + 255) & ~255, &modelData);
+		const ModelData modelData = {m_transform.GetTransformMatrix()};
+		m_constantBuffer->Create(device, L"Model Constant Buffer", 1, Math::AlignToMask(static_cast<int>(sizeof(ModelData)), 256), &modelData);
 	}
 }
 
@@ -168,7 +170,7 @@ void Chunk::Draw(ID3D12GraphicsCommandList* commandList, ShaderPass shaderPass) 
 	commandList->IASetVertexBuffers(0, 1, m_vertexBuffer[pass].GetVBV());
 	commandList->IASetIndexBuffer(m_indexBuffer[pass].GetIBV());
 
-	commandList->SetGraphicsRootDescriptorTable(1, m_constantBuffer->GetCBV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(0, m_constantBuffer->GetCBV().GPU());
 
 	commandList->DrawIndexedInstanced(m_indexBuffer[pass].GetElementCount(), 1, 0, 0, 0);
 }

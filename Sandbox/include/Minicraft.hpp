@@ -44,8 +44,6 @@ private:
 	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
 	std::unique_ptr<Zenyth::PixelBuffer> m_renderTargets[FrameCount];
 	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffers[FrameCount];
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 	std::unique_ptr<Zenyth::Pipeline> m_pipeline;
 
 	bool m_depthBoundsTestSupported = false;

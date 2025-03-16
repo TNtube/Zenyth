@@ -153,132 +153,11 @@ void Minicraft::LoadPipeline()
 void Minicraft::LoadAssets()
 {
 	{
-		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-
-		// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
-		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-
-		if (FAILED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
-		{
-			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-		}
-
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[3]; // Increase size to 3
-		CD3DX12_ROOT_PARAMETER1 rootParameters[3]; // Increase size to 3
-
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-
-		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-		rootParameters[1].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_VERTEX);
-		rootParameters[2].InitAsDescriptorTable(1, &ranges[2], D3D12_SHADER_VISIBILITY_VERTEX);
-
-		// Create a static sampler for the texture
-		D3D12_STATIC_SAMPLER_DESC sampler = {};
-		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.MipLODBias = 0;
-		sampler.MaxAnisotropy = 0;
-		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		sampler.MinLOD = 0.0f;
-		sampler.MaxLOD = D3D12_FLOAT32_MAX;
-		sampler.ShaderRegister = 0;
-		sampler.RegisterSpace = 0;
-		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(Zenyth::Renderer::pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		const std::wstring vertexShaderPath = GetAssetFullPath(L"shaders/basic_vs.hlsl");
+		const std::wstring pixelShaderPath = GetAssetFullPath(L"shaders/basic_ps.hlsl");
+		m_pipeline = std::make_unique<Zenyth::Pipeline>();
+		m_pipeline->Create(L"Basic Pipeline", vertexShaderPath, pixelShaderPath, m_depthBoundsTestSupported);
 	}
-
-	// Create the pipeline state, which includes compiling and loading shaders.
-	{
-		ComPtr<ID3DBlob> vertexShader;
-		ComPtr<ID3DBlob> pixelShader;
-
-#ifndef NDEBUG
-		// Enable better shader debugging with the graphics debugging tools.
-		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-		UINT compileFlags = 0;
-#endif
-
-		std::wstring vertexShaderPath = GetAssetFullPath(L"shaders/basic_vs.hlsl");
-		std::wstring pixelShaderPath = GetAssetFullPath(L"shaders/basic_ps.hlsl");
-
-//		ThrowIfFailed(D3DCompileFromFile(vertexShaderPath.c_str(), nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-//		ThrowIfFailed(D3DCompileFromFile(pixelShaderPath.c_str(), nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
-
-		ComPtr<ID3DBlob> error;
-
-		HRESULT hr;
-
-		hr = D3DCompileFromFile(vertexShaderPath.c_str(), nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, &error);
-		if (FAILED(hr))
-		{
-			if (error)
-			{
-				std::string output = static_cast<char *>(error->GetBufferPointer());
-				std::cout << output << std::endl;
-			}
-			ThrowIfFailed(hr);
-		}
-
-		hr = D3DCompileFromFile(pixelShaderPath.c_str(), nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, &error);
-
-		if (FAILED(hr))
-		{
-			if (error)
-			{
-				std::string output = static_cast<char *>(error->GetBufferPointer());
-				std::cout << output << std::endl;
-			}
-			ThrowIfFailed(hr);
-		}
-
-		// Define the vertex input layout.
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-			{
-				{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-				{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-			};
-
-		CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
-
-		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
-		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
-
-		depthStencilDesc.DepthBoundsTestEnable = m_depthBoundsTestSupported;
-
-		// Describe and create the graphics pipeline state object (PSO).
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState = depthStencilDesc;
-		psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-		psoDesc.SampleMask = UINT_MAX;
-		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.SampleDesc.Count = 1;
-		ThrowIfFailed(Zenyth::Renderer::pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-	}
-
-	m_pipeline = std::make_unique<Zenyth::Pipeline>();
-	m_pipeline->Create(L"Basic Pipeline");
 
 	// Create the chunk
 	m_world->Generate(Zenyth::Renderer::pDevice.Get(), *m_resourceHeap);
@@ -302,10 +181,10 @@ void Minicraft::PopulateCommandList()
 	auto commandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto* commandList = commandBatch.GetCommandList();
 
-	commandList->SetPipelineState(m_pipelineState.Get());
+	commandList->SetPipelineState(m_pipeline->Get());
 
 	// Set necessary state.
-	commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+	commandList->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap->GetHeapPointer() };
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -329,8 +208,8 @@ void Minicraft::PopulateCommandList()
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
 	// apply cbv
-	commandList->SetGraphicsRootDescriptorTable(0, m_texture->GetSRV().GPU());
-	commandList->SetGraphicsRootDescriptorTable(2, m_cameraConstantBuffer->GetCBV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipeline->GetRootParameterIndex("g_texture"), m_texture->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipeline->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
 
 	m_world->Draw(commandList, ShaderPass::Opaque);
 
