@@ -6,7 +6,7 @@
 
 namespace Zenyth
 {
-	class PixelBuffer final : public GpuBuffer
+	class PixelBuffer : public GpuBuffer
 	{
 	public:
 		explicit PixelBuffer(DescriptorHeap& rtvHeap, DescriptorHeap& resourceHeap) : m_rtvHeap(&rtvHeap), m_resourceHeap(&resourceHeap) {};
@@ -29,14 +29,16 @@ namespace Zenyth
 
 		void CreateViews() override;
 
-	private:
-		DescriptorHeap* m_rtvHeap;
+	protected:
 		DescriptorHeap* m_resourceHeap;
-
-		DescriptorHandle m_rtvHandle {};
 		DescriptorHandle m_srvHandle {};
 
 		DXGI_FORMAT m_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	private:
+		DescriptorHeap* m_rtvHeap;
+		DescriptorHandle m_rtvHandle {};
+
 		DirectX::XMVECTORF32 m_clearColor = DirectX::Colors::Black;
 	};
 }

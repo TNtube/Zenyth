@@ -8,6 +8,7 @@
 #include "Renderer/DescriptorHeap.hpp"
 #include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
+#include "Renderer/DepthStencilBuffer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/PixelBuffer.hpp"
 

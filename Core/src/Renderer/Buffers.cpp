@@ -112,54 +112,6 @@ namespace Zenyth {
 	}
 
 
-	DepthStencilBuffer::~DepthStencilBuffer()
-	{
-		if (m_dsvHandle.IsNull())
-			return;
-
-		m_dsvHeap->Free(m_dsvHandle);
-	}
-
-	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t width, const uint32_t height)
-	{
-		m_pDevice = device;
-
-		D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
-		depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-		depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
-		depthOptimizedClearValue.DepthStencil.Stencil = 0;
-
-		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&resDesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&depthOptimizedClearValue,
-			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())));
-
-		SUCCEEDED(m_buffer->SetName(name.c_str()));
-
-		CreateViews();
-	}
-
-	void DepthStencilBuffer::CreateViews()
-	{
-
-		D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
-		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-		if (m_dsvHandle.IsNull()) {
-			m_dsvHandle = m_dsvHeap->Alloc();
-		}
-
-		m_pDevice->CreateDepthStencilView(m_buffer.Get(), &depthStencilDesc, m_dsvHandle.CPU());
-	}
-
-
 	StructuredBuffer::~StructuredBuffer()
 	{
 		if (!m_srvHandle.IsNull())

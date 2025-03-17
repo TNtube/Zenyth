@@ -110,27 +110,6 @@ namespace Zenyth {
 		DescriptorHandle m_cbvHandle    {};
 	};
 
-	class DepthStencilBuffer final : public GpuBuffer
-	{
-	public:
-		explicit DepthStencilBuffer(DescriptorHeap& dsvHeap) { m_dsvHeap = &dsvHeap; }
-
-		DELETE_COPY_CTOR(DepthStencilBuffer)
-		DEFAULT_MOVE_CTOR(DepthStencilBuffer)
-
-		~DepthStencilBuffer() override;
-
-		// no need to re-instantiate the buffer for resizing it
-		void Create(ID3D12Device *device, const std::wstring& name, uint32_t width, uint32_t height);
-
-		[[nodiscard]] const DescriptorHandle& GetDSV() const { return m_dsvHandle; }
-	private:
-		void CreateViews() override;
-
-		DescriptorHeap*  m_dsvHeap   {};
-		DescriptorHandle m_dsvHandle {};
-	};
-
 
 	class StructuredBuffer final : public GpuBuffer
 	{

@@ -9,7 +9,7 @@ namespace Zenyth
 		Vector3 forward = Vector3::Transform(Vector3::Forward, m_camRot);
 		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, Vector3::Up);
 
-		m_projection = Matrix::CreatePerspectiveFieldOfView(fov, aspectRatio, m_nearPlane, m_farPlane);
+		UpdateAspectRatio(aspectRatio);
 	}
 
 	Camera::~Camera() = default;
@@ -72,7 +72,7 @@ namespace Zenyth
 
 	CameraData Camera::GetCameraData(const DX::StepTimer& timer) const {
 
-		CameraData md;
+		CameraData md {};
 		md.mView = m_view;
 		md.mProjection = m_projection;
 		md.mPosition = m_camPos;

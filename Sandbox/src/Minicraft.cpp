@@ -154,12 +154,12 @@ void Minicraft::LoadPipeline()
 
 	{
 		m_normalBuffer = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
-		m_normalBuffer->Create(L"Normal Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::MidnightBlue);
+		m_normalBuffer->Create(L"Normal Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::DarkBlue);
 
 		m_colorBuffer = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
-		m_colorBuffer->Create(L"Color Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::MidnightBlue);
+		m_colorBuffer->Create(L"Color Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::DarkBlue);
 
-		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
+		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap, *m_resourceHeap);
 		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", GetWidth(), GetHeight());
 	}
 
@@ -226,8 +226,9 @@ void Minicraft::PopulateCommandList()
 	commandList->RSSetViewports(1, &m_viewport);
 	commandList->RSSetScissorRects(1, &m_scissorRect);
 
-	commandBatch.TransitionResource(*m_normalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	commandBatch.TransitionResource(*m_colorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	commandBatch.TransitionResource(*m_normalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	commandBatch.TransitionResource(*m_colorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	commandBatch.TransitionResource(*m_depthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	const auto dsvHandle = m_depthStencilBuffer->GetDSV().CPU();
 
@@ -289,7 +290,7 @@ void Minicraft::PopulateCommandList()
 			colorBuffer = m_normalBuffer.get();
 			break;
 		case GBufferType::Depth:
-			colorBuffer = m_normalBuffer.get();
+			colorBuffer = m_depthStencilBuffer.get();
 			break;
 	}
 
