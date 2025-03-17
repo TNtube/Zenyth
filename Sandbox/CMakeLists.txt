@@ -31,6 +31,12 @@ add_custom_target(copy_resources ALL
     COMMENT "Copying resources to build directory"
 )
 
+add_custom_command(TARGET Sandbox POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${DXC_DIR}/bin/x64/dxcompiler.dll"
+        "${DXC_DIR}/bin/x64/dxil.dll"
+        $<TARGET_FILE_DIR:Sandbox>)
+
 add_dependencies(Sandbox copy_resources)
 
 target_link_libraries(Sandbox Core)
