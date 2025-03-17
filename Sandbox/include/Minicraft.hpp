@@ -42,9 +42,17 @@ private:
 	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_dsvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
+	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffer;
+
+	std::unique_ptr<Zenyth::PixelBuffer> m_colorBuffer;
+	std::unique_ptr<Zenyth::PixelBuffer> m_normalBuffer;
 	std::unique_ptr<Zenyth::PixelBuffer> m_renderTargets[FrameCount];
-	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffers[FrameCount];
-	std::unique_ptr<Zenyth::Pipeline> m_pipeline;
+
+	std::unique_ptr<Zenyth::Pipeline> m_pipelineGeometry;
+	std::unique_ptr<Zenyth::Pipeline> m_pipelinePresent;
+
+	std::unique_ptr<Zenyth::VertexBuffer> m_presentVertexBuffer;
+	std::unique_ptr<Zenyth::IndexBuffer> m_presentIndexBuffer;
 
 	bool m_depthBoundsTestSupported = false;
 

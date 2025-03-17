@@ -18,6 +18,13 @@ using namespace DirectX;
 using namespace DirectX::SimpleMath;
 using Microsoft::WRL::ComPtr;
 
+enum class GBufferType
+{
+	Color,
+	Normal,
+	Depth
+};
+
 
 Minicraft::Minicraft(const uint32_t width, const uint32_t height, const bool useWrapDevice)
 	:	Zenyth::Application(width, height, useWrapDevice),
@@ -122,9 +129,9 @@ void Minicraft::LoadPipeline()
 		m_rtvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_dsvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_resourceHeap = std::make_unique<Zenyth::DescriptorHeap>();
-		m_rtvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
+		m_rtvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64);
 		m_dsvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
-		m_resourceHeap->Create(Zenyth::Renderer::pDevice.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048);
+		m_resourceHeap->Create(Zenyth::Renderer::pDevice.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048); // :skull:
 	}
 
 	// Create frame resources.
@@ -137,9 +144,6 @@ void Minicraft::LoadPipeline()
 
 			m_renderTargets[n] = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
 			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
-
-			m_depthStencilBuffers[n] = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
-			m_depthStencilBuffers[n]->Create(Zenyth::Renderer::pDevice.Get(), std::format(L"DepthStencilBuffer #{}", n), GetWidth(), GetHeight());
 		}
 	}
 
@@ -148,15 +152,44 @@ void Minicraft::LoadPipeline()
 		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(Zenyth::Renderer::pDevice.Get(), Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue());
 	}
 
+	{
+		m_normalBuffer = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
+		m_normalBuffer->Create(L"Normal Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::MidnightBlue);
+
+		m_colorBuffer = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
+		m_colorBuffer->Create(L"Color Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::MidnightBlue);
+
+		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap);
+		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", GetWidth(), GetHeight());
+	}
+
+	{
+		const std::vector<Vector4> vertices = {
+			{-1, -1, 0, 1},
+			{-1,  1, 0, 1},
+			{ 1, -1, 0, 1},
+			{ 1,  1, 0, 1}
+		};
+		const std::vector<uint32_t> indices = {0, 1, 2, 2, 1, 3};
+
+		m_presentVertexBuffer = std::make_unique<Zenyth::VertexBuffer>();
+		m_presentVertexBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Final Vertex Buffer", vertices.size(), sizeof(Vector4), vertices.data());
+		m_presentIndexBuffer = std::make_unique<Zenyth::IndexBuffer>();
+		m_presentIndexBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Final Index Buffer", indices.size(), sizeof(uint32_t), indices.data());
+	}
 }
 
 void Minicraft::LoadAssets()
 {
 	{
-		const std::wstring vertexShaderPath = GetAssetFullPath(L"shaders/basic_vs.hlsl");
-		const std::wstring pixelShaderPath = GetAssetFullPath(L"shaders/basic_ps.hlsl");
-		m_pipeline = std::make_unique<Zenyth::Pipeline>();
-		m_pipeline->Create(L"Basic Pipeline", vertexShaderPath, pixelShaderPath, m_depthBoundsTestSupported);
+		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
+		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
+
+		m_pipelineGeometry = std::make_unique<Zenyth::Pipeline>();
+		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPath(L"shaders/basic_vs.hlsl"), GetAssetFullPath(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
+
+		m_pipelinePresent = std::make_unique<Zenyth::Pipeline>();
+		m_pipelinePresent->Create(L"Present Pipeline", GetAssetFullPath(L"shaders/present_vs.hlsl"), GetAssetFullPath(L"shaders/present_ps.hlsl"), false);
 	}
 
 	// Create the chunk
@@ -178,13 +211,13 @@ void Minicraft::LoadAssets()
 
 void Minicraft::PopulateCommandList()
 {
+
 	auto commandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto* commandList = commandBatch.GetCommandList();
 
-	commandList->SetPipelineState(m_pipeline->Get());
 
-	// Set necessary state.
-	commandList->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
+	commandList->SetPipelineState(m_pipelineGeometry->Get());
+	commandList->SetGraphicsRootSignature(m_pipelineGeometry->GetRootSignature());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap->GetHeapPointer() };
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -193,37 +226,106 @@ void Minicraft::PopulateCommandList()
 	commandList->RSSetViewports(1, &m_viewport);
 	commandList->RSSetScissorRects(1, &m_scissorRect);
 
-	commandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	const auto dsvHandle = m_depthStencilBuffers[m_frameIndex]->GetDSV().CPU();
-	const auto rtvHandle = m_renderTargets[m_frameIndex]->GetRTV().CPU();
-	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	commandBatch.TransitionResource(*m_normalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	commandBatch.TransitionResource(*m_colorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+
+	const auto dsvHandle = m_depthStencilBuffer->GetDSV().CPU();
+
+	const std::vector rtvs = {m_colorBuffer.get(), m_normalBuffer.get()};
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
+	rtvHandles.reserve(rtvs.size());
+
+	for (const auto rtv : rtvs)
+	{
+		const auto& handle = rtvHandles.emplace_back(rtv->GetRTV().CPU());
+		commandList->ClearRenderTargetView(handle, rtv->GetClearColor(), 0, nullptr);
+	}
+	commandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), FALSE, &dsvHandle);
 
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Record commands.
-	commandList->ClearRenderTargetView(rtvHandle, Colors::MidnightBlue, 0, nullptr);
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
 	// apply cbv
-	commandList->SetGraphicsRootDescriptorTable(m_pipeline->GetRootParameterIndex("g_texture"), m_texture->GetSRV().GPU());
-	commandList->SetGraphicsRootDescriptorTable(m_pipeline->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("g_texture"), m_texture->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
 
 	m_world->Draw(commandList, ShaderPass::Opaque);
 
-	ImGui::ShowDemoWindow();
-	ImGui::Begin("FPS");
-	ImGui::Text("Average FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
+	commandBatch.End();
+
+	static auto bufferToShow = GBufferType::Color;
+
+	auto presentCommandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto* presentCommandList = presentCommandBatch.GetCommandList();
+
+	presentCommandList->SetPipelineState(m_pipelinePresent->Get());
+	presentCommandList->SetGraphicsRootSignature(m_pipelinePresent->GetRootSignature());
+
+	presentCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	presentCommandList->RSSetViewports(1, &m_viewport);
+	presentCommandList->RSSetScissorRects(1, &m_scissorRect);
+
+	presentCommandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+
+	const auto rtvHandle = m_renderTargets[m_frameIndex]->GetRTV().CPU();
+	presentCommandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+	presentCommandList->ClearRenderTargetView(rtvHandle, Colors::MidnightBlue, 0, nullptr);
+
+	presentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	Zenyth::PixelBuffer* colorBuffer = m_colorBuffer.get();
+	switch (bufferToShow)
+	{
+		case GBufferType::Color:
+			colorBuffer = m_colorBuffer.get();
+			break;
+		case GBufferType::Normal:
+			colorBuffer = m_normalBuffer.get();
+			break;
+		case GBufferType::Depth:
+			colorBuffer = m_normalBuffer.get();
+			break;
+	}
+
+	presentCommandBatch.TransitionResource(*colorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+	presentCommandList->SetGraphicsRootDescriptorTable(m_pipelinePresent->GetRootParameterIndex("MainTexture"), colorBuffer->GetSRV().GPU());
+
+	presentCommandList->IASetVertexBuffers(0, 1, m_presentVertexBuffer->GetVBV());
+	presentCommandList->IASetIndexBuffer(m_presentIndexBuffer->GetIBV());
+
+	presentCommandList->DrawIndexedInstanced(m_presentIndexBuffer->GetElementCount(), 1, 0, 0, 0);
+
+
+	ImGui::Begin("Helper");
+	ImGui::Text("FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
+
+	// dropdown for the current gbuffer to display
+	if (ImGui::BeginCombo("GBuffer", "Color"))
+	{
+		if (ImGui::Selectable("Color", bufferToShow == GBufferType::Color))
+			bufferToShow = GBufferType::Color;
+		if (ImGui::Selectable("Normal", bufferToShow == GBufferType::Normal))
+			bufferToShow = GBufferType::Normal;
+		if (ImGui::Selectable("Depth", bufferToShow == GBufferType::Depth))
+			bufferToShow = GBufferType::Depth;
+		ImGui::EndCombo();
+	}
+
+
 	ImGui::End();
-	m_imguiLayer->Render(commandList);
+
+	m_imguiLayer->Render(presentCommandList);
+
+	presentCommandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT, true);
 
 
-	// Indicate that the back buffer will now be used to present.
-	commandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT, true);
-
-	const auto fence = commandBatch.End();
+	const auto fence = presentCommandBatch.End();
 	m_fenceValues[m_frameIndex] = fence;
 }
 
@@ -299,8 +401,8 @@ void Minicraft::LoadSizeDependentResources() const
 			ID3D12Resource* backBuffer = nullptr;
 			SUCCEEDED(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&backBuffer)));
 			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
-
-			m_depthStencilBuffers[n]->Create(Zenyth::Renderer::pDevice.Get(), std::format(L"DepthStencilBuffer #{}", n), m_width, m_height);
 		}
+
+		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", m_width, m_height);
 	}
 }

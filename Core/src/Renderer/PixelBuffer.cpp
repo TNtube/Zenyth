@@ -8,28 +8,34 @@ namespace Zenyth
 {
 
 	void PixelBuffer::Create(const std::wstring& name, const uint32_t width, const uint32_t height,
-							 const DXGI_FORMAT format, const D3D12_RESOURCE_FLAGS flags)
+							 const DXGI_FORMAT format, const DirectX::XMVECTORF32 clearColor, D3D12_RESOURCE_FLAGS flags)
 	{
 		m_pDevice = Renderer::pDevice.Get();
+
+		flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		m_resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+		m_format = format;
 
 		m_elementCount = width * height;
 		m_elementSize = sizeof(uint32_t) * 4;
 		m_bufferSize = m_elementCount * m_elementSize;
+		m_clearColor = clearColor;
 
 		D3D12_CLEAR_VALUE clearValue = {};
-		clearValue.Format = format;
-		clearValue.Color[0] = 0.0f;
-		clearValue.Color[1] = 0.0f;
-		clearValue.Color[2] = 0.0f;
-		clearValue.Color[3] = 1.0f;
+		clearValue.Format = m_format;
+		clearValue.Color[0] = m_clearColor.f[0];
+		clearValue.Color[1] = m_clearColor.f[1];
+		clearValue.Color[2] = m_clearColor.f[2];
+		clearValue.Color[3] = m_clearColor.f[3];
 
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, flags);
+		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_format, width, height, 1, 1, 1, 0, flags);
 		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&resDesc,
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			m_resourceState,
 			&clearValue,
 			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())));
 
@@ -57,18 +63,19 @@ namespace Zenyth
 	void PixelBuffer::CreateViews()
 	{
 		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-		rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		rtvDesc.Format = m_format;
 		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 		if (m_rtvHandle.IsNull())
-			m_rtvHandle = m_resourceHeap->Alloc();
+			m_rtvHandle = m_rtvHeap->Alloc();
 
 		m_pDevice->CreateRenderTargetView(m_buffer.Get(), &rtvDesc, m_rtvHandle.CPU());
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.Format = m_format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 		if (m_srvHandle.IsNull())
 			m_srvHandle = m_resourceHeap->Alloc();

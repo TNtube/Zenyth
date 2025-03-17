@@ -11,7 +11,7 @@ cbuffer CameraData {
 }
 
 struct Input {
-	float4 position : POSITION;
+	float4 position : SV_POSITION;
 	float4 normal: NORMAL0;
 	float2 uv : TEXCOORD0;
 };

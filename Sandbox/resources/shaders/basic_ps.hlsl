@@ -63,8 +63,12 @@ struct Input {
 	float time : TIME;
 };
 
+struct Output {
+	float4 color: SV_TARGET0;
+	float4 normal: SV_TARGET1;
+};
 
-float4 main(Input input) : SV_TARGET {
+Output main(Input input) {
 	// ambient light
 	float3 ambient = 0.0005;
 
@@ -76,8 +80,13 @@ float4 main(Input input) : SV_TARGET {
 	float3 specularAlbedo = float3( 0.56, 0.56, 0.56 );
 	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, input.normal.rgb, input.viewDir, input.worldPosition.xyz, input.camPos, 1000, float3(0.4, 0.4f, 0.4), input.camDir, float2(0.8, 0.8));
 
+	float3 x = colorSum;
+	float3 col = select(x < 0.0031308, 12.92 * x, 1.055 * pow(x, 1.0 / 2.4) - 0.055);
 
-	float3 col = pow(colorSum, 1.0 / 2.2); // gamma correction
+	Output output = (Output)0;
 
-	return float4(col, diffuseAlbedo.a);
+	output.normal = input.normal;
+	output.color = float4(col, diffuseAlbedo.a);
+
+	return output;
 }
