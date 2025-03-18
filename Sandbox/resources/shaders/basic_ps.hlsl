@@ -48,8 +48,10 @@ float3 ApplyLightCommon(
 }
 
 
-Texture2D g_texture : register(t0);
-SamplerState g_sampler : register(s0);
+Texture2D AlbedoTexture;
+SamplerState AlbedoSampler;
+Texture2D NormalTexture;
+SamplerState NormalSampler;
 
 
 struct Input {
@@ -70,21 +72,23 @@ struct Output {
 
 Output main(Input input) {
 	// ambient light
-	float3 ambient = 0.0005;
+	float3 ambient = 0.005;
 
-	float4 diffuseAlbedo = g_texture.Sample(g_sampler, input.uv);
+	float4 diffuseAlbedo = AlbedoTexture.Sample(AlbedoSampler, input.uv);
+	float4 normal = NormalTexture.Sample(NormalSampler, input.uv) * input.normal;
+
 	clip(diffuseAlbedo.a < 0.1 ? -1 : 1);
 
 	float3 colorSum = ambient * diffuseAlbedo.rgb;
 
-	float3 specularAlbedo = float3( 0.56, 0.56, 0.56 );
-	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, input.normal.rgb, input.viewDir, input.worldPosition.xyz, input.camPos, 1000, float3(0.4, 0.4f, 0.4), input.camDir, float2(0.8, 0.8));
+	float3 specularAlbedo = float3( 0.0, 0.0, 0.0);
+	colorSum += ApplyLightCommon(diffuseAlbedo.rgb, specularAlbedo, normal.rgb, input.viewDir, input.worldPosition.xyz, input.camPos, 1000, float3(0.4, 0.4f, 0.4), input.camDir, float2(0.8, 0.8));
 
 	float3 col = pow(colorSum, 1.0 / 2.2);
 
 	Output output = (Output)0;
 
-	output.normal = input.normal;
+	output.normal = normal;
 	output.color = float4(col, diffuseAlbedo.a);
 
 	return output;

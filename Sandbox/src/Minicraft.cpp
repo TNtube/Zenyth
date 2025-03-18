@@ -203,7 +203,8 @@ void Minicraft::LoadAssets()
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
 
 	// Create the texture.
-	m_texture = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), *m_resourceHeap);
+	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), *m_resourceHeap);
+	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain_n.dds").c_str(), *m_resourceHeap);
 
 	commandManager.IdleGPU();
 }
@@ -251,7 +252,8 @@ void Minicraft::PopulateCommandList()
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
 	// apply cbv
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("g_texture"), m_texture->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoTexture"), m_tileset->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalTexture"), m_tilesetNormal->GetSRV().GPU());
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
 
 	m_world->Draw(commandList, ShaderPass::Opaque);

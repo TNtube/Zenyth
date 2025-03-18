@@ -61,7 +61,8 @@ private:
 	// App resources.
 	std::unique_ptr<Zenyth::ImGuiLayer> m_imguiLayer {};
 
-	std::unique_ptr<Zenyth::Texture> m_texture {};
+	std::unique_ptr<Zenyth::Texture> m_tileset {};
+	std::unique_ptr<Zenyth::Texture> m_tilesetNormal {};
 	std::unique_ptr<Zenyth::UploadBuffer> m_cameraCpuBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_cameraConstantBuffer {};
 
