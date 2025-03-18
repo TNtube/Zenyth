@@ -17,7 +17,7 @@ namespace Zenyth {
 		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 		void Destroy() { m_buffer.Reset(); }
 
-		ID3D12Resource* Get() const { return m_buffer.Get(); }
+		[[nodiscard]] ID3D12Resource* Get() const { return m_buffer.Get(); }
 		ID3D12Resource** GetAddressOf() { return m_buffer.GetAddressOf(); }
 
 		[[nodiscard]] virtual bool IsValid() const { return m_buffer != nullptr; }

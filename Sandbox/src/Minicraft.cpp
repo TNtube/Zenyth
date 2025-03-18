@@ -396,5 +396,7 @@ void Minicraft::LoadSizeDependentResources() const
 		}
 
 		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", m_width, m_height);
+		m_normalBuffer->Resize(m_width, m_height);
+		m_colorBuffer->Resize(m_width, m_height);
 	}
 }

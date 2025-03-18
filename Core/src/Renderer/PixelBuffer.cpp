@@ -13,14 +13,26 @@ namespace Zenyth
 		m_pDevice = Renderer::pDevice.Get();
 
 		flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		m_flags = flags;
+
 		m_resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
 		m_format = format;
+		m_clearColor = clearColor;
+
+		m_name = name;
+
+		Resize(width, height);
+	}
+
+	void PixelBuffer::Resize(const uint32_t width, const uint32_t height)
+	{
+		assert(m_buffer && "Cannot resize an uninitialized buffer");
+		Destroy();
 
 		m_elementCount = width * height;
 		m_elementSize = sizeof(uint32_t) * 4;
 		m_bufferSize = m_elementCount * m_elementSize;
-		m_clearColor = clearColor;
 
 		D3D12_CLEAR_VALUE clearValue = {};
 		clearValue.Format = m_format;
@@ -30,7 +42,7 @@ namespace Zenyth
 		clearValue.Color[3] = m_clearColor.f[3];
 
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_format, width, height, 1, 1, 1, 0, flags);
+		const auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_format, width, height, 1, 1, 1, 0, m_flags);
 		ThrowIfFailed(m_pDevice->CreateCommittedResource(
 			&heapProperties,
 			D3D12_HEAP_FLAG_NONE,
@@ -39,9 +51,21 @@ namespace Zenyth
 			&clearValue,
 			IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())));
 
-		SUCCEEDED(m_buffer->SetName(name.c_str()));
+		SUCCEEDED(m_buffer->SetName(m_name.c_str()));
 
 		CreateViews();
+	}
+
+	PixelBuffer::~PixelBuffer()
+	{
+		if (!m_rtvHandle.IsNull())
+			m_rtvHeap->Free(m_rtvHandle);
+
+		if (!m_srvHandle.IsNull())
+			m_resourceHeap->Free(m_srvHandle);
+
+		if (m_buffer)
+			m_buffer.Reset();
 	}
 
 	void PixelBuffer::CreateFromSwapChain(const std::wstring &name, ID3D12Resource* swapChainBuffer)
