@@ -68,6 +68,10 @@ namespace Zenyth
 			CD3DX12_DEPTH_STENCIL_DESC1 depthStencilDesc(D3D12_DEFAULT);
 
 			depthStencilDesc.DepthBoundsTestEnable = depthBoundsTestSupported;
+			depthStencilDesc.DepthEnable = TRUE;
+			depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+
+			depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 
 			psoDesc.DepthStencilState = depthStencilDesc;
 			psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;

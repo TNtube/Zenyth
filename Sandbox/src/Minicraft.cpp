@@ -21,8 +21,7 @@ using Microsoft::WRL::ComPtr;
 enum class GBufferType
 {
 	Color,
-	Normal,
-	Depth
+	Normal
 };
 
 
@@ -243,7 +242,7 @@ void Minicraft::PopulateCommandList()
 	}
 	commandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), FALSE, &dsvHandle);
 
-	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 
 	// Record commands.
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -289,9 +288,6 @@ void Minicraft::PopulateCommandList()
 		case GBufferType::Normal:
 			colorBuffer = m_normalBuffer.get();
 			break;
-		case GBufferType::Depth:
-			colorBuffer = m_depthStencilBuffer.get();
-			break;
 	}
 
 	presentCommandBatch.TransitionResource(*colorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
@@ -307,15 +303,10 @@ void Minicraft::PopulateCommandList()
 	ImGui::Text("FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
 
 	// dropdown for the current gbuffer to display
-	if (ImGui::BeginCombo("GBuffer", "Color"))
+	int idx = static_cast<int>(bufferToShow);
+	if (ImGui::Combo("GBuffer", &idx, "Color\0Normal\0"))
 	{
-		if (ImGui::Selectable("Color", bufferToShow == GBufferType::Color))
-			bufferToShow = GBufferType::Color;
-		if (ImGui::Selectable("Normal", bufferToShow == GBufferType::Normal))
-			bufferToShow = GBufferType::Normal;
-		if (ImGui::Selectable("Depth", bufferToShow == GBufferType::Depth))
-			bufferToShow = GBufferType::Depth;
-		ImGui::EndCombo();
+		bufferToShow = static_cast<GBufferType>(idx);
 	}
 
 

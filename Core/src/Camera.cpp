@@ -1,6 +1,8 @@
 #include "pch.hpp"
 #include "Camera.hpp"
 
+#include "Math/Utils.hpp"
+
 namespace Zenyth
 {
 	using namespace DirectX::SimpleMath;
@@ -16,6 +18,7 @@ namespace Zenyth
 
 	void Camera::UpdateAspectRatio(const float aspectRatio) {
 		m_projection = Matrix::CreatePerspectiveFieldOfView(m_fov, aspectRatio, m_nearPlane, m_farPlane);
+		m_projection = Math::ApplyReverseZ(m_projection);
 	}
 
 	void Camera::Update(const float dt, const Keyboard::State &kb, Mouse* mouse) {
