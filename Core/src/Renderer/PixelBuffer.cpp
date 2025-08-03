@@ -27,8 +27,8 @@ namespace Zenyth
 
 	void PixelBuffer::Resize(const uint32_t width, const uint32_t height)
 	{
-		assert(m_buffer && "Cannot resize an uninitialized buffer");
-		Destroy();
+		if (m_buffer)
+			Destroy();
 
 		m_elementCount = width * height;
 		m_elementSize = sizeof(uint32_t) * 4;

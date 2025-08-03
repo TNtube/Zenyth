@@ -19,6 +19,11 @@ namespace Zenyth
 		if (m_utils == nullptr || m_compiler == nullptr || m_includeHandler == nullptr)
 			InitializeDXC();
 
+		// allocate arbitrary large size to prevent memory invalidation after shader compilation.
+		// TODO: encapsulate this into a class that hold shader specific data and use a utility
+		// TODO: function to compute root parameters from all compiled shader to prevent this.
+		m_descriptorRanges.reserve(256);
+
 		auto vertexBlob = CompileShader(vertexPath, ShaderType::Vertex, L"vs_6_0");
 		auto pixelBlob = CompileShader(pixelPath, ShaderType::Pixel, L"ps_6_0");
 
@@ -183,7 +188,6 @@ namespace Zenyth
 		{
 			m_inputElementSemanticNames.reserve(shaderDesc.InputParameters);
 			m_inputElementDescs.reserve(shaderDesc.InputParameters);
-			m_descriptorRanges.reserve(shaderDesc.InputParameters);
 
 			for (const uint32_t parameterIndex : std::views::iota(0u, shaderDesc.InputParameters))
 			{
