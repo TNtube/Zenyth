@@ -67,7 +67,6 @@ struct Input {
 
 struct Output {
 	float4 color: SV_TARGET0;
-	float4 normal: SV_TARGET1;
 };
 
 Output main(Input input) {
@@ -88,7 +87,6 @@ Output main(Input input) {
 
 	Output output = (Output)0;
 
-	output.normal = normal;
 	output.color = float4(col, diffuseAlbedo.a);
 
 	return output;

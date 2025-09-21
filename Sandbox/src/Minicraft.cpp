@@ -78,8 +78,8 @@ void Minicraft::OnRender()
 
 	m_imguiLayer->End();
 
-	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(0, 0));
+	// Present the frame. vsync enabled
+	ThrowIfFailed(m_swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
 
 	MoveToNextFrame();
 }
@@ -106,6 +106,7 @@ void Minicraft::LoadPipeline()
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.SampleDesc.Count = 1;
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 	ComPtr<IDXGISwapChain1> swapChain;
 
@@ -153,10 +154,10 @@ void Minicraft::LoadPipeline()
 
 	{
 		m_normalBuffer = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
-		m_normalBuffer->Create(L"Normal Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::DarkBlue);
+		m_normalBuffer->Create(L"Normal Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::CornflowerBlue);
 
 		m_colorBuffer = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
-		m_colorBuffer->Create(L"Color Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::DarkBlue);
+		m_colorBuffer->Create(L"Color Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::CornflowerBlue);
 
 		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap, *m_resourceHeap);
 		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", GetWidth(), GetHeight());
@@ -232,16 +233,22 @@ void Minicraft::PopulateCommandList()
 
 	const auto dsvHandle = m_depthStencilBuffer->GetDSV().CPU();
 
-	const std::vector rtvs = {m_colorBuffer.get(), m_normalBuffer.get()};
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
-	rtvHandles.reserve(rtvs.size());
+	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 
-	for (const auto rtv : rtvs)
-	{
-		const auto& handle = rtvHandles.emplace_back(rtv->GetRTV().CPU());
-		commandList->ClearRenderTargetView(handle, rtv->GetClearColor(), 0, nullptr);
-	}
-	commandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), FALSE, &dsvHandle);
+	const auto rtvHandle = m_renderTargets[m_frameIndex]->GetRTV().CPU();
+	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
+
+	// const std::vector rtvs = {m_colorBuffer.get(), m_normalBuffer.get()};
+	// std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
+	// rtvHandles.reserve(rtvs.size());
+	//
+	// for (const auto rtv : rtvs)
+	// {
+	// 	const auto& handle = rtvHandles.emplace_back(rtv->GetRTV().CPU());
+	// 	commandList->ClearRenderTargetView(handle, rtv->GetClearColor(), 0, nullptr);
+	// }
+	// commandList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), FALSE, &dsvHandle);
 
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 
@@ -258,9 +265,9 @@ void Minicraft::PopulateCommandList()
 
 	m_world->Draw(commandList, ShaderPass::Opaque);
 
-	commandBatch.End();
+	// commandBatch.End();
 
-	static auto bufferToShow = GBufferType::Color;
+	/*static auto bufferToShow = GBufferType::Color;
 
 	auto presentCommandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto* presentCommandList = presentCommandBatch.GetCommandList();
@@ -299,27 +306,20 @@ void Minicraft::PopulateCommandList()
 	presentCommandList->IASetIndexBuffer(m_presentIndexBuffer->GetIBV());
 
 	presentCommandList->DrawIndexedInstanced(m_presentIndexBuffer->GetElementCount(), 1, 0, 0, 0);
+*/
 
 
 	ImGui::Begin("Helper");
 	ImGui::Text("FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
 
-	// dropdown for the current gbuffer to display
-	int idx = static_cast<int>(bufferToShow);
-	if (ImGui::Combo("GBuffer", &idx, "Color\0Normal\0"))
-	{
-		bufferToShow = static_cast<GBufferType>(idx);
-	}
-
 
 	ImGui::End();
+	m_imguiLayer->Render(commandList);
 
-	m_imguiLayer->Render(presentCommandList);
-
-	presentCommandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT, true);
+	commandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT, true);
 
 
-	const auto fence = presentCommandBatch.End();
+	const auto fence = commandBatch.End();
 	m_fenceValues[m_frameIndex] = fence;
 }
 
