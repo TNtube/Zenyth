@@ -39,7 +39,7 @@ namespace Zenyth
 
 
 
-	void DescriptorHeap::Create(ID3D12Device* device, const std::wstring &debugHeapName, const D3D12_DESCRIPTOR_HEAP_TYPE type, const uint32_t maxCount)
+	void DescriptorHeap::Create(ID3D12Device* device, const std::wstring& debugHeapName, const D3D12_DESCRIPTOR_HEAP_TYPE type, const uint32_t maxCount)
 	{
 		m_heapDesc.Type = type;
 		m_heapDesc.NumDescriptors = maxCount;
@@ -85,7 +85,7 @@ namespace Zenyth
 		return ret;
 	}
 
-	void DescriptorHeap::Free(const DescriptorHandle &dHandle)
+	void DescriptorHeap::Free(const DescriptorHandle& dHandle)
 	{
 		const int cpu_idx = static_cast<int>((dHandle.GetCpuPtr() - m_firstHandle.GetCpuPtr()) / m_descriptorSize);
 
@@ -105,12 +105,12 @@ namespace Zenyth
 		return m_firstHandle + arrayIdx * m_descriptorSize;
 	}
 
-	uint32_t DescriptorHeap::GetOffsetOfHandle(const DescriptorHandle &dHandle) const
+	uint32_t DescriptorHeap::GetOffsetOfHandle(const DescriptorHandle& dHandle) const
 	{
 		return static_cast<uint32_t>(dHandle.GetCpuPtr() - m_firstHandle.GetCpuPtr()) / m_descriptorSize;
 	}
 
-	bool DescriptorHeap::ValidateHandle(const DescriptorHandle &dHandle) const
+	bool DescriptorHeap::ValidateHandle(const DescriptorHandle& dHandle) const
 	{
 		if (dHandle.GetCpuPtr() < m_firstHandle.GetCpuPtr() ||
 			dHandle.GetCpuPtr() >= m_firstHandle.GetCpuPtr() + m_heapDesc.NumDescriptors * m_descriptorSize)

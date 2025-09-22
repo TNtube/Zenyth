@@ -12,7 +12,7 @@ namespace Zenyth {
 		Destroy();
 	}
 
-	void GpuBuffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t numElements, const uint32_t elementSize, const void *initialData)
+	void GpuBuffer::Create(ID3D12Device *device, const std::wstring& name, const uint32_t numElements, const uint32_t elementSize, const void *initialData)
 	{
 		Destroy();
 
@@ -40,7 +40,7 @@ namespace Zenyth {
 	}
 
 
-	void UploadBuffer::Create(const std::wstring &name, const size_t size)
+	void UploadBuffer::Create(const std::wstring& name, const size_t size)
 	{
 		Destroy();
 

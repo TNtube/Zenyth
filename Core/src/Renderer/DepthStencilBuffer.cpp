@@ -14,7 +14,7 @@ namespace Zenyth
 			m_resourceHeap->Free(m_srvHandle);
 	}
 
-	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring &name, const uint32_t width, const uint32_t height)
+	void DepthStencilBuffer::Create(ID3D12Device *device, const std::wstring& name, const uint32_t width, const uint32_t height)
 	{
 		m_pDevice = device;
 

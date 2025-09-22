@@ -108,7 +108,7 @@ namespace Zenyth
 		return view;
 	}
 
-	void UploadAllocatorPool::Return(const uint64_t fenceValue, const BufferView &buffer) const
+	void UploadAllocatorPool::Return(const uint64_t fenceValue, const BufferView& buffer) const
 	{
 		for (auto& allocator: m_allocators)
 		{

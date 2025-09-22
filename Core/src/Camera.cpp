@@ -21,7 +21,7 @@ namespace Zenyth
 		m_projection = Math::ApplyReverseZ(m_projection);
 	}
 
-	void Camera::Update(const float dt, const Keyboard::State &kb, Mouse* mouse) {
+	void Camera::Update(const float dt, const Keyboard::State& kb, Mouse* mouse) {
 		float camSpeed = 15.0f;
 		if (kb.LeftShift) camSpeed *= 2.0f;
 

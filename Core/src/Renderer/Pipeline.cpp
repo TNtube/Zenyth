@@ -12,7 +12,7 @@ namespace Zenyth
 	DXGI_FORMAT GetDXGIFormat(D3D_REGISTER_COMPONENT_TYPE componentType, BYTE mask);
 	using namespace Microsoft::WRL;
 
-	void Pipeline::Create(const std::wstring &name, const std::wstring& vertexPath, const std::wstring& pixelPath, bool depthBoundsTestSupported)
+	void Pipeline::Create(const std::wstring& name, const std::wstring& vertexPath, const std::wstring& pixelPath, bool depthBoundsTestSupported)
 	{
 		Destroy();
 
@@ -117,7 +117,7 @@ namespace Zenyth
 	}
 
 
-	ComPtr<IDxcBlob> Pipeline::CompileShader(const std::wstring &shaderPath, const ShaderType shaderType, const std::wstring& smTarget)
+	ComPtr<IDxcBlob> Pipeline::CompileShader(const std::wstring& shaderPath, const ShaderType shaderType, const std::wstring& smTarget)
 	{
 		std::vector compilationArguments
 		{

@@ -39,7 +39,7 @@ namespace Zenyth {
 		return fence;
 	}
 
-	void CommandBatch::InitializeBuffer(GpuBuffer &buffer, const void *data, const size_t size, const size_t offset)
+	void CommandBatch::InitializeBuffer(GpuBuffer& buffer, const void *data, const size_t size, const size_t offset)
 	{
 		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
@@ -97,7 +97,7 @@ namespace Zenyth {
 		}
 	}
 
-	void CommandBatch::CopyBuffer(GpuBuffer &dst, GpuBuffer &src)
+	void CommandBatch::CopyBuffer(GpuBuffer& dst, GpuBuffer& src)
 	{
 		TransitionResource(dst, D3D12_RESOURCE_STATE_COPY_DEST);
 		TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE, true);
@@ -105,7 +105,7 @@ namespace Zenyth {
 		m_commandList->CopyResource(dst.m_buffer.Get(), src.m_buffer.Get());
 	}
 
-	void CommandBatch::CopyBufferRegion(GpuBuffer &dst, uint64_t dstOffset, GpuBuffer &src, uint64_t srcOffset, uint64_t numBytes)
+	void CommandBatch::CopyBufferRegion(GpuBuffer& dst, uint64_t dstOffset, GpuBuffer& src, uint64_t srcOffset, uint64_t numBytes)
 	{
 		TransitionResource(dst, D3D12_RESOURCE_STATE_COPY_DEST);
 		TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE, true);

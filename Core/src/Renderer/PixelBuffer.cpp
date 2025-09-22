@@ -68,7 +68,7 @@ namespace Zenyth
 			m_buffer.Reset();
 	}
 
-	void PixelBuffer::CreateFromSwapChain(const std::wstring &name, ID3D12Resource* swapChainBuffer)
+	void PixelBuffer::CreateFromSwapChain(const std::wstring& name, ID3D12Resource* swapChainBuffer)
 	{
 		m_buffer.Reset();
 		m_pDevice = Renderer::pDevice.Get();
