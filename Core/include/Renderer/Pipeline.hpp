@@ -45,7 +45,7 @@ namespace Zenyth
 
 		std::vector<std::string> m_inputElementSemanticNames{};
 		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputElementDescs{};
-		std::unordered_map<std::string, int> m_rootParameterIndices;
+		std::unordered_map<std::string, uint32_t> m_rootParameterIndices;
 
 		std::vector<CD3DX12_DESCRIPTOR_RANGE1> m_descriptorRanges;
 		std::vector<D3D12_ROOT_PARAMETER1> m_rootParameters;

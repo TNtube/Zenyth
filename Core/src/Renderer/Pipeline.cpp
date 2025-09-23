@@ -8,7 +8,6 @@
 
 namespace Zenyth
 {
-	UINT GetFormatSize(const DXGI_FORMAT format);
 	DXGI_FORMAT GetDXGIFormat(D3D_REGISTER_COMPONENT_TYPE componentType, BYTE mask);
 	using namespace Microsoft::WRL;
 

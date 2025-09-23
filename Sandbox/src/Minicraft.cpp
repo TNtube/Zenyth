@@ -227,8 +227,8 @@ void Minicraft::PopulateCommandList()
 	commandList->RSSetViewports(1, &m_viewport);
 	commandList->RSSetScissorRects(1, &m_scissorRect);
 
-	commandBatch.TransitionResource(*m_normalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	commandBatch.TransitionResource(*m_colorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	// commandBatch.TransitionResource(*m_normalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	// commandBatch.TransitionResource(*m_colorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	commandBatch.TransitionResource(*m_depthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	const auto dsvHandle = m_depthStencilBuffer->GetDSV().CPU();
