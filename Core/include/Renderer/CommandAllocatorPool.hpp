@@ -20,7 +20,7 @@ namespace Zenyth {
 		explicit CommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type);
 
 		DELETE_COPY_CTOR(CommandAllocatorPool)
-		DEFAULT_MOVE_CTOR(CommandAllocatorPool)
+		DELETE_MOVE_CTOR(CommandAllocatorPool)
 
 		~CommandAllocatorPool() { Clear(); }
 

@@ -11,7 +11,7 @@ namespace Zenyth::Renderer
 
 	void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false);
 
-	void Initialize(bool useWrapDevice)
+	void Initialize(const bool useWrapDevice)
 	{
 		UINT dxgiFactoryFlags = 0;
 

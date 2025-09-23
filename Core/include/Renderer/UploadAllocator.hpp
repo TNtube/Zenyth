@@ -13,10 +13,10 @@ namespace Zenyth
 
 		BufferView() = default;
 
-		UploadBuffer* buffer;
-		size_t offset;
-		size_t size;
-		void* data;
+		UploadBuffer* buffer = nullptr;
+		size_t offset = 0;
+		size_t size = 0;
+		void* data = nullptr;
 	};
 
 	class UploadAllocator

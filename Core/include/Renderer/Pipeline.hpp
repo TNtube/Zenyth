@@ -26,7 +26,7 @@ namespace Zenyth
 		void Create(const std::wstring &name, const std::wstring &vertexPath, const std::wstring &pixelPath, bool depthBoundsTestSupported);
 		void Destroy();
 
-		int GetRootParameterIndex(const std::string &name) const { return m_rootParameterIndices.at(name); }
+		[[nodiscard]] uint32_t GetRootParameterIndex(const std::string &name) const { return m_rootParameterIndices.at(name); }
 
 		[[nodiscard]] ID3D12PipelineState* Get() const { return m_pipelineState.Get(); }
 		[[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return m_rootSignature.Get(); }

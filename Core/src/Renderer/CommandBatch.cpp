@@ -9,9 +9,7 @@ namespace Zenyth {
 	{
 	}
 
-	CommandBatch::~CommandBatch()
-	{
-	}
+	CommandBatch::~CommandBatch() = default;
 
 	CommandBatch CommandBatch::Begin(const D3D12_COMMAND_LIST_TYPE type)
 	{

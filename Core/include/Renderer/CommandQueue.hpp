@@ -12,7 +12,7 @@ namespace Zenyth
 			: m_type(type), m_allocatorPool(type), m_uploadAllocatorPool(type) {}
 
 		DELETE_COPY_CTOR(CommandQueue)
-		DEFAULT_MOVE_CTOR(CommandQueue)
+		DELETE_MOVE_CTOR(CommandQueue)
 
 		~CommandQueue() { Destroy(); };
 
@@ -25,7 +25,7 @@ namespace Zenyth
 		void WaitForFence(uint64_t fenceValue);
 		void WaitForIdle();
 
-		ID3D12CommandQueue* GetCommandQueue() const { return m_commandQueue.Get(); }
+		[[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const { return m_commandQueue.Get(); }
 
 		ID3D12CommandAllocator* AcquireAllocator();
 		void FreeAllocator(uint64_t fenceValue, ID3D12CommandAllocator *commandAllocator);

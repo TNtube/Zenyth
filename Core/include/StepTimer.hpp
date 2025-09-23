@@ -36,18 +36,18 @@ namespace DX
 		}
 
 		// Get elapsed time since the previous Update call.
-		uint64_t GetElapsedTicks() const noexcept { return m_elapsedTicks; }
-		double GetElapsedSeconds() const noexcept { return TicksToSeconds(m_elapsedTicks); }
+		[[nodiscard]] uint64_t GetElapsedTicks() const noexcept { return m_elapsedTicks; }
+		[[nodiscard]] double GetElapsedSeconds() const noexcept { return TicksToSeconds(m_elapsedTicks); }
 
 		// Get total time since the start of the program.
-		uint64_t GetTotalTicks() const noexcept { return m_totalTicks; }
-		double GetTotalSeconds() const noexcept { return TicksToSeconds(m_totalTicks); }
+		[[nodiscard]] uint64_t GetTotalTicks() const noexcept { return m_totalTicks; }
+		[[nodiscard]] double GetTotalSeconds() const noexcept { return TicksToSeconds(m_totalTicks); }
 
 		// Get total number of updates since start of the program.
-		uint32_t GetFrameCount() const noexcept { return m_frameCount; }
+		[[nodiscard]] uint32_t GetFrameCount() const noexcept { return m_frameCount; }
 
 		// Get the current framerate.
-		uint32_t GetFramesPerSecond() const noexcept { return m_framesPerSecond; }
+		[[nodiscard]] uint32_t GetFramesPerSecond() const noexcept { return m_framesPerSecond; }
 
 		// Set whether to use fixed or variable timestep mode.
 		void SetFixedTimeStep(const bool isFixedTimestep) noexcept { m_isFixedTimeStep = isFixedTimestep; }
@@ -91,7 +91,7 @@ namespace DX
 				throw std::exception();
 			}
 
-			uint64_t timeDelta = static_cast<uint64_t>(currentTime.QuadPart - m_qpcLastTime.QuadPart);
+			auto timeDelta = static_cast<uint64_t>(currentTime.QuadPart - m_qpcLastTime.QuadPart);
 
 			m_qpcLastTime = currentTime;
 			m_qpcSecondCounter += timeDelta;

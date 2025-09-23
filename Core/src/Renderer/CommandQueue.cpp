@@ -97,7 +97,7 @@ namespace Zenyth
 		m_allocatorPool.FreeAllocator(fenceValue, commandAllocator);
 	}
 
-	BufferView CommandQueue::AllocateUploadBufferView(size_t size, size_t alignment)
+	BufferView CommandQueue::AllocateUploadBufferView(const size_t size, const size_t alignment)
 	{
 		return m_uploadAllocatorPool.Allocate(size, alignment);
 	}

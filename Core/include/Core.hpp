@@ -13,8 +13,8 @@
 	ClassName& operator=(const ClassName&) = default;
 
 #define DEFAULT_MOVE_CTOR(ClassName) \
-	ClassName(ClassName&&) = default; \
-	ClassName& operator=(ClassName&&) = default;
+	ClassName(ClassName&&) noexcept = default; \
+	ClassName& operator=(ClassName&&) noexcept = default;
 
 
 inline void ThrowIfFailed(const HRESULT hr, const char* msg = "")

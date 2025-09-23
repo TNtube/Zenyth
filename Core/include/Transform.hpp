@@ -18,15 +18,15 @@ namespace Zenyth
 		void SetScale(float x, float y, float z);
 		void SetScale(const Vector3& scale) { SetScale(scale.x, scale.y, scale.z); }
 
-		Vector3 GetForward() const;
-		Vector3 GetRight() const;
-		Vector3 GetUp() const;
+		[[nodiscard]] Vector3 GetForward() const;
+		[[nodiscard]] Vector3 GetRight() const;
+		[[nodiscard]] Vector3 GetUp() const;
 
-		Vector3 GetPosition() const { return m_position; }
-		Quaternion GetRotation() const { return m_rotation; }
-		Vector3 GetScale() const { return m_scale; }
+		[[nodiscard]] Vector3 GetPosition() const { return m_position; }
+		[[nodiscard]] Quaternion GetRotation() const { return m_rotation; }
+		[[nodiscard]] Vector3 GetScale() const { return m_scale; }
 
-		Matrix GetTransformMatrix() const { return m_transform; }
+		[[nodiscard]] Matrix GetTransformMatrix() const { return m_transform; }
 
 	private:
 		void UpdateTransform();

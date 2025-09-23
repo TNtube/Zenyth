@@ -31,7 +31,7 @@ namespace Zenyth
 		void SetPosition(const Vector3& pos) { m_camPos = pos; }
 		void SetRotation(const Quaternion& rot) { m_camRot = rot; }
 
-		CameraData GetCameraData(const DX::StepTimer& timer) const;
+		[[nodiscard]] CameraData GetCameraData(const DX::StepTimer& timer) const;
 	private:
 		float m_fov;
 		float m_nearPlane = 0.01f;
