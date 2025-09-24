@@ -4,6 +4,7 @@
 
 #include <ranges>
 
+#include "CommonStates.h"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth

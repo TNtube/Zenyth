@@ -229,6 +229,7 @@ void Minicraft::PopulateCommandList()
 
 	// commandBatch.TransitionResource(*m_normalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	// commandBatch.TransitionResource(*m_colorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	commandBatch.TransitionResource(*m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	commandBatch.TransitionResource(*m_depthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 	const auto dsvHandle = m_depthStencilBuffer->GetDSV().CPU();
@@ -334,7 +335,7 @@ void Minicraft::MoveToNextFrame()
 
 std::wstring Minicraft::GetAssetFullPath(const std::wstring &assetName)
 {
-	return L"resources/" + assetName;
+	return WORKING_DIR L"resources/" + assetName;
 }
 
 void Minicraft::OnWindowSizeChanged(const int width, const int height)

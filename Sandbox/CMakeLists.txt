@@ -1,5 +1,3 @@
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS include/*.hpp src/*.cpp)
 
 add_executable(Sandbox WIN32
@@ -9,19 +7,13 @@ add_executable(Sandbox WIN32
 target_compile_features(Sandbox PRIVATE cxx_std_20)
 
 target_include_directories(Sandbox PUBLIC
-    $"$<TARGET_PROPERTY:Core,PUBLIC_INCLUDE_DIRECTORIES>"
+    ${CMAKE_SOURCE_DIR}/Core/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+target_compile_definitions(Sandbox PRIVATE WORKING_DIR="${CMAKE_CURRENT_SOURCE_DIR}/")
+
 target_precompile_headers(Sandbox REUSE_FROM Core)
-
-
-if (CMAKE_GENERATOR MATCHES "Visual Studio")
-    # Visual Studio seems to have a different build directory structure
-    set(RESOURCES_BUILD_DIR ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/resources)
-else()
-    set(RESOURCES_BUILD_DIR ${CMAKE_BINARY_DIR}/resources)
-endif()
 
 add_custom_command(TARGET Sandbox POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -29,11 +21,11 @@ add_custom_command(TARGET Sandbox POST_BUILD
         "${DXC_DIR}/bin/x64/dxil.dll"
         $<TARGET_FILE_DIR:Sandbox>)
 
-add_custom_command(TARGET Sandbox POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/resources"
-        "${RESOURCES_BUILD_DIR}"
-        COMMENT "Copying resources to build directory"
-)
+#add_custom_command(TARGET Sandbox POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy_directory
+#        "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+#        "${CMAKE_BINARY_DIR}/Sandbox/resources"
+#        COMMENT "Copying resources to build directory"
+#)
 
 target_link_libraries(Sandbox Core)
