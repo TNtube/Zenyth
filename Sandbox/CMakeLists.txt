@@ -9,8 +9,8 @@ add_executable(Sandbox WIN32
 target_compile_features(Sandbox PRIVATE cxx_std_20)
 
 target_include_directories(Sandbox PUBLIC
-    ${CMAKE_SOURCE_DIR}/Core/include
-    ${CMAKE_SOURCE_DIR}/Sandbox/include
+    $"$<TARGET_PROPERTY:Core,PUBLIC_INCLUDE_DIRECTORIES>"
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_precompile_headers(Sandbox REUSE_FROM Core)
@@ -23,20 +23,17 @@ else()
     set(RESOURCES_BUILD_DIR ${CMAKE_BINARY_DIR}/resources)
 endif()
 
-# Copy resources to build directory
-add_custom_target(copy_resources ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/Sandbox/resources"
-    "${RESOURCES_BUILD_DIR}"
-    COMMENT "Copying resources to build directory"
-)
-
 add_custom_command(TARGET Sandbox POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${DXC_DIR}/bin/x64/dxcompiler.dll"
         "${DXC_DIR}/bin/x64/dxil.dll"
         $<TARGET_FILE_DIR:Sandbox>)
 
-add_dependencies(Sandbox copy_resources)
+add_custom_command(TARGET Sandbox POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+        "${RESOURCES_BUILD_DIR}"
+        COMMENT "Copying resources to build directory"
+)
 
 target_link_libraries(Sandbox Core)

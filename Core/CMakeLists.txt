@@ -31,14 +31,12 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp include/*.hpp)
 
 add_library(Core STATIC
     ${SOURCES}
-        include/ImGuiLayer.hpp
-        src/ImGuiLayer.cpp
 )
 
 target_compile_features(Core PRIVATE cxx_std_20)
 
 target_include_directories(Core PUBLIC
-    ${CMAKE_SOURCE_DIR}/Core/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_precompile_headers(Core PUBLIC include/pch.hpp)
