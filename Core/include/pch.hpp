@@ -37,3 +37,6 @@
 #include <shellapi.h>
 #include <cmath>
 #include <cstdint>
+
+#include "Math/Utils.hpp"
+

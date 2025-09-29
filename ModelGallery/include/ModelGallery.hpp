@@ -10,7 +10,7 @@
 #include "Renderer/DepthStencilBuffer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/PixelBuffer.hpp"
-#include "Renderer/Model/Mesh.hpp"
+#include "Renderer/SubmeshRenderer.hpp"
 
 class ModelGallery final : public Zenyth::Application
 {
@@ -86,5 +86,5 @@ private:
 	std::unique_ptr<DirectX::Mouse>			m_mouse;
 
 	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
-	std::vector<Zenyth::Mesh> m_meshes;
+	std::vector<Zenyth::SubmeshRenderer> m_meshes;
 };

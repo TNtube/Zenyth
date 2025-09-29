@@ -71,7 +71,7 @@ struct Output {
 
 Output main(Input input) {
 	// ambient light
-	float3 ambient = 0.005;
+	float3 ambient = 0.1;
 
 	float4 diffuseAlbedo = AlbedoTexture.Sample(AlbedoSampler, input.uv);
 	float4 normal = NormalTexture.Sample(NormalSampler, input.uv);

@@ -1,9 +1,10 @@
 #pragma once
+#include <SimpleMath.h>
 
 class Vertex
 {
 public:
-	DirectX::XMFLOAT4 position;
-	DirectX::XMFLOAT4 normal;
-	DirectX::XMFLOAT2 uv;
+	DirectX::SimpleMath::Vector4 position;
+	DirectX::SimpleMath::Vector4 normal;
+	DirectX::SimpleMath::Vector2 uv;
 };

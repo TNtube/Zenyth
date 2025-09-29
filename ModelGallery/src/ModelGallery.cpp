@@ -10,9 +10,8 @@
 #include "Win32Application.hpp"
 
 #include "imgui.h"
-#include "Transform.hpp"
-#include "Assets/ObjParser.hpp"
-#include "Math/Utils.hpp"
+#include "Data/Transform.hpp"
+#include "Assets/ObjLoader.hpp"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/PixelBuffer.hpp"
 #include "Renderer/Renderer.hpp"
@@ -93,7 +92,7 @@ void ModelGallery::OnDestroy()
 
 struct ModelData
 {
-	DirectX::SimpleMath::Matrix model;
+	Matrix model;
 };
 void ModelGallery::LoadPipeline()
 {
@@ -164,11 +163,11 @@ void ModelGallery::LoadPipeline()
 	}
 
 	{
-		Zenyth::ObjParser doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
+		Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
 
 		if (doorObj.LoadData())
 		{
-			m_meshes = doorObj.GenerateMeshes();
+			m_meshes = doorObj.GenerateRenderers();
 		}
 	}
 
@@ -177,7 +176,7 @@ void ModelGallery::LoadPipeline()
 		// transform.SetScale(30, 30, 30);
 		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
 		const ModelData modelData = {transform.GetTransformMatrix()};
-		m_meshConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Model Constant Buffer", 1, Math::AlignToMask(static_cast<int>(sizeof(ModelData)), 256), &modelData);
+		m_meshConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Model Constant Buffer", 1, Zenyth::Math::AlignToMask(static_cast<int>(sizeof(ModelData)), 256), &modelData);
 	}
 }
 
@@ -200,7 +199,7 @@ void ModelGallery::LoadAssets()
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
 
 	// Create the texture.
-	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_BC.dds").c_str(), *m_resourceHeap);
+	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain_n.dds").c_str(), *m_resourceHeap);
 	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain_n.dds").c_str(), *m_resourceHeap);
 
 	commandManager.IdleGPU();
@@ -260,6 +259,8 @@ void ModelGallery::PopulateCommandList()
 
 	ImGui::Begin("Helper");
 	ImGui::Text("FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
+
+	// m_camera.OnImGui();
 
 
 	ImGui::End();

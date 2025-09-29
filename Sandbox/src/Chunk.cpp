@@ -158,7 +158,7 @@ void Chunk::Create(ID3D12Device* device, Zenyth::DescriptorHeap& resourceHeap)
 	{
 		m_constantBuffer = std::make_unique<Zenyth::ConstantBuffer>(resourceHeap);
 		const ModelData modelData = {m_transform.GetTransformMatrix()};
-		m_constantBuffer->Create(device, L"Model Constant Buffer", 1, Math::AlignToMask(static_cast<int>(sizeof(ModelData)), 256), &modelData);
+		m_constantBuffer->Create(device, L"Model Constant Buffer", 1, Zenyth::Math::AlignToMask(static_cast<int>(sizeof(ModelData)), 256), &modelData);
 	}
 }
 
