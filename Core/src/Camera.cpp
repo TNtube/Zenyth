@@ -76,8 +76,7 @@ namespace Zenyth
 	CameraData Camera::GetCameraData(const DX::StepTimer& timer) const {
 
 		CameraData md {};
-		md.mView = m_view;
-		md.mProjection = m_projection;
+		md.mViewProjection = m_view * m_projection;
 		md.mPosition = m_camPos;
 		md.mCamDir = Vector3::Transform(Vector3::Forward, m_camRot);
 		md.time = static_cast<float>(timer.GetTotalSeconds());

@@ -10,5 +10,5 @@ d 1.000000
 illum 2
 map_Kd T_Door_BC.png
 map_Ns T_Door_R.png
-# map_refl T_Door_M.png
+refl -type sphere T_Door_M.png
 map_bump -bm 1.000000 T_Door_N.png

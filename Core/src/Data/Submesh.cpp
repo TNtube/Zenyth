@@ -33,7 +33,7 @@ namespace Zenyth
 
 			const float denominator = uvd1.x * uvd2.y - uvd2.x * uvd2.y;
 
-			DirectX::SimpleMath::Vector3 tangent {0, 0, 0};
+			Vector3 tangent {0, 0, 0};
 
 			if (denominator != 0.f)
 				tangent = (e1 * uvd2.y - e2 * uvd1.y) / denominator;

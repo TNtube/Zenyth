@@ -12,8 +12,7 @@ namespace Zenyth
 	using namespace DirectX::SimpleMath;
 
 	struct CameraData {
-		Matrix mView;
-		Matrix mProjection;
+		Matrix mViewProjection;
 		Vector3 mPosition; float pad0;
 		Vector3 mCamDir;
 		float time;

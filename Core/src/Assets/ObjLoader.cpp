@@ -60,16 +60,19 @@ namespace Zenyth
 						currentGroup.name = token.data[0];
 						break;
 					case TokenType::Position:
-						if (!ParseVec(token, parsed)) return false;
+						if (!ParseVec(token, parsed))
+							return false;
 						m_positions.push_back(parsed);
 						break;
 					case TokenType::Normal:
-						if (!ParseVec(token, parsed)) return false;
+						if (!ParseVec(token, parsed))
+							return false;
 						m_normals.push_back(parsed);
 						break;
 					case TokenType::Uv:
-						if (!ParseVec(token, parsed)) return false;
-						m_uvs.push_back({parsed.x, parsed.y});
+						if (!ParseVec(token, parsed))
+							return false;
+						m_uvs.push_back({parsed.x, 1.0f - parsed.y}); // v=0 is at the top, not the bottom
 						break;
 					case TokenType::FaceIndices:
 						std::vector<VertexIndices> vertices;
@@ -124,6 +127,7 @@ namespace Zenyth
 		else if (s == "f") token.type = TokenType::FaceIndices;
 
 		while (std::getline(iss, s, ' ')) {
+			if (s.empty()) continue;
 			token.data.push_back(s);
 		}
 

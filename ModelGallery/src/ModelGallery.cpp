@@ -163,7 +163,7 @@ void ModelGallery::LoadPipeline()
 	}
 
 	{
-		Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
+		Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/cube-tex.obj"));
 
 		if (doorObj.LoadData())
 		{
@@ -199,7 +199,7 @@ void ModelGallery::LoadAssets()
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
 
 	// Create the texture.
-	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain_n.dds").c_str(), *m_resourceHeap);
+	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/texture.dds").c_str(), *m_resourceHeap);
 	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain_n.dds").c_str(), *m_resourceHeap);
 
 	commandManager.IdleGPU();

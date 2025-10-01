@@ -4,6 +4,7 @@
 #include "Core.hpp"
 #include "DDSTextureLoader.h"
 #include "DirectXHelpers.h"
+#include "ResourceUploadBatch.h"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
