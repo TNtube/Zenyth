@@ -9,8 +9,8 @@ namespace Zenyth
 	SubmeshRenderer::SubmeshRenderer(const Submesh& submesh)
 	{
 		std::wstring wName(submesh.GetName().begin(), submesh.GetName().end());
-		m_vertexBuffer.Create(Renderer::pDevice.Get(), std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), submesh.GetVertices().data());
-		m_indexBuffer .Create(Renderer::pDevice.Get(), std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), submesh.GetIndices().data());
+		m_vertexBuffer.Create(Renderer::pDevice.Get(), std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), false, submesh.GetVertices().data());
+		m_indexBuffer .Create(Renderer::pDevice.Get(), std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), false, submesh.GetIndices().data());
 	}
 
 	void SubmeshRenderer::Draw(ID3D12GraphicsCommandList* commandList) const

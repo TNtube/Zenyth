@@ -12,14 +12,14 @@ namespace Zenyth {
 		Destroy();
 	}
 
-	void GpuBuffer::Create(ID3D12Device *device, const std::wstring& name, const uint32_t numElements, const uint32_t elementSize, const void *initialData)
+	void GpuBuffer::Create(ID3D12Device *device, const std::wstring& name, const size_t numElements, const size_t elementSize, const bool align, const void *initialData)
 	{
 		Destroy();
 
 		m_pDevice = device;
-		m_elementSize = elementSize;
+		m_elementSize = align ? Math::AlignToMask(elementSize, 256ull) : elementSize;
 		m_elementCount = numElements;
-		m_bufferSize = elementSize * numElements;
+		m_bufferSize = m_elementSize * numElements;
 
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		const auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize);
@@ -34,7 +34,11 @@ namespace Zenyth {
 		SUCCEEDED(m_buffer->SetName(name.c_str()));
 
 		if (initialData != nullptr)
-			CommandBatch::InitializeBuffer(*this, initialData, m_bufferSize);
+		{
+			// we need to copy the initial data size, we cannot use the m_bufferSize
+			// since it might actually be greater than the copied data.
+			CommandBatch::InitializeBuffer(*this, initialData, elementSize * numElements);
+		}
 
 		CreateViews();
 	}
@@ -46,7 +50,7 @@ namespace Zenyth {
 
 		m_pDevice = Renderer::pDevice.Get();
 
-		m_bufferSize = size;
+		m_bufferSize = Math::AlignToMask(size, 256ull);
 
 		const auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		const auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(m_bufferSize);

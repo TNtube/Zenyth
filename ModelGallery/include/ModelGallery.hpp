@@ -7,6 +7,7 @@
 #include "Renderer/DescriptorHeap.hpp"
 #include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
+#include "Data/Light.hpp"
 #include "Renderer/DepthStencilBuffer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/PixelBuffer.hpp"
@@ -58,8 +59,16 @@ private:
 
 	std::unique_ptr<Zenyth::Texture> m_tileset {};
 	std::unique_ptr<Zenyth::Texture> m_tilesetNormal {};
+
+	std::unique_ptr<Zenyth::UploadBuffer> m_lightUploadBuffer {};
+	std::unique_ptr<Zenyth::StructuredBuffer> m_lightBuffer {};
+	float m_lightSpeed = 5.0f;
+
 	std::unique_ptr<Zenyth::UploadBuffer> m_cameraCpuBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_cameraConstantBuffer {};
+
+	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
+	std::vector<Zenyth::SubmeshRenderer> m_meshes;
 
 	// Synchronization objects.
 	UINT m_frameIndex;
@@ -85,6 +94,6 @@ private:
 	std::unique_ptr<DirectX::Keyboard>		m_keyboard;
 	std::unique_ptr<DirectX::Mouse>			m_mouse;
 
-	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
-	std::vector<Zenyth::SubmeshRenderer> m_meshes;
+
+	Zenyth::LightData m_directionalLight;
 };

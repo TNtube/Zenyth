@@ -12,6 +12,7 @@
 #include "imgui.h"
 #include "Data/Transform.hpp"
 #include "Assets/ObjLoader.hpp"
+#include "Data/Light.hpp"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/PixelBuffer.hpp"
 #include "Renderer/Renderer.hpp"
@@ -35,7 +36,12 @@ ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bo
 		m_frameIndex(0),
 		m_camera(XMConvertToRadians(80), m_aspectRatio)
 {
-	m_camera.SetPosition({0, 0, 10});
+	m_camera.SetPosition({0, 1, 3});
+
+	m_directionalLight.direction = Vector3{0.2, 0.0, 0.5};
+
+	m_directionalLight.color = Colors::IndianRed;
+
 }
 
 void ModelGallery::OnInit()
@@ -59,11 +65,15 @@ void ModelGallery::Tick() {
 
 void ModelGallery::OnUpdate()
 {
+	const auto dt = static_cast<float>(m_timer.GetElapsedSeconds());
 	auto const kb = m_keyboard->GetState();
-	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()), kb, m_mouse.get());
+	m_camera.Update(dt, kb, m_mouse.get());
 	const auto cameraData = m_camera.GetCameraData(m_timer);
 	// m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
 	memcpy(m_cameraCpuBuffer->GetMappedData(), &cameraData, sizeof(Zenyth::CameraData));
+
+	memcpy(m_lightUploadBuffer->GetMappedData(), &m_directionalLight, sizeof(Zenyth::LightData));
+
 }
 
 void ModelGallery::OnRender()
@@ -94,6 +104,7 @@ struct ModelData
 {
 	Matrix model;
 };
+
 void ModelGallery::LoadPipeline()
 {
 	Zenyth::Renderer::Initialize(m_useWarpDevice);
@@ -162,22 +173,6 @@ void ModelGallery::LoadPipeline()
 		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", GetWidth(), GetHeight());
 	}
 
-	{
-		Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
-
-		if (doorObj.LoadData())
-		{
-			m_meshes = doorObj.GenerateRenderers();
-		}
-	}
-
-	{
-		Zenyth::Transform transform;
-		// transform.SetScale(30, 30, 30);
-		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
-		const ModelData modelData = {transform.GetTransformMatrix()};
-		m_meshConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Model Constant Buffer", 1, Zenyth::Math::AlignToMask(static_cast<int>(sizeof(ModelData)), 256), &modelData);
-	}
 }
 
 void ModelGallery::LoadAssets()
@@ -190,11 +185,57 @@ void ModelGallery::LoadAssets()
 		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPath(L"shaders/basic_vs.hlsl"), GetAssetFullPath(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
 	}
 
-	m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
-	m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
-	m_cameraCpuBuffer->Map();
-	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
-	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 3, (sizeof(Zenyth::CameraData) + 255) & ~255);
+	{
+		m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
+		m_cameraCpuBuffer->Map();
+
+		m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+		m_cameraConstantBuffer->Create(
+			Zenyth::Renderer::pDevice.Get(),
+			L"Camera Constant Buffer",
+			3,
+			sizeof(Zenyth::CameraData));
+	}
+
+	{
+		Zenyth::Transform transform;
+		transform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
+		// transform.SetScale(30, 30, 30);
+		const ModelData modelData = {transform.GetTransformMatrix()};
+
+		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+		m_meshConstantBuffer->Create(
+			Zenyth::Renderer::pDevice.Get(),
+			L"Model Constant Buffer",
+			1,
+			sizeof(ModelData),
+			true,
+			&modelData);
+	}
+
+	{
+		Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
+
+		if (doorObj.LoadData())
+		{
+			m_meshes = doorObj.GenerateRenderers();
+		}
+	}
+
+
+	{
+		m_lightUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		m_lightUploadBuffer->Create(L"Light Upload Buffer", sizeof(Zenyth::LightData));
+		m_lightUploadBuffer->Map();
+
+		m_lightBuffer = std::make_unique<Zenyth::StructuredBuffer>(*m_resourceHeap);
+		m_lightBuffer->Create(
+			Zenyth::Renderer::pDevice.Get(),
+			L"Light Structured Buffer",
+			3,
+			sizeof(Zenyth::LightData));
+	}
 
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
 
@@ -233,7 +274,7 @@ void ModelGallery::PopulateCommandList()
 
 	const auto rtvHandle = m_renderTargets[m_frameIndex]->GetRTV().CPU();
 	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-	commandList->ClearRenderTargetView(rtvHandle, Colors::CornflowerBlue, 0, nullptr);
+	commandList->ClearRenderTargetView(rtvHandle, Color{0.2f, 0.2f, 0.2f, 1.0f}, 0, nullptr);
 
 
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
@@ -244,6 +285,9 @@ void ModelGallery::PopulateCommandList()
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
+	commandBatch.CopyBufferRegion(*m_lightBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_lightUploadBuffer, 0, sizeof(Zenyth::LightData));
+	commandBatch.TransitionResource(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+
 	// apply cbv
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoTexture"), m_tileset->GetSRV().GPU());
 	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalTexture"), m_tilesetNormal->GetSRV().GPU());
@@ -251,6 +295,8 @@ void ModelGallery::PopulateCommandList()
 
 
 	commandList->SetGraphicsRootDescriptorTable(0, m_meshConstantBuffer->GetCBV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
+
 	for (const auto& mesh : m_meshes)
 	{
 		mesh.Draw(commandList);
@@ -261,6 +307,11 @@ void ModelGallery::PopulateCommandList()
 	ImGui::Text("FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
 
 	// m_camera.OnImGui();
+
+	ImGui::TreePush("Foo");
+	ImGui::DragFloat3("Speed", &m_directionalLight.direction.x, 0.001f);
+	ImGui::ColorEdit3("Color", &m_directionalLight.color.x);
+	ImGui::TreePop();
 
 
 	ImGui::End();

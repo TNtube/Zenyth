@@ -14,7 +14,7 @@ namespace Zenyth {
 
 		virtual ~GpuBuffer();
 
-		void Create(ID3D12Device *device, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
+		void Create(ID3D12Device *device, const std::wstring& name, size_t numElements, size_t elementSize, bool align = true, const void* initialData = nullptr);
 		void Destroy() { m_buffer.Reset(); }
 
 		[[nodiscard]] ID3D12Resource* Get() const { return m_buffer.Get(); }
