@@ -2,7 +2,7 @@
 
 namespace Zenyth
 {
-	enum class LightType
+	enum class LightType : uint32_t
 	{
 		Point,
 		Spot,
@@ -18,7 +18,7 @@ namespace Zenyth
 		float							radiusSq;
 		DirectX::SimpleMath::Vector3	color;
 
-		uint32_t						type;
+		LightType						type;
 		DirectX::SimpleMath::Vector2	coneAngles;
 	};
 }

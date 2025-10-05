@@ -38,9 +38,9 @@ ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bo
 {
 	m_camera.SetPosition({0, 1, 3});
 
-	m_directionalLight.direction = Vector3{0.2, 0.0, 0.5};
-
-	m_directionalLight.color = Colors::IndianRed;
+	m_directionalLight.direction = Vector3{-0.2f, -1.0f, -0.3f};
+	m_directionalLight.type = Zenyth::LightType::Directional;
+	m_directionalLight.color = Colors::White;
 
 }
 
@@ -68,12 +68,20 @@ void ModelGallery::OnUpdate()
 	const auto dt = static_cast<float>(m_timer.GetElapsedSeconds());
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(dt, kb, m_mouse.get());
-	const auto cameraData = m_camera.GetCameraData(m_timer);
-	// m_cameraConstantBuffer->SetData(cameraData, m_frameIndex);
+	const auto cameraData = m_camera.GetCameraData();
 	memcpy(m_cameraCpuBuffer->GetMappedData(), &cameraData, sizeof(Zenyth::CameraData));
 
 	memcpy(m_lightUploadBuffer->GetMappedData(), &m_directionalLight, sizeof(Zenyth::LightData));
 
+	SceneConstants sc;
+
+	sc.activeLightCount = 1;
+	sc.cameraPosition = m_camera.GetPosition();
+	sc.time = m_timer.GetTotalSeconds();
+	sc.deltaTime = m_timer.GetElapsedSeconds();
+	sc.screenResolution = Vector2(m_width, m_height);
+
+	memcpy(m_sceneUploadBuffer->GetMappedData(), &sc, sizeof(SceneConstants));
 }
 
 void ModelGallery::OnRender()
@@ -196,6 +204,18 @@ void ModelGallery::LoadAssets()
 			L"Camera Constant Buffer",
 			3,
 			sizeof(Zenyth::CameraData));
+
+
+		m_sceneUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		m_sceneUploadBuffer->Create(L"Scene Upload Buffer", sizeof(SceneConstants));
+		m_sceneUploadBuffer->Map();
+
+		m_sceneConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+		m_sceneConstantBuffer->Create(
+			Zenyth::Renderer::pDevice.Get(),
+			L"Scene Constant Buffer",
+			3,
+			sizeof(SceneConstants));
 	}
 
 	{
@@ -241,7 +261,8 @@ void ModelGallery::LoadAssets()
 
 	// Create the texture.
 	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_BC.dds").c_str(), *m_resourceHeap);
-	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain_n.dds").c_str(), *m_resourceHeap);
+	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_N.dds").c_str(), *m_resourceHeap);
+	m_tilesetSpecular = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_R.dds").c_str(), *m_resourceHeap);
 
 	commandManager.IdleGPU();
 }
@@ -285,16 +306,22 @@ void ModelGallery::PopulateCommandList()
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
-	commandBatch.CopyBufferRegion(*m_lightBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_lightUploadBuffer, 0, sizeof(Zenyth::LightData));
+	commandBatch.CopyBufferRegion(*m_sceneConstantBuffer, m_frameIndex * m_sceneConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
+	commandBatch.TransitionResource(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
+
+	commandBatch.CopyBufferRegion(*m_lightBuffer, m_frameIndex * m_lightBuffer->GetElementSize(), *m_lightUploadBuffer, 0, sizeof(Zenyth::LightData));
 	commandBatch.TransitionResource(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 	// apply cbv
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoTexture"), m_tileset->GetSRV().GPU());
-	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalTexture"), m_tilesetNormal->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoMap"), m_tileset->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalMap"), m_tilesetNormal->GetSRV().GPU());
+	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("SpecularMap"), m_tilesetSpecular->GetSRV().GPU());
+
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
+	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("SceneConstants"), m_sceneConstantBuffer->GetCBV().GPU());
 
 
-	commandList->SetGraphicsRootDescriptorTable(0, m_meshConstantBuffer->GetCBV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("ObjectData"), m_meshConstantBuffer->GetCBV().GPU());
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
 
 	for (const auto& mesh : m_meshes)
@@ -309,7 +336,7 @@ void ModelGallery::PopulateCommandList()
 	// m_camera.OnImGui();
 
 	ImGui::TreePush("Foo");
-	ImGui::DragFloat3("Speed", &m_directionalLight.direction.x, 0.001f);
+	ImGui::DragFloat3("Speed", &m_directionalLight.direction.x, 0.1f);
 	ImGui::ColorEdit3("Color", &m_directionalLight.color.x);
 	ImGui::TreePop();
 

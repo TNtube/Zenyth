@@ -30,9 +30,19 @@ private:
 	float m_aspectRatio;
 
 
-	struct SceneConstantBuffer
+	struct SceneConstants
 	{
-		DirectX::SimpleMath::Matrix model;
+		uint32_t activeLightCount;
+		float time;
+		float deltaTime;
+		uint32_t shadowMapCount;
+
+		DirectX::SimpleMath::Vector3 cameraPosition;
+		float _pad1;
+
+		DirectX::SimpleMath::Vector2 screenResolution;
+		DirectX::SimpleMath::Vector2 _pad0;
+
 	};
 
 	DWORD m_callbackCookie{};
@@ -59,6 +69,7 @@ private:
 
 	std::unique_ptr<Zenyth::Texture> m_tileset {};
 	std::unique_ptr<Zenyth::Texture> m_tilesetNormal {};
+	std::unique_ptr<Zenyth::Texture> m_tilesetSpecular {};
 
 	std::unique_ptr<Zenyth::UploadBuffer> m_lightUploadBuffer {};
 	std::unique_ptr<Zenyth::StructuredBuffer> m_lightBuffer {};
@@ -66,6 +77,9 @@ private:
 
 	std::unique_ptr<Zenyth::UploadBuffer> m_cameraCpuBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_cameraConstantBuffer {};
+
+	std::unique_ptr<Zenyth::UploadBuffer> m_sceneUploadBuffer {};
+	std::unique_ptr<Zenyth::ConstantBuffer> m_sceneConstantBuffer {};
 
 	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
 	std::vector<Zenyth::SubmeshRenderer> m_meshes;

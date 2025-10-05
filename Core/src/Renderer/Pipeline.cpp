@@ -222,7 +222,7 @@ namespace Zenyth
 				m_descriptorRanges.push_back(cbvRange);
 
 				CD3DX12_ROOT_PARAMETER1 rootParameter;
-				rootParameter.InitAsDescriptorTable(1, &m_descriptorRanges.back(), D3D12_SHADER_VISIBILITY_VERTEX);
+				rootParameter.InitAsDescriptorTable(1, &m_descriptorRanges.back(), shaderType == ShaderType::Vertex ? D3D12_SHADER_VISIBILITY_VERTEX : D3D12_SHADER_VISIBILITY_PIXEL);
 
 				m_rootParameters.push_back(rootParameter);
 			}

@@ -218,6 +218,8 @@ namespace Zenyth
 			output.GetVertices().push_back(vertex);
 		}
 
+		output.ComputeTangents();
+
 		return output;
 	}
 }

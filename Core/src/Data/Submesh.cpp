@@ -19,34 +19,59 @@ namespace Zenyth
 
 	void Submesh::ComputeTangents()
 	{
-		for (int i = 0; i < GetIndexCount(); i += 3)
-		{
-			auto& v1 = m_vertices[m_indices[i]];
-			auto& v2 = m_vertices[m_indices[i + 1]];
-			auto& v3 = m_vertices[m_indices[i + 2]];
+		// Temporary arrays to accumulate tangent
+		std::vector tan1(m_vertices.size(), Vector3::Zero);
 
-			const auto e1  = v2.position - v1.position;
-			const auto e2 = v3.position - v1.position;
+		// Calculate tangents for each triangle
+		for (size_t i = 0; i < m_indices.size(); i += 3) {
+			const uint32_t i0 = m_indices[i + 0];
+			const uint32_t i1 = m_indices[i + 1];
+			const uint32_t i2 = m_indices[i + 2];
 
-			const auto uvd1  = v2.uv - v1.uv;
-			const auto uvd2 = v3.uv - v1.uv;
+			const Vertex& v0 = m_vertices[i0];
+			const Vertex& v1 = m_vertices[i1];
+			const Vertex& v2 = m_vertices[i2];
 
-			const float denominator = uvd1.x * uvd2.y - uvd2.x * uvd2.y;
+			// Position deltas
+			const Vector3 edge1 = v1.position - v0.position;
+			const Vector3 edge2 = v2.position - v0.position;
 
-			Vector3 tangent {0, 0, 0};
+			// UV deltas
+			const float deltaU1 = v1.uv.x - v0.uv.x;
+			const float deltaV1 = v1.uv.y - v0.uv.y;
+			const float deltaU2 = v2.uv.x - v0.uv.x;
+			const float deltaV2 = v2.uv.y - v0.uv.y;
 
-			if (denominator != 0.f)
-				tangent = (e1 * uvd2.y - e2 * uvd1.y) / denominator;
+			// Calculate tangent and bitangent
+			float f = 1.0f / (deltaU1 * deltaV2 - deltaU2 * deltaV1);
 
-			v1.tangent += tangent;
-			v2.tangent += tangent;
-			v3.tangent += tangent;
+			// Avoid division by zero
+			if (!isfinite(f)) {
+				f = 1.0f;
+			}
+
+			const Vector3 tangent(
+				f * (deltaV2 * edge1.x - deltaV1 * edge2.x),
+				f * (deltaV2 * edge1.y - deltaV1 * edge2.y),
+				f * (deltaV2 * edge1.z - deltaV1 * edge2.z)
+			);
+
+			// Accumulate for each vertex of the triangle
+			tan1[i0] += tangent;
+			tan1[i1] += tangent;
+			tan1[i2] += tangent;
 		}
 
-		for (Vertex& vert : m_vertices)
-		{
-			vert.tangent = vert.tangent - vert.normal * vert.tangent.Dot(vert.normal);
-			vert.tangent.Normalize();
+		// Orthogonalize and normalize tangents using Gram-Schmidt
+		for (size_t i = 0; i < m_vertices.size(); ++i) {
+			Vector3 n = m_vertices[i].normal;
+			Vector3 t = tan1[i];
+
+			// Gram-Schmidt orthogonalize: t = normalize(t - n * dot(n, t))
+			Vector3 tangent = t - n * n.Dot(t);
+			tangent.Normalize();
+
+			m_vertices[i].tangent = tangent;
 		}
 	}
 }
