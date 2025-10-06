@@ -313,8 +313,8 @@ void ModelGallery::PopulateCommandList()
 	commandBatch.TransitionResource(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 	// apply cbv
-	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoMap"), m_tileset->GetSRV().GPU());
-	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalMap"), m_tilesetNormal->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoMap"), m_tileset->GetSRV().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalMap"), m_tilesetNormal->GetSRV().GPU());
 	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("SpecularMap"), m_tilesetSpecular->GetSRV().GPU());
 
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
@@ -322,7 +322,7 @@ void ModelGallery::PopulateCommandList()
 
 
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("ObjectData"), m_meshConstantBuffer->GetCBV().GPU());
-	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
+	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
 
 	for (const auto& mesh : m_meshes)
 	{

@@ -77,9 +77,9 @@ Output main(Input input) {
 
 	Output output = (Output)0;
 	float3 gammaCorrection = 1.0/2.2;
-	normal = input.matTBN[2];
-	normal = mad(normal, 0.5, 0.5);
-	output.color = float4(normal, 1.0f); //float4(pow(color, gammaCorrection), albedo.a);
+// 	normal = input.matTBN[2];
+// 	normal = mad(normal, 0.5, 0.5);
+	output.color = /*float4(normal, 1.0f); //*/float4(pow(color, gammaCorrection), albedo.a);
 
 	return output;
 }
