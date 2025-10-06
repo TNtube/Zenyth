@@ -257,12 +257,12 @@ namespace Zenyth
 			{
 				const D3D12_STATIC_SAMPLER_DESC staticSampler
 				{
-					.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT,
+					.Filter = D3D12_FILTER_ANISOTROPIC,
 					.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
 					.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
 					.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
 					.MipLODBias = 0,
-					.MaxAnisotropy = 0,
+					.MaxAnisotropy = 16,
 					.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
 					.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK,
 					.MinLOD = 0.0f,

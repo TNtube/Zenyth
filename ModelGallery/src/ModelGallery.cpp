@@ -38,9 +38,9 @@ ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bo
 {
 	m_camera.SetPosition({0, 1, 3});
 
-	m_directionalLight.direction = Vector3{-0.2f, -1.0f, -0.3f};
+	m_directionalLight.direction = Vector3{0.3, -1.0, 0.2};
 	m_directionalLight.type = Zenyth::LightType::Directional;
-	m_directionalLight.color = Colors::White;
+	m_directionalLight.color = Colors::LightYellow;
 
 }
 
@@ -313,8 +313,8 @@ void ModelGallery::PopulateCommandList()
 	commandBatch.TransitionResource(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 	// apply cbv
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoMap"), m_tileset->GetSRV().GPU());
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalMap"), m_tilesetNormal->GetSRV().GPU());
+	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoMap"), m_tileset->GetSRV().GPU());
+	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalMap"), m_tilesetNormal->GetSRV().GPU());
 	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("SpecularMap"), m_tilesetSpecular->GetSRV().GPU());
 
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
@@ -322,7 +322,7 @@ void ModelGallery::PopulateCommandList()
 
 
 	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("ObjectData"), m_meshConstantBuffer->GetCBV().GPU());
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
+	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
 
 	for (const auto& mesh : m_meshes)
 	{
@@ -336,8 +336,8 @@ void ModelGallery::PopulateCommandList()
 	// m_camera.OnImGui();
 
 	ImGui::TreePush("Foo");
-	ImGui::DragFloat3("Speed", &m_directionalLight.direction.x, 0.1f);
-	ImGui::ColorEdit3("Color", &m_directionalLight.color.x);
+	ImGui::DragFloat3("Sun Direction", &m_directionalLight.direction.x, 0.01f);
+	ImGui::ColorEdit3("Sun Color", &m_directionalLight.color.x);
 	ImGui::TreePop();
 
 
