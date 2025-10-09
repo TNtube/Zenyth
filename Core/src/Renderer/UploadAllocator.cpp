@@ -42,22 +42,19 @@ namespace Zenyth
 			}
 		}
 
-		if (!view.IsValid() && m_offset + size < m_buffer.GetBufferSize())
+		if (view.IsValid())
 		{
-			view = {m_offset, size};
+			return { &m_buffer, view.offset, size };
+		}
+
+		if (m_offset + size <= m_buffer.GetBufferSize())
+		{
+			auto offset = m_offset;
 			m_offset += size;
+			return { &m_buffer, offset, size };
 		}
 
-		BufferView newView = { &m_buffer, view.offset, size };
-		newView.data = m_buffer.GetMappedData() + view.offset;
-
-		if (m_offset + size > m_buffer.GetBufferSize())
-		{
-			// too big, return empty view to allocate bigger buffer later on.
-			return {};
-		}
-
-		return newView;
+		return {};
 	}
 
 	void UploadAllocator::Return(uint64_t fenceValue, const BufferView &buffer)

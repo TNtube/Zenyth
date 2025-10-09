@@ -12,13 +12,13 @@ namespace Zenyth
 
 	struct LightData
 	{
-		DirectX::SimpleMath::Vector3	position;
-		DirectX::SimpleMath::Vector3	direction;
+		Vector3		position;
+		Vector3		direction;
 
-		float							radiusSq;
-		DirectX::SimpleMath::Vector3	color;
+		float		radiusSq;
+		Vector3		color;
 
-		LightType						type;
-		DirectX::SimpleMath::Vector2	coneAngles;
+		LightType	type;
+		Vector2		coneAngles;
 	};
 }

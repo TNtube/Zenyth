@@ -11,8 +11,8 @@
 
 #include "imgui.h"
 #include "Data/Transform.hpp"
-#include "Assets/ObjLoader.hpp"
 #include "Data/Light.hpp"
+#include "Data/Mesh.hpp"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/PixelBuffer.hpp"
 #include "Renderer/Renderer.hpp"
@@ -190,7 +190,7 @@ void ModelGallery::LoadAssets()
 		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
 
 		m_pipelineGeometry = std::make_unique<Zenyth::Pipeline>();
-		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPath(L"shaders/basic_vs.hlsl"), GetAssetFullPath(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
+		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPathW(L"shaders/basic_vs.hlsl"), GetAssetFullPathW(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
 	}
 
 	{
@@ -203,7 +203,8 @@ void ModelGallery::LoadAssets()
 			Zenyth::Renderer::pDevice.Get(),
 			L"Camera Constant Buffer",
 			3,
-			sizeof(Zenyth::CameraData));
+			sizeof(Zenyth::CameraData),
+			true);
 
 
 		m_sceneUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
@@ -215,7 +216,8 @@ void ModelGallery::LoadAssets()
 			Zenyth::Renderer::pDevice.Get(),
 			L"Scene Constant Buffer",
 			3,
-			sizeof(SceneConstants));
+			sizeof(SceneConstants),
+			true);
 	}
 
 	{
@@ -235,11 +237,17 @@ void ModelGallery::LoadAssets()
 	}
 
 	{
-		Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
+		// Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
+		//
+		// if (doorObj.LoadData())
+		// {
+		// 	m_meshes = doorObj.GenerateRenderers();
+		// }
 
-		if (doorObj.LoadData())
+		Zenyth::Mesh mesh;
+		if (Zenyth::Mesh::FromObjFile(GetAssetFullPath("models/SM_Door/SM_Door.obj"), mesh))
 		{
-			m_meshes = doorObj.GenerateRenderers();
+			m_meshRenderer = std::make_unique<Zenyth::MeshRenderer>(mesh, *m_resourceHeap);
 		}
 	}
 
@@ -260,9 +268,9 @@ void ModelGallery::LoadAssets()
 	auto& commandManager = *Zenyth::Renderer::pCommandManager;
 
 	// Create the texture.
-	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_BC.dds").c_str(), *m_resourceHeap);
-	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_N.dds").c_str(), *m_resourceHeap);
-	m_tilesetSpecular = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/T_Door_R.dds").c_str(), *m_resourceHeap);
+	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_BC.png").c_str(), *m_resourceHeap);
+	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_N.png").c_str(), *m_resourceHeap, false);
+	m_tilesetSpecular = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_R.png").c_str(), *m_resourceHeap);
 
 	commandManager.IdleGPU();
 }
@@ -306,28 +314,20 @@ void ModelGallery::PopulateCommandList()
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionResource(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
-	commandBatch.CopyBufferRegion(*m_sceneConstantBuffer, m_frameIndex * m_sceneConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
+	commandBatch.CopyBufferRegion(*m_sceneConstantBuffer, m_frameIndex * m_sceneConstantBuffer->GetElementSize(), *m_sceneUploadBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionResource(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
 
 	commandBatch.CopyBufferRegion(*m_lightBuffer, m_frameIndex * m_lightBuffer->GetElementSize(), *m_lightUploadBuffer, 0, sizeof(Zenyth::LightData));
 	commandBatch.TransitionResource(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
-	// apply cbv
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("AlbedoMap"), m_tileset->GetSRV().GPU());
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("NormalMap"), m_tilesetNormal->GetSRV().GPU());
-	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("SpecularMap"), m_tilesetSpecular->GetSRV().GPU());
 
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("CameraData"), m_cameraConstantBuffer->GetCBV().GPU());
-	// commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("SceneConstants"), m_sceneConstantBuffer->GetCBV().GPU());
+	commandBatch.SetRootParameter("CameraData", m_cameraConstantBuffer->GetCBV());
+	commandBatch.SetRootParameter("SceneConstants", m_sceneConstantBuffer->GetCBV());
+	commandBatch.SetRootParameter("ObjectData", m_meshConstantBuffer->GetCBV());
+	commandBatch.SetRootParameter("lightBuffer", m_lightBuffer->GetSrv());
 
-
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("ObjectData"), m_meshConstantBuffer->GetCBV().GPU());
-	commandList->SetGraphicsRootDescriptorTable(m_pipelineGeometry->GetRootParameterIndex("lightBuffer"), m_lightBuffer->GetSrv().GPU());
-
-	for (const auto& mesh : m_meshes)
-	{
-		mesh.Draw(commandList);
-	}
+	// will submit material, should be used
+	m_meshRenderer->Submit(commandBatch);
 
 
 	ImGui::Begin("Helper");
@@ -360,9 +360,14 @@ void ModelGallery::MoveToNextFrame()
 	graphicsQueue.WaitForFence(m_fenceValues[m_frameIndex]);
 }
 
-std::wstring ModelGallery::GetAssetFullPath(const std::wstring& assetName)
+std::wstring ModelGallery::GetAssetFullPathW(const std::wstring& assetName)
 {
 	return WORKING_DIR L"resources/" + assetName;
+}
+
+std::string ModelGallery::GetAssetFullPath(const std::string& assetName)
+{
+	return WORKING_DIR "resources/" + assetName;
 }
 
 void ModelGallery::OnWindowSizeChanged(const int width, const int height)

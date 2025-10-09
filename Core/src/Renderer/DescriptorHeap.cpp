@@ -87,6 +87,7 @@ namespace Zenyth
 
 	void DescriptorHeap::Free(const DescriptorHandle& dHandle)
 	{
+		// if (ValidateHandle(dHandle)) return;
 		const int cpu_idx = static_cast<int>((dHandle.GetCpuPtr() - m_firstHandle.GetCpuPtr()) / m_descriptorSize);
 
 #ifndef NDEBUG

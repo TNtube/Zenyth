@@ -1,5 +1,6 @@
 #pragma once
 #include "Buffers.hpp"
+#include "Material.hpp"
 #include "Data/Submesh.hpp"
 
 namespace Zenyth
@@ -7,10 +8,11 @@ namespace Zenyth
 	class SubmeshRenderer
 	{
 	public:
-		explicit SubmeshRenderer(const Submesh& submesh);
+		explicit SubmeshRenderer(const Submesh& submesh, DescriptorHeap& resourceHeap);
 
-		void Draw(ID3D12GraphicsCommandList* commandList) const;
+		void Submit(CommandBatch& commandBatch) const;
 	private:
+		Material m_material;
 		VertexBuffer m_vertexBuffer;
 		IndexBuffer m_indexBuffer;
 	};

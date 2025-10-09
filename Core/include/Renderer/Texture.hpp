@@ -9,12 +9,14 @@ namespace Zenyth
 	public:
 		Texture(ID3D12Device *device, DescriptorHeap &resourceHeap);
 
+		~Texture();
+
 		DELETE_COPY_CTOR(Texture)
 		DEFAULT_MOVE_CTOR(Texture)
 
 		[[nodiscard]] const DescriptorHandle& GetSRV() const { return m_srvHandle; }
 
-		static std::unique_ptr<Texture> LoadTextureFromFile(const wchar_t *filename, DescriptorHeap &resourceHeap);
+		static std::unique_ptr<Texture> LoadTextureFromFile(const char *filename, DescriptorHeap &resourceHeap, bool sRGB = true);
 	private:
 		void CreateViews() override;
 		DescriptorHeap* m_resourceHeap;

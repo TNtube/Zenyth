@@ -9,6 +9,7 @@
 #include "StepTimer.hpp"
 #include "Data/Light.hpp"
 #include "Renderer/DepthStencilBuffer.hpp"
+#include "Renderer/MeshRenderer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/PixelBuffer.hpp"
 #include "Renderer/SubmeshRenderer.hpp"
@@ -82,7 +83,7 @@ private:
 	std::unique_ptr<Zenyth::ConstantBuffer> m_sceneConstantBuffer {};
 
 	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
-	std::vector<Zenyth::SubmeshRenderer> m_meshes;
+	std::unique_ptr<Zenyth::MeshRenderer> m_meshRenderer;
 
 	// Synchronization objects.
 	UINT m_frameIndex;
@@ -98,7 +99,8 @@ private:
 
 	void LoadSizeDependentResources() const;
 
-	static std::wstring GetAssetFullPath(const std::wstring& assetName);
+	static std::wstring GetAssetFullPathW(const std::wstring& assetName);
+	static std::string GetAssetFullPath(const std::string& assetName);
 
 	Zenyth::Camera m_camera;
 	// Rendering loop timer.

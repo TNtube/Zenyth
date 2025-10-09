@@ -2,6 +2,7 @@
 
 #include "Renderer/CommandBatch.hpp"
 
+#include "Renderer/Pipeline.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth {
@@ -109,6 +110,36 @@ namespace Zenyth {
 		TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE, true);
 
 		m_commandList->CopyBufferRegion(dst.m_buffer.Get(), dstOffset, src.m_buffer.Get(), srcOffset, numBytes);
+	}
+
+	void CommandBatch::SubmitMaterial(const Material* material)
+	{
+		m_currentMaterial = material;
+
+		material->Submit(m_commandList.Get());
+
+		for (const auto& [param, handle] : m_rootParameters)
+		{
+			const auto idx = m_currentMaterial->GetPipeline().GetRootParameterIndex(param);
+			if (idx.has_value())
+				m_commandList->SetGraphicsRootDescriptorTable(idx.value(), handle.GPU());
+			// else
+			// 	m_rootParameters.erase(param);
+		}
+	}
+
+	void CommandBatch::SetRootParameter(const std::string& param, const DescriptorHandle& handle)
+	{
+		m_rootParameters[param] = handle;
+
+		if (!m_currentMaterial) return;
+
+		const auto idx = m_currentMaterial->GetPipeline().GetRootParameterIndex(param);
+		if (idx.has_value())
+			m_commandList->SetGraphicsRootDescriptorTable(idx.value(), handle.GPU());
+		else
+			m_rootParameters.erase(param);
+
 	}
 
 	void CommandBatch::SendResourceBarriers()

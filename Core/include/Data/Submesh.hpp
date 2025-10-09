@@ -1,5 +1,6 @@
 #pragma once
 #include "Core.hpp"
+#include "MaterialDesc.hpp"
 #include "Vertex.hpp"
 
 namespace Zenyth
@@ -21,6 +22,9 @@ namespace Zenyth
 		[[nodiscard]] const std::vector<uint32_t>& GetIndices() const { return m_indices; }
 		std::vector<uint32_t>& GetIndices() { return m_indices; }
 
+		[[nodiscard]] const MaterialDesc& GetMaterialDesc() const { return m_materialDesc; }
+		MaterialDesc& GetMaterialDesc() { return m_materialDesc; }
+
 		[[nodiscard]] std::size_t GetVertexCount() const { return m_vertices.size(); }
 		[[nodiscard]] std::size_t GetIndexCount() const { return m_indices.size(); }
 
@@ -30,5 +34,6 @@ namespace Zenyth
 		std::string m_name = "Default";
 		std::vector<Vertex> m_vertices;
 		std::vector<uint32_t> m_indices;
+		MaterialDesc m_materialDesc;
 	};
 }

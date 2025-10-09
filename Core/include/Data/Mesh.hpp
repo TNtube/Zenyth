@@ -1,7 +1,6 @@
 #pragma once
 #include "Submesh.hpp"
 #include "Vertex.hpp"
-#include "Renderer/Buffers.hpp"
 
 namespace Zenyth
 {
@@ -14,7 +13,10 @@ namespace Zenyth
 
 		void ComputeTangents();
 		void PushSubmesh(Submesh submesh);
+
+		static bool FromObjFile(const std::string& path, Mesh& output);
 	private:
+		friend class MeshRenderer;
 		std::string m_name = "DefaultMesh";
 		std::vector<Submesh> m_submeshes;
 	};

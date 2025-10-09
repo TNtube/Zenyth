@@ -52,3 +52,38 @@ endfunction()
 
 # Usage example (uncomment to use directly):
 # download_dxc("${CMAKE_CURRENT_SOURCE_DIR}/Deps")
+
+
+function(download_single_file OUTPUT_PATH GITHUB_USER GITHUB_REPO GITHUB_BRANCH GITHUB_FILE)
+
+    # Construct the raw GitHub URL
+    set(DOWNLOAD_URL "https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FILE}")
+
+    # Get the filename from the GitHub file path
+    get_filename_component(FILENAME ${GITHUB_FILE} NAME)
+
+    # Construct the full output path
+    set(FULL_OUTPUT_PATH "${OUTPUT_PATH}/${FILENAME}")
+
+    message(STATUS "Downloading ${FILENAME} from GitHub...")
+    message(STATUS "Source: ${DOWNLOAD_URL}")
+    message(STATUS "Destination: ${FULL_OUTPUT_PATH}")
+
+    # Download the file
+    file(DOWNLOAD
+            ${DOWNLOAD_URL}
+            ${FULL_OUTPUT_PATH}
+            STATUS DOWNLOAD_STATUS
+            SHOW_PROGRESS
+    )
+
+    # Check if download was successful
+    list(GET DOWNLOAD_STATUS 0 STATUS_CODE)
+    list(GET DOWNLOAD_STATUS 1 ERROR_MESSAGE)
+
+    if(NOT STATUS_CODE EQUAL 0)
+        message(FATAL_ERROR "Failed to download file: ${ERROR_MESSAGE}")
+    else()
+        message(STATUS "Successfully downloaded ${FILENAME}")
+    endif()
+endfunction()

@@ -2,19 +2,23 @@
 
 #include "Renderer/SubmeshRenderer.hpp"
 
+#include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth
 {
-	SubmeshRenderer::SubmeshRenderer(const Submesh& submesh)
+	SubmeshRenderer::SubmeshRenderer(const Submesh& submesh, DescriptorHeap& resourceHeap)
+		: m_material(submesh.GetMaterialDesc(), resourceHeap)
 	{
 		std::wstring wName(submesh.GetName().begin(), submesh.GetName().end());
 		m_vertexBuffer.Create(Renderer::pDevice.Get(), std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), false, submesh.GetVertices().data());
 		m_indexBuffer .Create(Renderer::pDevice.Get(), std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), false, submesh.GetIndices().data());
 	}
 
-	void SubmeshRenderer::Draw(ID3D12GraphicsCommandList* commandList) const
+	void SubmeshRenderer::Submit(CommandBatch& commandBatch) const
 	{
+		commandBatch.SubmitMaterial(&m_material);
+		const auto commandList = commandBatch.GetCommandList();
 		commandList->IASetVertexBuffers(0, 1, m_vertexBuffer.GetVBV());
 		commandList->IASetIndexBuffer(m_indexBuffer.GetIBV());
 
