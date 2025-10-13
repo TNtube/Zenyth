@@ -9,7 +9,7 @@ namespace Zenyth
 	public:
 		Texture(ID3D12Device *device, DescriptorHeap &resourceHeap);
 
-		~Texture();
+		~Texture() override;
 
 		DELETE_COPY_CTOR(Texture)
 		DEFAULT_MOVE_CTOR(Texture)

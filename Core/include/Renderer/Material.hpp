@@ -20,13 +20,17 @@ namespace Zenyth
 	class Material
 	{
 	public:
-		explicit Material(const MaterialDesc& matDesc, DescriptorHeap& resourceHeap);
-
 		void Submit(ID3D12GraphicsCommandList* commandList) const;
 
-		const Pipeline& GetPipeline() const { return *m_pipeline; };
+		[[nodiscard]] const Pipeline& GetPipeline() const { return *m_pipeline; };
+
+		bool operator==(const Material& other) const { return m_description == other.m_description; }
+		bool operator==(const MaterialDesc& other) const { return m_description == other; }
 
 	private:
+		explicit Material(const MaterialDesc& matDesc, DescriptorHeap& resourceHeap);
+
+		friend class MaterialManager;
 		std::unique_ptr<Pipeline> m_pipeline;
 
 		ConstantBuffer m_constantBuffer;
@@ -34,5 +38,17 @@ namespace Zenyth
 		std::unique_ptr<Texture> m_diffuseMap;
 		std::unique_ptr<Texture> m_specularMap;
 		std::unique_ptr<Texture> m_normalMap;
+
+		MaterialDesc m_description;
+	};
+
+	class MaterialManager
+	{
+	public:
+		MaterialManager() = default;
+		std::shared_ptr<Material> GetMaterial(const MaterialDesc& matDesc);
+
+	private:
+		std::vector<std::shared_ptr<Material>> m_materialInstances {};
 	};
 }

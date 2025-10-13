@@ -16,7 +16,7 @@ namespace Zenyth
 
 		~CommandQueue() { Destroy(); };
 
-		void Create();
+		void Create(ID3D12Device* device);
 		void Destroy();
 
 		uint64_t ExecuteCommandList(ID3D12GraphicsCommandList *commandList);

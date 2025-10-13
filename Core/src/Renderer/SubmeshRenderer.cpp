@@ -2,22 +2,26 @@
 
 #include "Renderer/SubmeshRenderer.hpp"
 
+#include "Application.hpp"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth
 {
-	SubmeshRenderer::SubmeshRenderer(const Submesh& submesh, DescriptorHeap& resourceHeap)
-		: m_material(submesh.GetMaterialDesc(), resourceHeap)
+	SubmeshRenderer::SubmeshRenderer(const Submesh& submesh)
 	{
+		auto& renderer = Application::Get().GetRenderer();
+
+		m_material = renderer.GetMaterialManager().GetMaterial(submesh.GetMaterialDesc());
+
 		std::wstring wName(submesh.GetName().begin(), submesh.GetName().end());
-		m_vertexBuffer.Create(Renderer::pDevice.Get(), std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), false, submesh.GetVertices().data());
-		m_indexBuffer .Create(Renderer::pDevice.Get(), std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), false, submesh.GetIndices().data());
+		m_vertexBuffer.Create(renderer.GetDevice(), std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), false, submesh.GetVertices().data());
+		m_indexBuffer .Create(renderer.GetDevice(), std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), false, submesh.GetIndices().data());
 	}
 
 	void SubmeshRenderer::Submit(CommandBatch& commandBatch) const
 	{
-		commandBatch.SubmitMaterial(&m_material);
+		commandBatch.SubmitMaterial(m_material);
 		const auto commandList = commandBatch.GetCommandList();
 		commandList->IASetVertexBuffers(0, 1, m_vertexBuffer.GetVBV());
 		commandList->IASetIndexBuffer(m_indexBuffer.GetIBV());

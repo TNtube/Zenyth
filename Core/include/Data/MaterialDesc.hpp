@@ -23,7 +23,9 @@ namespace Zenyth
 		// Vector3 transmissionColor;
 
 		std::string diffuseMap;
-		std::string specularMap;
 		std::string normalMap;
+		std::string specularMap;
+
+		bool operator==(const MaterialDesc& other) const = default;
 	};
 }

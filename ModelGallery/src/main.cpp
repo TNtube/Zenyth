@@ -2,6 +2,7 @@
 
 #include "Win32Application.hpp"
 #include "ModelGallery.hpp"
+#include "Renderer/Renderer.hpp"
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, const int nShowCmd)

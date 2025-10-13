@@ -27,6 +27,8 @@ public:
 
 	void OnWindowSizeChanged(int width, int height) override;
 
+	void LoadSizeDependentResources();
+
 private:
 	float m_aspectRatio;
 
@@ -54,7 +56,6 @@ private:
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
 	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
 	std::unique_ptr<Zenyth::DescriptorHeap> m_dsvHeap {};
-	std::unique_ptr<Zenyth::DescriptorHeap> m_resourceHeap {};
 	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffer;
 
 	std::unique_ptr<Zenyth::PixelBuffer> m_renderTargets[FrameCount];

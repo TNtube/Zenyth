@@ -22,7 +22,7 @@ namespace Zenyth
 	}
 
 	void Camera::Update(const float dt, const Keyboard::State& kb, Mouse* mouse) {
-		float camSpeed = 3.0f;
+		float camSpeed = 15.0f;
 		if (kb.LeftShift) camSpeed *= 2.0f;
 
 		const Mouse::State mstate = mouse->GetState();

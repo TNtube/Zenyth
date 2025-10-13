@@ -26,7 +26,7 @@ namespace Zenyth {
 		void CopyBuffer(GpuBuffer &dst, GpuBuffer &src);
 		void CopyBufferRegion(GpuBuffer &dst, uint64_t dstOffset, GpuBuffer &src, uint64_t srcOffset, uint64_t numBytes);
 
-		void SubmitMaterial(const Material* material);
+		void SubmitMaterial(std::shared_ptr<Material> material);
 		void SetRootParameter(const std::string& param, const DescriptorHandle& handle);
 
 		[[nodiscard]] ID3D12GraphicsCommandList* GetCommandList() const { return m_commandList.Get(); }
@@ -46,7 +46,7 @@ namespace Zenyth {
 		D3D12_RESOURCE_BARRIER                            m_resourceBarriers[ResourceBarrierCount] = {};
 		uint32_t                                          m_barrierIndex = 0;
 
-		const Material*                                   m_currentMaterial = nullptr;
+		std::shared_ptr<Material>                         m_currentMaterial = nullptr;
 
 		std::unordered_map<std::string, DescriptorHandle> m_rootParameters {};
 	};

@@ -53,6 +53,7 @@ float3 CalcDirectionalLight(LightData light, float3 normalMap, float3 diffMap, f
 
 Output main(Input input) {
 	float4 albedo = AlbedoMap.Sample(TexSampler, input.uv);
+	if (albedo.a < 0.05f) clip(-1);
 
 	float3 ambient = 0.05f;
 	float3 color = albedo.rgb * ambient;

@@ -3,6 +3,7 @@
 #include "Core.hpp"
 #include "Renderer/Buffers.hpp"
 
+#include "Application.hpp"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -48,7 +49,9 @@ namespace Zenyth {
 	{
 		Destroy();
 
-		m_pDevice = Renderer::pDevice.Get();
+		auto& renderer = Application::Get().GetRenderer();
+
+		m_pDevice = renderer.GetDevice();
 
 		m_bufferSize = Math::AlignToMask(size, 256ull);
 

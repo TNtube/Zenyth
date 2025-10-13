@@ -8,11 +8,11 @@ namespace Zenyth
 	class SubmeshRenderer
 	{
 	public:
-		explicit SubmeshRenderer(const Submesh& submesh, DescriptorHeap& resourceHeap);
+		explicit SubmeshRenderer(const Submesh& submesh);
 
 		void Submit(CommandBatch& commandBatch) const;
 	private:
-		Material m_material;
+		std::shared_ptr<Material> m_material;
 		VertexBuffer m_vertexBuffer;
 		IndexBuffer m_indexBuffer;
 	};

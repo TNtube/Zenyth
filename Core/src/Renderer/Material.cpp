@@ -1,13 +1,14 @@
 #include "pch.hpp"
 #include "Renderer/Material.hpp"
 
+#include "Application.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth
 {
 	Material::Material(const MaterialDesc& matDesc, DescriptorHeap& resourceHeap)
-		: m_constantBuffer(resourceHeap)
+		: m_constantBuffer(resourceHeap), m_description(matDesc)
 	{
 		m_pipeline = std::make_unique<Pipeline>();
 
@@ -24,7 +25,6 @@ namespace Zenyth
 
 	void Material::Submit(ID3D12GraphicsCommandList* commandList) const
 	{
-
 		commandList->SetPipelineState(m_pipeline->Get());
 		commandList->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 
@@ -38,5 +38,20 @@ namespace Zenyth
 			commandList->SetGraphicsRootDescriptorTable(normalIdx.value(), m_normalMap->GetSRV().GPU());
 		if (specularIdx.has_value() && m_specularMap)
 			commandList->SetGraphicsRootDescriptorTable(specularIdx.value(), m_specularMap->GetSRV().GPU());
+	}
+
+	std::shared_ptr<Material> MaterialManager::GetMaterial(const MaterialDesc& matDesc)
+	{
+		const auto mat = std::ranges::find_if(
+			m_materialInstances,
+			[&matDesc](const auto& curr){
+				return *curr == matDesc;
+			});
+
+		if (mat != m_materialInstances.end())
+			return *mat;
+
+		auto& renderer = Application::Get().GetRenderer();
+		return m_materialInstances.emplace_back(new Material(matDesc, renderer.GetResourceHeap()));
 	}
 }

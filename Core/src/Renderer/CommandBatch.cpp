@@ -2,6 +2,7 @@
 
 #include "Renderer/CommandBatch.hpp"
 
+#include "Application.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -15,15 +16,17 @@ namespace Zenyth {
 	CommandBatch CommandBatch::Begin(const D3D12_COMMAND_LIST_TYPE type)
 	{
 		CommandBatch guard(type);
-
-		Renderer::pCommandManager->GetNewCommandList(type, &guard.m_commandList, &guard.m_commandAllocator);
+		
+		auto& renderer = Application::Get().GetRenderer();
+		renderer.GetCommandManager().GetNewCommandList(type, &guard.m_commandList, &guard.m_commandAllocator);
 
 		return guard;
 	}
 
-	uint64_t CommandBatch::End(bool wait)
+	uint64_t CommandBatch::End(const bool wait)
 	{
-		CommandQueue& queue = Renderer::pCommandManager->GetQueue(m_listType);
+		auto& renderer = Application::Get().GetRenderer();
+		CommandQueue& queue = renderer.GetCommandManager().GetQueue(m_listType);
 
 		const auto fence = queue.ExecuteCommandList(m_commandList.Get());
 
@@ -42,7 +45,8 @@ namespace Zenyth {
 	{
 		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-		CommandQueue& queue = Renderer::pCommandManager->GetQueue(batch.m_listType);
+		auto& renderer = Application::Get().GetRenderer();
+		CommandQueue& queue = renderer.GetCommandManager().GetQueue(batch.m_listType);
 
 		const BufferView bufferView = queue.AllocateUploadBufferView(size);
 
@@ -63,7 +67,8 @@ namespace Zenyth {
 
 		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-		CommandQueue& queue = Renderer::pCommandManager->GetQueue(batch.m_listType);
+		auto& renderer = Application::Get().GetRenderer();
+		CommandQueue& queue = renderer.GetCommandManager().GetQueue(batch.m_listType);
 
 		const BufferView bufferView = queue.AllocateUploadBufferView(uploadBufferSize);
 
@@ -112,11 +117,11 @@ namespace Zenyth {
 		m_commandList->CopyBufferRegion(dst.m_buffer.Get(), dstOffset, src.m_buffer.Get(), srcOffset, numBytes);
 	}
 
-	void CommandBatch::SubmitMaterial(const Material* material)
+	void CommandBatch::SubmitMaterial(std::shared_ptr<Material> material)
 	{
-		m_currentMaterial = material;
+		m_currentMaterial = std::move(material);
 
-		material->Submit(m_commandList.Get());
+		m_currentMaterial->Submit(m_commandList.Get());
 
 		for (const auto& [param, handle] : m_rootParameters)
 		{

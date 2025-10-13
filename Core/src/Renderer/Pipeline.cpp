@@ -4,6 +4,7 @@
 
 #include <ranges>
 
+#include "Application.hpp"
 #include "CommonStates.h"
 #include "Renderer/Renderer.hpp"
 
@@ -37,7 +38,9 @@ namespace Zenyth
 		// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-		if (FAILED(Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+		auto& renderer = Application::Get().GetRenderer();
+
+		if (FAILED(renderer.GetDevice()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 		{
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
@@ -53,7 +56,7 @@ namespace Zenyth
 			}
 			ThrowIfFailed(E_FAIL);
 		}
-		ThrowIfFailed(Renderer::pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		ThrowIfFailed(renderer.GetDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 
 		// Describe and create the graphics pipeline state object (PSO).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -91,7 +94,7 @@ namespace Zenyth
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		psoDesc.SampleDesc.Count = 1;
-		ThrowIfFailed(Renderer::pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		ThrowIfFailed(renderer.GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 
 	}
 
@@ -258,9 +261,9 @@ namespace Zenyth
 				const D3D12_STATIC_SAMPLER_DESC staticSampler
 				{
 					.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-					.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-					.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-					.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+					.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+					.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+					.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
 					.MipLODBias = 0,
 					.MaxAnisotropy = 0,
 					.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,

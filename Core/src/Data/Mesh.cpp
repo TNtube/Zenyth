@@ -107,6 +107,9 @@ namespace Zenyth
 				auto& matDesc = currentSubmesh.GetMaterialDesc();
 
 				matDesc.name = mat.name;
+				// matDesc.ambient = Vector3{1, 1, 1};
+				// matDesc.diffuse = Vector3{1, 1, 1};
+				// matDesc.specular = Vector3{1, 1, 1};
 
 				memcpy(&matDesc.ambient, mat.ambient, sizeof(Vector3));
 				memcpy(&matDesc.diffuse, mat.diffuse, sizeof(Vector3));

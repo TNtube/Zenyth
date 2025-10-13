@@ -2,6 +2,7 @@
 
 #include "Renderer/PixelBuffer.hpp"
 
+#include "Application.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth
@@ -10,7 +11,8 @@ namespace Zenyth
 	void PixelBuffer::Create(const std::wstring& name, const uint32_t width, const uint32_t height,
 							 const DXGI_FORMAT format, const DirectX::XMVECTORF32 clearColor, D3D12_RESOURCE_FLAGS flags)
 	{
-		m_pDevice = Renderer::pDevice.Get();
+		auto& renderer = Application::Get().GetRenderer();
+		m_pDevice = renderer.GetDevice();
 
 		flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 		m_flags = flags;
@@ -71,7 +73,7 @@ namespace Zenyth
 	void PixelBuffer::CreateFromSwapChain(const std::wstring& name, ID3D12Resource* swapChainBuffer)
 	{
 		m_buffer.Reset();
-		m_pDevice = Renderer::pDevice.Get();
+		m_pDevice = Application::Get().GetRenderer().GetDevice();
 
 		m_buffer.Attach(swapChainBuffer);
 		SUCCEEDED(m_buffer->SetName(name.c_str()));

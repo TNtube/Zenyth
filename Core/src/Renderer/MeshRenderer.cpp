@@ -3,12 +3,12 @@
 
 namespace Zenyth
 {
-	MeshRenderer::MeshRenderer(const Mesh& mesh, DescriptorHeap& resourceHeap)
+	MeshRenderer::MeshRenderer(const Mesh& mesh)
 	{
 		m_submeshRenderers.reserve(mesh.m_submeshes.size());
 
 		for (const auto& submesh : mesh.m_submeshes)
-			m_submeshRenderers.emplace_back(submesh, resourceHeap);
+			m_submeshRenderers.emplace_back(submesh);
 	}
 
 	void MeshRenderer::Submit(CommandBatch& commandBatch) const

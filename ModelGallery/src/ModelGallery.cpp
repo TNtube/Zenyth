@@ -105,7 +105,7 @@ void ModelGallery::OnRender()
 
 void ModelGallery::OnDestroy()
 {
-	Zenyth::Renderer::Shutdown();
+	GetRenderer().GetCommandManager().IdleGPU();
 }
 
 struct ModelData
@@ -115,8 +115,6 @@ struct ModelData
 
 void ModelGallery::LoadPipeline()
 {
-	Zenyth::Renderer::Initialize(m_useWarpDevice);
-
 	ComPtr<IDXGIFactory4> factory;
 	ThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&factory)), "Failed to create DXGIFactory");
 
@@ -135,7 +133,7 @@ void ModelGallery::LoadPipeline()
 	ComPtr<IDXGISwapChain1> swapChain;
 
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue(),// Swap chain needs the queue so that it can force a flush on it.
+		GetRenderer().GetCommandManager().GetGraphicsQueue().GetCommandQueue(),// Swap chain needs the queue so that it can force a flush on it.
 		Zenyth::Win32Application::GetHwnd(),
 		&swapChainDesc,
 		nullptr, nullptr,
@@ -152,10 +150,8 @@ void ModelGallery::LoadPipeline()
 		// Describe and create a render target view (RTV) descriptor heap.
 		m_rtvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_dsvHeap = std::make_unique<Zenyth::DescriptorHeap>();
-		m_resourceHeap = std::make_unique<Zenyth::DescriptorHeap>();
-		m_rtvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64);
-		m_dsvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
-		m_resourceHeap->Create(Zenyth::Renderer::pDevice.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048); // :skull:
+		m_rtvHeap->Create(GetRenderer().GetDevice(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64);
+		m_dsvHeap->Create(GetRenderer().GetDevice(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
 	}
 
 	// Create frame resources.
@@ -166,19 +162,19 @@ void ModelGallery::LoadPipeline()
 			ID3D12Resource* backBuffer = nullptr;
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&backBuffer)), "Failed to get buffer");
 
-			m_renderTargets[n] = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, *m_resourceHeap);
+			m_renderTargets[n] = std::make_unique<Zenyth::PixelBuffer>(*m_rtvHeap, GetRenderer().GetResourceHeap());
 			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
 		}
 	}
 
 	// load imgui
 	{
-		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(Zenyth::Renderer::pDevice.Get(), Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue());
+		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(GetRenderer().GetDevice(), GetRenderer().GetCommandManager().GetGraphicsQueue().GetCommandQueue());
 	}
 
 	{
-		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap, *m_resourceHeap);
-		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", GetWidth(), GetHeight());
+		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap, GetRenderer().GetResourceHeap());
+		m_depthStencilBuffer->Create(GetRenderer().GetDevice(), L"DepthStencilBuffer", GetWidth(), GetHeight());
 	}
 
 }
@@ -187,7 +183,7 @@ void ModelGallery::LoadAssets()
 {
 	{
 		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
-		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
+		m_depthBoundsTestSupported = SUCCEEDED(GetRenderer().GetDevice()->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
 
 		m_pipelineGeometry = std::make_unique<Zenyth::Pipeline>();
 		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPathW(L"shaders/basic_vs.hlsl"), GetAssetFullPathW(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
@@ -198,9 +194,9 @@ void ModelGallery::LoadAssets()
 		m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
 		m_cameraCpuBuffer->Map();
 
-		m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+		m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(GetRenderer().GetResourceHeap());
 		m_cameraConstantBuffer->Create(
-			Zenyth::Renderer::pDevice.Get(),
+			GetRenderer().GetDevice(),
 			L"Camera Constant Buffer",
 			3,
 			sizeof(Zenyth::CameraData),
@@ -211,9 +207,9 @@ void ModelGallery::LoadAssets()
 		m_sceneUploadBuffer->Create(L"Scene Upload Buffer", sizeof(SceneConstants));
 		m_sceneUploadBuffer->Map();
 
-		m_sceneConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+		m_sceneConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(GetRenderer().GetResourceHeap());
 		m_sceneConstantBuffer->Create(
-			Zenyth::Renderer::pDevice.Get(),
+			GetRenderer().GetDevice(),
 			L"Scene Constant Buffer",
 			3,
 			sizeof(SceneConstants),
@@ -223,12 +219,12 @@ void ModelGallery::LoadAssets()
 	{
 		Zenyth::Transform transform;
 		transform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
-		// transform.SetScale(30, 30, 30);
+		transform.SetScale(.1, .1, .1);
 		const ModelData modelData = {transform.GetTransformMatrix()};
 
-		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
+		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(GetRenderer().GetResourceHeap());
 		m_meshConstantBuffer->Create(
-			Zenyth::Renderer::pDevice.Get(),
+			GetRenderer().GetDevice(),
 			L"Model Constant Buffer",
 			1,
 			sizeof(ModelData),
@@ -245,9 +241,9 @@ void ModelGallery::LoadAssets()
 		// }
 
 		Zenyth::Mesh mesh;
-		if (Zenyth::Mesh::FromObjFile(GetAssetFullPath("models/SM_Door/SM_Door.obj"), mesh))
+		if (Zenyth::Mesh::FromObjFile(GetAssetFullPath("models/sponza/sponza.obj"), mesh))
 		{
-			m_meshRenderer = std::make_unique<Zenyth::MeshRenderer>(mesh, *m_resourceHeap);
+			m_meshRenderer = std::make_unique<Zenyth::MeshRenderer>(mesh);
 		}
 	}
 
@@ -257,20 +253,20 @@ void ModelGallery::LoadAssets()
 		m_lightUploadBuffer->Create(L"Light Upload Buffer", sizeof(Zenyth::LightData));
 		m_lightUploadBuffer->Map();
 
-		m_lightBuffer = std::make_unique<Zenyth::StructuredBuffer>(*m_resourceHeap);
+		m_lightBuffer = std::make_unique<Zenyth::StructuredBuffer>(GetRenderer().GetResourceHeap());
 		m_lightBuffer->Create(
-			Zenyth::Renderer::pDevice.Get(),
+			GetRenderer().GetDevice(),
 			L"Light Structured Buffer",
 			3,
 			sizeof(Zenyth::LightData));
 	}
 
-	auto& commandManager = *Zenyth::Renderer::pCommandManager;
+	auto& commandManager = GetRenderer().GetCommandManager();
 
 	// Create the texture.
-	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_BC.png").c_str(), *m_resourceHeap);
-	m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_N.png").c_str(), *m_resourceHeap, false);
-	m_tilesetSpecular = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_R.png").c_str(), *m_resourceHeap);
+	// m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_BC.png").c_str(), GetRenderer().GetResourceHeap());
+	// m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_N.png").c_str(), GetRenderer().GetResourceHeap(), false);
+	// m_tilesetSpecular = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_R.png").c_str(), GetRenderer().GetResourceHeap());
 
 	commandManager.IdleGPU();
 }
@@ -286,7 +282,7 @@ void ModelGallery::PopulateCommandList()
 
 	commandList->SetGraphicsRootSignature(m_pipelineGeometry->GetRootSignature());
 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap->GetHeapPointer() };
+	ID3D12DescriptorHeap* ppHeaps[] = { GetRenderer().GetResourceHeap().GetHeapPointer() };
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 
@@ -353,7 +349,7 @@ void ModelGallery::PopulateCommandList()
 
 void ModelGallery::MoveToNextFrame()
 {
-	auto& graphicsQueue = Zenyth::Renderer::pCommandManager->GetGraphicsQueue();
+	auto& graphicsQueue = GetRenderer().GetCommandManager().GetGraphicsQueue();
 
 	// Update the frame index.
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -391,7 +387,7 @@ void ModelGallery::OnWindowSizeChanged(const int width, const int height)
 		m_width = width;
 		m_height = height;
 		// Flush all current GPU commands.
-		Zenyth::Renderer::pCommandManager->IdleGPU();
+		GetRenderer().GetCommandManager().IdleGPU();
 
 		// Release the resources holding references to the swap chain (requirement of
 		// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
@@ -417,7 +413,7 @@ void ModelGallery::OnWindowSizeChanged(const int width, const int height)
 }
 
 
-void ModelGallery::LoadSizeDependentResources() const
+void ModelGallery::LoadSizeDependentResources()
 {
 	// Create frame resources.
 	{
@@ -429,6 +425,6 @@ void ModelGallery::LoadSizeDependentResources() const
 			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
 		}
 
-		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", m_width, m_height);
+		m_depthStencilBuffer->Create(GetRenderer().GetDevice(), L"DepthStencilBuffer", m_width, m_height);
 	}
 }

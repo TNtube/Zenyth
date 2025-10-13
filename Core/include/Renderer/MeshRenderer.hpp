@@ -7,7 +7,7 @@ namespace Zenyth
 	class MeshRenderer
 	{
 	public:
-		explicit MeshRenderer(const Mesh& mesh, DescriptorHeap& resourceHeap);
+		explicit MeshRenderer(const Mesh& mesh);
 
 		void Submit(CommandBatch& commandBatch) const;
 

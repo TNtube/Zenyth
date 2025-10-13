@@ -111,7 +111,7 @@ void Minicraft::LoadPipeline()
 	ComPtr<IDXGISwapChain1> swapChain;
 
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue(),// Swap chain needs the queue so that it can force a flush on it.
+		Zenyth::Renderer::GetCommandManager().GetGraphicsQueue().GetCommandQueue(),// Swap chain needs the queue so that it can force a flush on it.
 		Zenyth::Win32Application::GetHwnd(),
 		&swapChainDesc,
 		nullptr, nullptr,
@@ -129,9 +129,9 @@ void Minicraft::LoadPipeline()
 		m_rtvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_dsvHeap = std::make_unique<Zenyth::DescriptorHeap>();
 		m_resourceHeap = std::make_unique<Zenyth::DescriptorHeap>();
-		m_rtvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64);
-		m_dsvHeap->Create(Zenyth::Renderer::pDevice.Get(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
-		m_resourceHeap->Create(Zenyth::Renderer::pDevice.Get(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048); // :skull:
+		m_rtvHeap->Create(Zenyth::Renderer::GetDevice(), L"RTV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64);
+		m_dsvHeap->Create(Zenyth::Renderer::GetDevice(), L"DSV Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_DSV, FrameCount);
+		m_resourceHeap->Create(Zenyth::Renderer::GetDevice(), L"Resource Descriptor Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2048); // :skull:
 	}
 
 	// Create frame resources.
@@ -149,7 +149,7 @@ void Minicraft::LoadPipeline()
 
 	// load imgui
 	{
-		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(Zenyth::Renderer::pDevice.Get(), Zenyth::Renderer::pCommandManager->GetGraphicsQueue().GetCommandQueue());
+		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(Zenyth::Renderer::GetDevice(), Zenyth::Renderer::GetCommandManager().GetGraphicsQueue().GetCommandQueue());
 	}
 
 	{
@@ -160,7 +160,7 @@ void Minicraft::LoadPipeline()
 		m_colorBuffer->Create(L"Color Buffer", GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, Colors::CornflowerBlue);
 
 		m_depthStencilBuffer = std::make_unique<Zenyth::DepthStencilBuffer>(*m_dsvHeap, *m_resourceHeap);
-		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", GetWidth(), GetHeight());
+		m_depthStencilBuffer->Create(Zenyth::Renderer::GetDevice(), L"DepthStencilBuffer", GetWidth(), GetHeight());
 	}
 
 	{
@@ -173,9 +173,9 @@ void Minicraft::LoadPipeline()
 		const std::vector<uint32_t> indices = {0, 1, 2, 2, 1, 3};
 
 		m_presentVertexBuffer = std::make_unique<Zenyth::VertexBuffer>();
-		m_presentVertexBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Final Vertex Buffer", vertices.size(), sizeof(Vector4), vertices.data());
+		m_presentVertexBuffer->Create(Zenyth::Renderer::GetDevice(), L"Final Vertex Buffer", vertices.size(), sizeof(Vector4), vertices.data());
 		m_presentIndexBuffer = std::make_unique<Zenyth::IndexBuffer>();
-		m_presentIndexBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Final Index Buffer", indices.size(), sizeof(uint32_t), indices.data());
+		m_presentIndexBuffer->Create(Zenyth::Renderer::GetDevice(), L"Final Index Buffer", indices.size(), sizeof(uint32_t), indices.data());
 	}
 }
 
@@ -183,7 +183,7 @@ void Minicraft::LoadAssets()
 {
 	{
 		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
-		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
+		m_depthBoundsTestSupported = SUCCEEDED(Zenyth::Renderer::GetDevice()->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
 
 		m_pipelineGeometry = std::make_unique<Zenyth::Pipeline>();
 		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPath(L"shaders/basic_vs.hlsl"), GetAssetFullPath(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
@@ -193,15 +193,15 @@ void Minicraft::LoadAssets()
 	}
 
 	// Create the chunk
-	m_world->Generate(Zenyth::Renderer::pDevice.Get(), *m_resourceHeap);
+	m_world->Generate(Zenyth::Renderer::GetDevice(), *m_resourceHeap);
 
 	m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
 	m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
 	m_cameraCpuBuffer->Map();
 	m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>(*m_resourceHeap);
-	m_cameraConstantBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"Camera Constant Buffer", 3, (sizeof(Zenyth::CameraData) + 255) & ~255);
+	m_cameraConstantBuffer->Create(Zenyth::Renderer::GetDevice(), L"Camera Constant Buffer", 3, (sizeof(Zenyth::CameraData) + 255) & ~255);
 
-	auto& commandManager = *Zenyth::Renderer::pCommandManager;
+	auto& commandManager = Zenyth::Renderer::GetCommandManager();
 
 	// Create the texture.
 	m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath(L"textures/terrain.dds").c_str(), *m_resourceHeap);
@@ -326,7 +326,7 @@ void Minicraft::PopulateCommandList()
 
 void Minicraft::MoveToNextFrame()
 {
-	auto& graphicsQueue = Zenyth::Renderer::pCommandManager->GetGraphicsQueue();
+	auto& graphicsQueue = Zenyth::Renderer::GetCommandManager().GetGraphicsQueue();
 
 	// Update the frame index.
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -359,7 +359,7 @@ void Minicraft::OnWindowSizeChanged(const int width, const int height)
 		m_width = width;
 		m_height = height;
 		// Flush all current GPU commands.
-		Zenyth::Renderer::pCommandManager->IdleGPU();
+		Zenyth::Renderer::GetCommandManager().IdleGPU();
 
 		// Release the resources holding references to the swap chain (requirement of
 		// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
@@ -398,7 +398,7 @@ void Minicraft::LoadSizeDependentResources() const
 			m_renderTargets[n]->CreateFromSwapChain(std::format(L"Render Target #{}", n), backBuffer);
 		}
 
-		m_depthStencilBuffer->Create(Zenyth::Renderer::pDevice.Get(), L"DepthStencilBuffer", m_width, m_height);
+		m_depthStencilBuffer->Create(Zenyth::Renderer::GetDevice(), L"DepthStencilBuffer", m_width, m_height);
 		m_normalBuffer->Resize(m_width, m_height);
 		m_colorBuffer->Resize(m_width, m_height);
 	}

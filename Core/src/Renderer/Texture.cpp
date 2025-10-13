@@ -8,6 +8,7 @@
 #include "Renderer/Renderer.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
+#include "Application.hpp"
 #include "stb_image.h"
 
 namespace Zenyth
@@ -44,14 +45,15 @@ namespace Zenyth
 
 	std::unique_ptr<Texture> Texture::LoadTextureFromFile(const char *filename, DescriptorHeap& resourceHeap, const bool sRGB)
 	{
-		auto* device = Renderer::pDevice.Get();
+		auto& renderer = Application::Get().GetRenderer();
+		auto* device = renderer.GetDevice();
 		auto output = std::make_unique<Texture>(device, resourceHeap);
 
 		int image_width = 0;
 		int image_height = 0;
 		int channel_count = 0;
 
-		unsigned char* data = stbi_load(filename, &image_width, &image_height, &channel_count, 0);
+		unsigned char* data = stbi_load(filename, &image_width, &image_height, &channel_count, 4);
 		if (data == nullptr)
 			return nullptr;
 
@@ -68,9 +70,7 @@ namespace Zenyth
 		desc.Height = image_height;
 		desc.DepthOrArraySize = 1;
 		desc.MipLevels = 1;
-		desc.Format = channel_count == 1
-					  ? DXGI_FORMAT_R8_UNORM
-					  : sRGB
+		desc.Format =  sRGB
 					    ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
 					    : DXGI_FORMAT_R8G8B8A8_UNORM;
 		desc.SampleDesc.Count = 1;
@@ -78,12 +78,16 @@ namespace Zenyth
 		desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-		Renderer::pDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
+		device->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
 			   D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(output->m_buffer.ReleaseAndGetAddressOf()));
+
+		const auto len = strlen(filename);
+		const std::wstring wName(filename, filename + len);
+		output->m_buffer->SetName(wName.c_str());
 
 		D3D12_SUBRESOURCE_DATA subresource;
 		subresource.pData = data;
-		subresource.RowPitch = image_width * channel_count;
+		subresource.RowPitch = image_width * 4;
 		subresource.SlicePitch = subresource.RowPitch * image_height;
 
 		CommandBatch::InitializeTexture(*output, 1u, &subresource);

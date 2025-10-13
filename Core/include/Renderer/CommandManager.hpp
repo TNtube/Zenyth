@@ -6,9 +6,11 @@ namespace Zenyth
 	class CommandManager
 	{
 	public:
-		CommandManager() : m_graphicsQueue(D3D12_COMMAND_LIST_TYPE_DIRECT), m_copyQueue(D3D12_COMMAND_LIST_TYPE_COPY) {}
+		CommandManager()
+			: m_graphicsQueue(D3D12_COMMAND_LIST_TYPE_DIRECT),
+			  m_copyQueue(D3D12_COMMAND_LIST_TYPE_COPY) {}
 
-		void Create();
+		void Create(ID3D12Device* device);
 		void Destroy();
 
 		~CommandManager() { Destroy(); }

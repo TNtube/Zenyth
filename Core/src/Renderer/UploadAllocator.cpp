@@ -2,6 +2,7 @@
 
 #include "Renderer/UploadAllocator.hpp"
 
+#include "Application.hpp"
 #include "Math/Utils.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -64,8 +65,9 @@ namespace Zenyth
 
 	void UploadAllocator::FlushUsedViews()
 	{
-		std::erase_if(m_inUseViews, [this](const auto& inUseView) {
-			if (Renderer::pCommandManager->GetQueue(m_type).IsFenceComplete(inUseView.fenceValue))
+		auto& renderer = Application::Get().GetRenderer();
+		std::erase_if(m_inUseViews, [this, &renderer](const auto& inUseView) {
+			if (renderer.GetCommandManager().GetQueue(m_type).IsFenceComplete(inUseView.fenceValue))
 			{
 				m_availableView.emplace_back(inUseView.view);
 				return true;
