@@ -12,7 +12,6 @@
 #include "Renderer/MeshRenderer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/PixelBuffer.hpp"
-#include "Renderer/SubmeshRenderer.hpp"
 
 class ModelGallery final : public Zenyth::Application
 {

@@ -177,6 +177,12 @@ void ModelGallery::LoadPipeline()
 		m_depthStencilBuffer->Create(GetRenderer().GetDevice(), L"DepthStencilBuffer", GetWidth(), GetHeight());
 	}
 
+
+
+	auto generateMipsPipeline = std::make_unique<Zenyth::Pipeline>();
+
+	generateMipsPipeline->Create(L"Generate Mips PSO", GetAssetFullPathW(L"shaders/GenerateMipsCS.hlsl"));
+
 }
 
 void ModelGallery::LoadAssets()

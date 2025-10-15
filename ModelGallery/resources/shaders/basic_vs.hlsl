@@ -1,3 +1,5 @@
+#include "Common.hlsli"
+
 cbuffer ObjectData : register(b0) {
 	float4x4 worldMatrix;
 	// add material properties ?
@@ -21,6 +23,7 @@ struct Output {
 	float3x3 matTBN: NORMAL0;
 };
 
+[RootSignature( Default_RootSig )]
 Output main(Input input) {
 	Output output = (Output)0;
 

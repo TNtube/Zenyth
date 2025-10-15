@@ -11,7 +11,7 @@ namespace Zenyth
 		DELETE_MOVE_CTOR(Renderer)
 		~Renderer() = default;
 
-		ID3D12Device* GetDevice() const { return m_Device.Get(); };
+		[[nodiscard]] ID3D12Device* GetDevice() const { return m_Device.Get(); };
 		CommandManager& GetCommandManager() { return m_commandManager; }
 		DescriptorHeap& GetResourceHeap() { return m_resourceHeap; }
 		MaterialManager& GetMaterialManager() { return m_materialManager; }

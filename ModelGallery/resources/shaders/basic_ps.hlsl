@@ -1,9 +1,11 @@
+#include "Common.hlsli"
+
 #define MAX_LIGHT 128
 
 Texture2D AlbedoMap;
 Texture2D NormalMap;
 Texture2D SpecularMap;
-SamplerState TexSampler;
+SamplerState TexSampler : register(s0);
 
 cbuffer SceneConstants : register(b2)
 {
@@ -51,6 +53,7 @@ StructuredBuffer<LightData> lightBuffer;
 
 float3 CalcDirectionalLight(LightData light, float3 normalMap, float3 diffMap, float3 viewDir, float specMask);
 
+[RootSignature( Default_RootSig )]
 Output main(Input input) {
 	float4 albedo = AlbedoMap.Sample(TexSampler, input.uv);
 	if (albedo.a < 0.05f) clip(-1);

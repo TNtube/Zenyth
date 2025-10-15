@@ -28,6 +28,10 @@ namespace Zenyth
 		auto vertexBlob = CompileShader(vertexPath, ShaderType::Vertex, L"vs_6_0");
 		auto pixelBlob = CompileShader(pixelPath, ShaderType::Pixel, L"ps_6_0");
 
+		auto& renderer = Application::Get().GetRenderer();
+
+
+		/*
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 		rootSignatureDesc.Init_1_1(m_rootParameters.size(), m_rootParameters.data(),
 			m_staticSamplers.size(), m_staticSamplers.data(),
@@ -37,8 +41,6 @@ namespace Zenyth
 
 		// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-
-		auto& renderer = Application::Get().GetRenderer();
 
 		if (FAILED(renderer.GetDevice()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 		{
@@ -57,6 +59,7 @@ namespace Zenyth
 			ThrowIfFailed(E_FAIL);
 		}
 		ThrowIfFailed(renderer.GetDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		*/
 
 		// Describe and create the graphics pipeline state object (PSO).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -96,6 +99,29 @@ namespace Zenyth
 		psoDesc.SampleDesc.Count = 1;
 		ThrowIfFailed(renderer.GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 
+		SUCCEEDED(m_pipelineState->SetName(name.c_str()));
+
+	}
+
+	void Pipeline::Create(const std::wstring& name, const std::wstring& computePath)
+	{
+		Destroy();
+
+		if (m_utils == nullptr || m_compiler == nullptr || m_includeHandler == nullptr)
+			InitializeDXC();
+		m_descriptorRanges.reserve(256);
+
+		const auto computeBlob = CompileShader(computePath, ShaderType::Compute, L"cs_6_0");
+		auto& renderer = Application::Get().GetRenderer();
+
+		D3D12_COMPUTE_PIPELINE_STATE_DESC computeDesc {};
+		computeDesc.pRootSignature = m_rootSignature.Get();
+		computeDesc.CS.pShaderBytecode = computeBlob->GetBufferPointer();
+		computeDesc.CS.BytecodeLength = computeBlob->GetBufferSize();
+
+		ThrowIfFailed( renderer.GetDevice()->CreateComputePipelineState( &computeDesc, IID_PPV_ARGS( &m_pipelineState ) ) );
+
+		m_pipelineState->SetName(name.c_str());
 	}
 
 	void Pipeline::Destroy()
@@ -122,12 +148,13 @@ namespace Zenyth
 
 	ComPtr<IDxcBlob> Pipeline::CompileShader(const std::wstring& shaderPath, const ShaderType shaderType, const std::wstring& smTarget)
 	{
+		auto pos = shaderPath.find_last_of(L"\\/");
+		auto shaderDir = shaderPath.substr(0, pos);
 		std::vector compilationArguments
 		{
-			L"-E",
-			L"main",
-			L"-T",
-			smTarget.c_str(),
+			L"-E", L"main",
+			L"-T", smTarget.c_str(),
+			L"-I", shaderDir.c_str(),
 			DXC_ARG_PACK_MATRIX_ROW_MAJOR,
 			DXC_ARG_WARNINGS_ARE_ERRORS,
 			DXC_ARG_ALL_RESOURCES_BOUND,
@@ -152,7 +179,7 @@ namespace Zenyth
 		};
 
 		ComPtr<IDxcResult> compileResult;
-		const auto hr = m_compiler->Compile(&sourceBuffer,
+		auto hr = m_compiler->Compile(&sourceBuffer,
 			compilationArguments.data(), static_cast<uint32_t>(compilationArguments.size()),
 			m_includeHandler.Get(), IID_PPV_ARGS(compileResult.GetAddressOf()));
 
@@ -169,6 +196,9 @@ namespace Zenyth
 		}
 
 		ThrowIfFailed(hr);
+
+		ComPtr<IDxcBlob> compiledShaderBlob{nullptr};
+		compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&compiledShaderBlob), nullptr);
 
 		// Get shader reflection data.
 		ComPtr<IDxcBlob> reflectionBlob{};
@@ -209,6 +239,8 @@ namespace Zenyth
 						});
 			}
 		}
+
+		// get root parameters names
 
 		// constant buffers
 		for (const uint32_t i : std::views::iota(0u, shaderDesc.BoundResources))
@@ -279,8 +311,29 @@ namespace Zenyth
 			}
 		}
 
-		ComPtr<IDxcBlob> compiledShaderBlob{nullptr};
-		compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&compiledShaderBlob), nullptr);
+		// if we have a root signature, we can early exit
+		if (m_rootSignature)
+			return compiledShaderBlob;
+
+		// Get the root signature (if embedded)
+		ComPtr<IDxcBlob> rootSigBlob;
+		ComPtr<IDxcBlobUtf16> rootSigName;
+		hr = compileResult->GetOutput(DXC_OUT_ROOT_SIGNATURE,
+									   IID_PPV_ARGS(&rootSigBlob),
+									   &rootSigName);
+
+		if (SUCCEEDED(hr)) {
+			auto& renderer = Application::Get().GetRenderer();
+			// Shader has explicit root signature - use it!
+			renderer.GetDevice()->CreateRootSignature(0,
+									   rootSigBlob->GetBufferPointer(),
+									   rootSigBlob->GetBufferSize(),
+									   IID_PPV_ARGS(&m_rootSignature));
+		}
+		else {
+			// failed, we crash
+			ThrowIfFailed(hr, "No root signature found. Please add an explicit root signature in your shader.");
+		}
 
 		return compiledShaderBlob;
 	}

@@ -23,10 +23,11 @@ namespace Zenyth
 
 		~Pipeline() = default;
 
-		void Create(const std::wstring &name, const std::wstring &vertexPath, const std::wstring &pixelPath, bool depthBoundsTestSupported);
+		void Create(const std::wstring& name, const std::wstring& vertexPath, const std::wstring& pixelPath, bool depthBoundsTestSupported);
+		void Create(const std::wstring& name, const std::wstring& computePath);
 		void Destroy();
 
-		[[nodiscard]] std::optional<uint32_t> GetRootParameterIndex(const std::string &name) const
+		[[nodiscard]] std::optional<uint32_t> GetRootParameterIndex(const std::string& name) const
 		{
 			const auto index = m_rootParameterIndices.find(name);
 			if (index != m_rootParameterIndices.end())
@@ -43,7 +44,7 @@ namespace Zenyth
 
 		void InitializeDXC();
 
-		Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring &shaderPath, ShaderType shaderType, const std::wstring &smTarget);
+		Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& shaderPath, ShaderType shaderType, const std::wstring& smTarget);
 
 		Microsoft::WRL::ComPtr<IDxcCompiler3> m_compiler;
 		Microsoft::WRL::ComPtr<IDxcUtils> m_utils;
