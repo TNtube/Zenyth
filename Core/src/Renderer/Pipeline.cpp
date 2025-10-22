@@ -10,65 +10,17 @@
 
 namespace Zenyth
 {
-	DXGI_FORMAT GetDXGIFormat(D3D_REGISTER_COMPONENT_TYPE componentType, BYTE mask);
 	using namespace Microsoft::WRL;
 
 	void Pipeline::Create(const std::wstring& name, const std::wstring& vertexPath, const std::wstring& pixelPath, bool depthBoundsTestSupported)
 	{
 		Destroy();
-
-		if (m_utils == nullptr || m_compiler == nullptr || m_includeHandler == nullptr)
-			InitializeDXC();
-
-		// allocate arbitrary large size to prevent memory invalidation after shader compilation.
-		// TODO: encapsulate this into a class that hold shader specific data and use a utility
-		// TODO: function to compute root parameters from all compiled shader to prevent this.
-		// m_descriptorRanges.reserve(256);
-
-		auto vertexBlob = CompileShader(vertexPath, ShaderType::Vertex, L"vs_6_0");
-		auto pixelBlob = CompileShader(pixelPath, ShaderType::Pixel, L"ps_6_0");
-
 		auto& renderer = Application::Get().GetRenderer();
 
+		m_shader.AddStage(ShaderStage::Vertex, vertexPath);
+		m_shader.AddStage(ShaderStage::Pixel, pixelPath);
 
-		/*
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(m_rootParameters.size(), m_rootParameters.data(),
-			m_staticSamplers.size(), m_staticSamplers.data(),
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-
-		// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
-		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-
-		if (FAILED(renderer.GetDevice()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
-		{
-			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-		}
-
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		if (FAILED(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error)))
-		{
-			if (error)
-			{
-				std::string output = static_cast<char *>(error->GetBufferPointer());
-				std::cout << output << std::endl;
-			}
-			ThrowIfFailed(E_FAIL);
-		}
-		ThrowIfFailed(renderer.GetDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
-		*/
-
-		// Describe and create the graphics pipeline state object (PSO).
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = {m_inputElementDescs.data(), static_cast<uint32_t>(m_inputElementDescs.size())};
-		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS.pShaderBytecode = vertexBlob->GetBufferPointer();
-		psoDesc.VS.BytecodeLength = vertexBlob->GetBufferSize();
-		psoDesc.PS.pShaderBytecode = pixelBlob->GetBufferPointer();
-		psoDesc.PS.BytecodeLength = pixelBlob->GetBufferSize();
+		auto psoDesc = m_shader.GetGraphicPipelineStateDesc();
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		psoDesc.NumRenderTargets = 1;
@@ -106,17 +58,10 @@ namespace Zenyth
 	void Pipeline::Create(const std::wstring& name, const std::wstring& computePath)
 	{
 		Destroy();
-
-		if (m_utils == nullptr || m_compiler == nullptr || m_includeHandler == nullptr)
-			InitializeDXC();
-
-		const auto computeBlob = CompileShader(computePath, ShaderType::Compute, L"cs_6_0");
 		const auto& renderer = Application::Get().GetRenderer();
 
-		D3D12_COMPUTE_PIPELINE_STATE_DESC computeDesc {};
-		computeDesc.pRootSignature = m_rootSignature.Get();
-		computeDesc.CS.pShaderBytecode = computeBlob->GetBufferPointer();
-		computeDesc.CS.BytecodeLength = computeBlob->GetBufferSize();
+		m_shader.AddStage(ShaderStage::Compute, computePath);
+		const auto computeDesc = m_shader.GetComputePipelineStateDesc();
 
 		ThrowIfFailed( renderer.GetDevice()->CreateComputePipelineState( &computeDesc, IID_PPV_ARGS( &m_pipelineState ) ) );
 
@@ -126,208 +71,6 @@ namespace Zenyth
 	void Pipeline::Destroy()
 	{
 		m_pipelineState.Reset();
-		m_rootSignature.Reset();
-
-		m_inputElementSemanticNames.clear();
-		m_inputElementDescs.clear();
-
-	}
-
-	void Pipeline::InitializeDXC()
-	{
-		ThrowIfFailed(::DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_utils.ReleaseAndGetAddressOf())));
-		ThrowIfFailed(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_compiler.ReleaseAndGetAddressOf())));
-		ThrowIfFailed(m_utils->CreateDefaultIncludeHandler(m_includeHandler.ReleaseAndGetAddressOf()));
-	}
-
-
-	ComPtr<IDxcBlob> Pipeline::CompileShader(const std::wstring& shaderPath, const ShaderType shaderType, const std::wstring& smTarget)
-	{
-		auto pos = shaderPath.find_last_of(L"\\/");
-		auto shaderDir = shaderPath.substr(0, pos);
-		std::vector compilationArguments
-		{
-			L"-E", L"main",
-			L"-T", smTarget.c_str(),
-			L"-I", shaderDir.c_str(),
-			DXC_ARG_PACK_MATRIX_ROW_MAJOR,
-			DXC_ARG_WARNINGS_ARE_ERRORS,
-			DXC_ARG_ALL_RESOURCES_BOUND,
-		};
-
-#ifndef NDEBUG
-		compilationArguments.push_back(DXC_ARG_DEBUG); // Enable debug info
-		compilationArguments.push_back(L"-Qembed_debug"); // Embed debug info
-		compilationArguments.push_back(L"-Od"); // Disable optimizations
-#else
-		compilationArguments.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
-#endif
-
-		ComPtr<IDxcBlobEncoding> shaderBlob;
-		ThrowIfFailed(m_utils->LoadFile(shaderPath.c_str(), nullptr, shaderBlob.GetAddressOf()));
-
-		const DxcBuffer sourceBuffer
-		{
-			.Ptr = shaderBlob->GetBufferPointer(),
-			.Size = shaderBlob->GetBufferSize(),
-			.Encoding = 0
-		};
-
-		ComPtr<IDxcResult> compileResult;
-		auto hr = m_compiler->Compile(&sourceBuffer,
-			compilationArguments.data(), static_cast<uint32_t>(compilationArguments.size()),
-			m_includeHandler.Get(), IID_PPV_ARGS(compileResult.GetAddressOf()));
-
-		ComPtr<IDxcBlobUtf8> errors{};
-		ThrowIfFailed(compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr));
-		if (errors && errors->GetStringLength() > 0)
-		{
-			std::stringstream errorsStream;
-			errorsStream << "Shader compilation failed with the following errors:\n";
-			errorsStream << std::string_view{ errors->GetStringPointer(), errors->GetStringLength() };
-
-			std::cout << errorsStream.str() << std::endl;
-			throw std::runtime_error(errorsStream.str());
-		}
-
-		ThrowIfFailed(hr);
-
-		ComPtr<IDxcBlob> compiledShaderBlob{nullptr};
-		compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&compiledShaderBlob), nullptr);
-
-		// Get shader reflection data.
-		ComPtr<IDxcBlob> reflectionBlob{};
-		ThrowIfFailed(compileResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr));
-
-		const DxcBuffer reflectionBuffer
-		{
-			.Ptr = reflectionBlob->GetBufferPointer(),
-			.Size = reflectionBlob->GetBufferSize(),
-			.Encoding = 0,
-		};
-
-		ComPtr<ID3D12ShaderReflection> shaderReflection{};
-		m_utils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
-		D3D12_SHADER_DESC shaderDesc{};
-		shaderReflection->GetDesc(&shaderDesc);
-
-		// input layout description
-		if (shaderType == ShaderType::Vertex)
-		{
-			m_inputElementSemanticNames.reserve(shaderDesc.InputParameters);
-			m_inputElementDescs.reserve(shaderDesc.InputParameters);
-
-			for (const uint32_t parameterIndex : std::views::iota(0u, shaderDesc.InputParameters))
-			{
-				D3D12_SIGNATURE_PARAMETER_DESC signatureParameterDesc{};
-				shaderReflection->GetInputParameterDesc(parameterIndex, &signatureParameterDesc);
-
-				m_inputElementSemanticNames.emplace_back(signatureParameterDesc.SemanticName);
-				m_inputElementDescs.emplace_back(D3D12_INPUT_ELEMENT_DESC{
-							.SemanticName = m_inputElementSemanticNames.back().c_str(),
-							.SemanticIndex = signatureParameterDesc.SemanticIndex,
-							.Format = GetDXGIFormat(signatureParameterDesc.ComponentType, signatureParameterDesc.Mask),
-							.InputSlot = 0u,
-							.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT,
-							.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-							.InstanceDataStepRate = 0u,
-						});
-			}
-		}
-
-		// if we have a root signature, we can early exit
-		if (m_rootSignature)
-			return compiledShaderBlob;
-
-		// Get the root signature (if embedded)
-		ComPtr<IDxcBlob> rootSigBlob;
-		ComPtr<IDxcBlobUtf16> rootSigName;
-		hr = compileResult->GetOutput(DXC_OUT_ROOT_SIGNATURE,
-									   IID_PPV_ARGS(&rootSigBlob),
-									   &rootSigName);
-
-		if (SUCCEEDED(hr)) {
-			auto& renderer = Application::Get().GetRenderer();
-			// Shader has explicit root signature - use it!
-			renderer.GetDevice()->CreateRootSignature(0,
-									   rootSigBlob->GetBufferPointer(),
-									   rootSigBlob->GetBufferSize(),
-									   IID_PPV_ARGS(&m_rootSignature));
-		}
-		else {
-			// failed, we crash
-			ThrowIfFailed(hr, "No root signature found. Please add an explicit root signature in your shader.");
-		}
-
-		return compiledShaderBlob;
-	}
-
-
-	static DXGI_FORMAT GetDXGIFormat(D3D_REGISTER_COMPONENT_TYPE componentType, BYTE mask) {
-		// Count the number of components
-		int componentCount = 0;
-		if (mask & D3D_COMPONENT_MASK_X) componentCount++;
-		if (mask & D3D_COMPONENT_MASK_Y) componentCount++;
-		if (mask & D3D_COMPONENT_MASK_Z) componentCount++;
-		if (mask & D3D_COMPONENT_MASK_W) componentCount++;
-
-		// Determine the format based on the component type and count
-		switch (componentType) {
-			case D3D_REGISTER_COMPONENT_FLOAT32:
-				switch (componentCount) {
-					case 1: return DXGI_FORMAT_R32_FLOAT;
-					case 2: return DXGI_FORMAT_R32G32_FLOAT;
-					case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
-					case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-					default: return DXGI_FORMAT_UNKNOWN;
-				}
-
-			case D3D_REGISTER_COMPONENT_SINT32:
-				switch (componentCount) {
-					case 1: return DXGI_FORMAT_R32_SINT;
-					case 2: return DXGI_FORMAT_R32G32_SINT;
-					case 3: return DXGI_FORMAT_R32G32B32_SINT;
-					case 4: return DXGI_FORMAT_R32G32B32A32_SINT;
-					default: return DXGI_FORMAT_UNKNOWN;
-				}
-
-			case D3D_REGISTER_COMPONENT_UINT32:
-				switch (componentCount) {
-					case 1: return DXGI_FORMAT_R32_UINT;
-					case 2: return DXGI_FORMAT_R32G32_UINT;
-					case 3: return DXGI_FORMAT_R32G32B32_UINT;
-					case 4: return DXGI_FORMAT_R32G32B32A32_UINT;
-					default: return DXGI_FORMAT_UNKNOWN;
-				}
-
-			case D3D_REGISTER_COMPONENT_FLOAT16:
-				switch (componentCount) {
-					case 1: return DXGI_FORMAT_R16_FLOAT;
-					case 2: return DXGI_FORMAT_R16G16_FLOAT;
-					case 4: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-					// No 3-component half format
-					default: return DXGI_FORMAT_UNKNOWN;
-				}
-
-			case D3D_REGISTER_COMPONENT_SINT16:
-				switch (componentCount) {
-					case 1: return DXGI_FORMAT_R16_SINT;
-					case 2: return DXGI_FORMAT_R16G16_SINT;
-					case 4: return DXGI_FORMAT_R16G16B16A16_SINT;
-					// No 3-component half format
-					default: return DXGI_FORMAT_UNKNOWN;
-				}
-
-			case D3D_REGISTER_COMPONENT_UINT16:
-				switch (componentCount) {
-					case 1: return DXGI_FORMAT_R16_UINT;
-					case 2: return DXGI_FORMAT_R16G16_UINT;
-					case 4: return DXGI_FORMAT_R16G16B16A16_UINT;
-					// No 3-component half format
-					default: return DXGI_FORMAT_UNKNOWN;
-				}
-			default: return DXGI_FORMAT_UNKNOWN;
-		}
-
+		m_shader.Destroy();
 	}
 }
