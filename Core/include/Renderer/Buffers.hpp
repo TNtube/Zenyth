@@ -12,7 +12,7 @@ namespace Zenyth {
 	{
 	public:
 		DELETE_COPY_CTOR(GpuBuffer)
-		DELETE_MOVE_CTOR(GpuBuffer)
+		DEFAULT_MOVE_CTOR(GpuBuffer)
 
 		void Create( const std::wstring& name, uint32_t numElements, uint32_t ElementSize,
 			const void* initialData = nullptr, bool align = false );
@@ -54,7 +54,7 @@ namespace Zenyth {
 	public:
 		UploadBuffer() = default;
 		DELETE_COPY_CTOR(UploadBuffer)
-		DELETE_MOVE_CTOR(UploadBuffer)
+		DEFAULT_MOVE_CTOR(UploadBuffer)
 
 		void Create(const std::wstring& name, size_t size);
 
@@ -74,7 +74,7 @@ namespace Zenyth {
 	public:
 		IndexBuffer() = default;
 		DELETE_COPY_CTOR(IndexBuffer)
-		DELETE_MOVE_CTOR(IndexBuffer)
+		DEFAULT_MOVE_CTOR(IndexBuffer)
 
 		~IndexBuffer() override = default;
 		[[nodiscard]] const D3D12_INDEX_BUFFER_VIEW* GetIBV() const { return &m_ibv; }
@@ -91,7 +91,7 @@ namespace Zenyth {
 	public:
 		VertexBuffer() = default;
 		DELETE_COPY_CTOR(VertexBuffer)
-		DELETE_MOVE_CTOR(VertexBuffer)
+		DEFAULT_MOVE_CTOR(VertexBuffer)
 
 		~VertexBuffer() override = default;
 		[[nodiscard]] const D3D12_VERTEX_BUFFER_VIEW* GetVBV() const { return &m_vbv; }
@@ -106,7 +106,7 @@ namespace Zenyth {
 	public:
 		ConstantBuffer() = default;
 		DELETE_COPY_CTOR(ConstantBuffer)
-		DELETE_MOVE_CTOR(ConstantBuffer)
+		DEFAULT_MOVE_CTOR(ConstantBuffer)
 
 		void Destroy() override;
 
@@ -123,7 +123,7 @@ namespace Zenyth {
 	public:
 		StructuredBuffer() { m_resourceFlags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS; }
 		DELETE_COPY_CTOR(StructuredBuffer)
-		DELETE_MOVE_CTOR(StructuredBuffer)
+		DEFAULT_MOVE_CTOR(StructuredBuffer)
 	private:
 		void CreateViews() override;
 	};

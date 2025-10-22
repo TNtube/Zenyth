@@ -9,8 +9,8 @@
 	ClassName& operator=(ClassName&&) = delete;
 
 #define DEFAULT_COPY_CTOR(ClassName) \
-	ClassName(const ClassName&) = default; \
-	ClassName& operator=(const ClassName&) = default;
+	ClassName(const ClassName&) noexcept = default; \
+	ClassName& operator=(const ClassName&) noexcept = default;
 
 #define DEFAULT_MOVE_CTOR(ClassName) \
 	ClassName(ClassName&&) noexcept = default; \

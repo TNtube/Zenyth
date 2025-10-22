@@ -1,4 +1,5 @@
 #pragma once
+#include "Core.hpp"
 
 
 namespace Zenyth
@@ -14,6 +15,9 @@ namespace Zenyth
 			m_GpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
 		{
 		}
+
+		DELETE_COPY_CTOR(GpuResource)
+		DEFAULT_MOVE_CTOR(GpuResource)
 
 		virtual ~GpuResource() { GpuResource::Destroy(); }
 
