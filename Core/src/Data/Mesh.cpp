@@ -35,8 +35,7 @@ namespace Zenyth
 
 		const auto pos = path.find_last_of("\\/");
 
-		std::string filename = path.substr(pos + 1);
-		std::string directory = path.substr(0, pos);
+		std::string directory = path.substr(0, pos + 1);
 
 		tinyobj::ObjReader reader;
 
@@ -117,14 +116,14 @@ namespace Zenyth
 
 				index_offset += fv;
 
-				matDesc.diffuseMap = directory + "/" + mat.diffuse_texname;
-				matDesc.normalMap = directory + "/" + mat.normal_texname;
-				matDesc.specularMap = directory + "/" + mat.specular_highlight_texname;
+				matDesc.diffuseMap  = std::string(directory).append(mat.diffuse_texname);
+				matDesc.normalMap   = std::string(directory).append(mat.normal_texname);
+				matDesc.specularMap = std::string(directory).append(mat.specular_highlight_texname);
 			}
 		}
 
 
-		output.m_name = filename;
+		output.m_name = path.substr(pos + 1);
 		output.m_submeshes = std::move(submeshes);
 
 		output.ComputeTangents();
