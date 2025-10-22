@@ -245,6 +245,7 @@ namespace Zenyth {
 
 	void CommandBatch::SubmitMaterial(std::shared_ptr<Material> material)
 	{
+		if (material == m_currentMaterial) return;
 		m_currentMaterial = std::move(material);
 
 		m_currentMaterial->Submit(m_commandList.Get());

@@ -27,5 +27,14 @@ namespace Zenyth
 		std::string specularMap;
 
 		bool operator==(const MaterialDesc& other) const = default;
+
+		bool operator<(const MaterialDesc& other) const {
+			if (name != other.name) return name < other.name;
+			if (vsPath != other.vsPath) return vsPath < other.vsPath;
+			if (psPath != other.psPath) return psPath < other.psPath;
+			if (diffuseMap != other.diffuseMap) return diffuseMap < other.diffuseMap;
+			if (normalMap != other.normalMap) return normalMap < other.normalMap;
+			return specularMap < other.specularMap;
+		}
 	};
 }

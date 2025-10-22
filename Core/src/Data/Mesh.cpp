@@ -14,6 +14,10 @@ namespace Zenyth
 		: m_submeshes(std::move(submeshes))
 	{
 		if (!name.empty()) m_name = std::move(name);
+
+		std::ranges::sort(m_submeshes, [](const Submesh& sma, const Submesh& smb) {
+			return sma.GetMaterialDesc() < smb.GetMaterialDesc();
+		});
 	}
 
 	void Mesh::ComputeTangents()
@@ -102,24 +106,24 @@ namespace Zenyth
 					currentSubmesh.GetVertices().push_back(vertex);
 				}
 
-				const tinyobj::material_t& mat = materials[shape.mesh.material_ids[f]];
-				auto& matDesc = currentSubmesh.GetMaterialDesc();
-
-				matDesc.name = mat.name;
-				// matDesc.ambient = Vector3{1, 1, 1};
-				// matDesc.diffuse = Vector3{1, 1, 1};
-				// matDesc.specular = Vector3{1, 1, 1};
-
-				memcpy(&matDesc.ambient, mat.ambient, sizeof(Vector3));
-				memcpy(&matDesc.diffuse, mat.diffuse, sizeof(Vector3));
-				memcpy(&matDesc.specular, mat.specular, sizeof(Vector3));
-
 				index_offset += fv;
-
-				matDesc.diffuseMap  = std::string(directory).append(mat.diffuse_texname);
-				matDesc.normalMap   = std::string(directory).append(mat.normal_texname);
-				matDesc.specularMap = std::string(directory).append(mat.specular_highlight_texname);
 			}
+
+			const tinyobj::material_t& mat = materials[shape.mesh.material_ids.front()];
+			auto& matDesc = currentSubmesh.GetMaterialDesc();
+
+			matDesc.name = mat.name;
+
+			memcpy(&matDesc.ambient, mat.ambient, sizeof(Vector3));
+			memcpy(&matDesc.diffuse, mat.diffuse, sizeof(Vector3));
+			memcpy(&matDesc.specular, mat.specular, sizeof(Vector3));
+
+			matDesc.diffuseMap.reserve(directory.length() + mat.diffuse_texname.length());
+			matDesc.normalMap.reserve(directory.length() + mat.normal_texname.length());
+			matDesc.specularMap.reserve(directory.length() + mat.specular_highlight_texname.length());
+			matDesc.diffuseMap.append(directory).append(mat.diffuse_texname);
+			matDesc.normalMap.append(directory).append(mat.normal_texname);
+			matDesc.specularMap.append(directory).append(mat.specular_highlight_texname);
 		}
 
 
