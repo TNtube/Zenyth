@@ -28,7 +28,7 @@ namespace Zenyth
 		bool operator==(const MaterialDesc& other) const { return m_description == other; }
 
 	private:
-		explicit Material(const MaterialDesc& matDesc, DescriptorHeap& resourceHeap);
+		explicit Material(const MaterialDesc& matDesc);
 
 		friend class MaterialManager;
 		std::unique_ptr<Pipeline> m_pipeline;

@@ -27,14 +27,6 @@ namespace Zenyth
 		void Create(const std::wstring& name, const std::wstring& computePath);
 		void Destroy();
 
-		[[nodiscard]] std::optional<uint32_t> GetRootParameterIndex(const std::string& name) const
-		{
-			const auto index = m_rootParameterIndices.find(name);
-			if (index != m_rootParameterIndices.end())
-				return index->second;
-			return {};
-		}
-
 		[[nodiscard]] ID3D12PipelineState* Get() const { return m_pipelineState.Get(); }
 		[[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return m_rootSignature.Get(); }
 
@@ -52,10 +44,5 @@ namespace Zenyth
 
 		std::vector<std::string> m_inputElementSemanticNames{};
 		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputElementDescs{};
-		std::unordered_map<std::string, uint32_t> m_rootParameterIndices;
-
-		std::vector<CD3DX12_DESCRIPTOR_RANGE1> m_descriptorRanges;
-		std::vector<D3D12_ROOT_PARAMETER1> m_rootParameters;
-		std::vector<D3D12_STATIC_SAMPLER_DESC> m_staticSamplers;
 	};
 }

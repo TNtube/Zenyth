@@ -40,7 +40,7 @@ namespace Zenyth
 		// no available allocator, create a new one
 		if (!outAllocator)
 		{
-			auto& renderer = Application::Get().GetRenderer();
+			const auto& renderer = Application::Get().GetRenderer();
 
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> newAllocator;
 			ThrowIfFailed(renderer.GetDevice()->CreateCommandAllocator(m_type, IID_PPV_ARGS(&newAllocator)));

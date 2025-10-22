@@ -11,10 +11,18 @@ namespace Zenyth
 		DELETE_MOVE_CTOR(Renderer)
 		~Renderer() = default;
 
-		[[nodiscard]] ID3D12Device* GetDevice() const { return m_Device.Get(); };
+		void Init();
+
+		[[nodiscard]] ID3D12Device* GetDevice() const { return m_device.Get(); };
 		CommandManager& GetCommandManager() { return m_commandManager; }
-		DescriptorHeap& GetResourceHeap() { return m_resourceHeap; }
 		MaterialManager& GetMaterialManager() { return m_materialManager; }
+
+		const DescriptorHeap& GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_descriptorHeaps[type]; }
+
+		DescriptorHandle AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type, int64_t count = 1);
+		void FreeDescriptor(const DescriptorHandle& handle, int64_t count = 1);
+
+		static constexpr uint8_t FrameCount = 3;
 
 	private:
 		explicit Renderer(bool useWrapDevice);
@@ -23,10 +31,18 @@ namespace Zenyth
 
 	private:
 		friend class Application;
-		Microsoft::WRL::ComPtr<ID3D12Device> m_Device = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Device> m_device = nullptr;
 
 		CommandManager m_commandManager;
-		DescriptorHeap m_resourceHeap;
+
+		DescriptorHeap m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
+		{
+			DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
+			DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
+			DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV),
+			DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+		};
+
 		MaterialManager m_materialManager;
 	};
 }

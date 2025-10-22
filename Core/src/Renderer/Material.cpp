@@ -7,8 +7,8 @@
 
 namespace Zenyth
 {
-	Material::Material(const MaterialDesc& matDesc, DescriptorHeap& resourceHeap)
-		: m_constantBuffer(resourceHeap), m_description(matDesc)
+	Material::Material(const MaterialDesc& matDesc)
+		: m_description(matDesc)
 	{
 		m_pipeline = std::make_unique<Pipeline>();
 
@@ -18,9 +18,9 @@ namespace Zenyth
 
 		m_pipeline->Create(wName, wVsPath, wPsPath, true);
 
-		m_diffuseMap = Texture::LoadTextureFromFile(matDesc.diffuseMap.c_str(), resourceHeap);
-		m_normalMap = Texture::LoadTextureFromFile(matDesc.normalMap.c_str(), resourceHeap, false);
-		m_specularMap = Texture::LoadTextureFromFile(matDesc.specularMap.c_str(), resourceHeap);
+		m_diffuseMap = Texture::LoadTextureFromFile(matDesc.diffuseMap.c_str());
+		m_normalMap = Texture::LoadTextureFromFile(matDesc.normalMap.c_str(), false);
+		m_specularMap = Texture::LoadTextureFromFile(matDesc.specularMap.c_str());
 	}
 
 	void Material::Submit(ID3D12GraphicsCommandList* commandList) const
@@ -28,16 +28,12 @@ namespace Zenyth
 		commandList->SetPipelineState(m_pipeline->Get());
 		commandList->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 
-		const auto albedoIdx   = m_pipeline->GetRootParameterIndex("AlbedoMap");
-		const auto normalIdx   = m_pipeline->GetRootParameterIndex("NormalMap");
-		const auto specularIdx = m_pipeline->GetRootParameterIndex("SpecularMap");
-
-		if (albedoIdx.has_value() && m_diffuseMap)
-			commandList->SetGraphicsRootDescriptorTable(albedoIdx.value(), m_diffuseMap->GetSRV().GPU());
-		if (normalIdx.has_value() && m_normalMap)
-			commandList->SetGraphicsRootDescriptorTable(normalIdx.value(), m_normalMap->GetSRV().GPU());
-		if (specularIdx.has_value() && m_specularMap)
-			commandList->SetGraphicsRootDescriptorTable(specularIdx.value(), m_specularMap->GetSRV().GPU());
+		if (m_diffuseMap)
+			commandList->SetGraphicsRootDescriptorTable(3, m_diffuseMap->GetSRV().GPU());
+		if (m_normalMap)
+			commandList->SetGraphicsRootDescriptorTable(4, m_normalMap->GetSRV().GPU());
+		if (m_specularMap)
+			commandList->SetGraphicsRootDescriptorTable(5, m_specularMap->GetSRV().GPU());
 	}
 
 	std::shared_ptr<Material> MaterialManager::GetMaterial(const MaterialDesc& matDesc)
@@ -51,7 +47,6 @@ namespace Zenyth
 		if (mat != m_materialInstances.end())
 			return *mat;
 
-		auto& renderer = Application::Get().GetRenderer();
-		return m_materialInstances.emplace_back(new Material(matDesc, renderer.GetResourceHeap()));
+		return m_materialInstances.emplace_back(new Material(matDesc));
 	}
 }

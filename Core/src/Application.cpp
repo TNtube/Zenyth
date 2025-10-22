@@ -20,6 +20,8 @@ namespace Zenyth
 	{
 		assert(!s_App);
 		s_App = this;
+
+		m_renderer.Init();
 	}
 
 }

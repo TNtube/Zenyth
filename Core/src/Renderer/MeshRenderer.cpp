@@ -8,14 +8,14 @@ namespace Zenyth
 		m_submeshRenderers.reserve(mesh.m_submeshes.size());
 
 		for (const auto& submesh : mesh.m_submeshes)
-			m_submeshRenderers.emplace_back(submesh);
+			m_submeshRenderers.emplace_back(std::make_shared<SubmeshRenderer>(submesh));
 	}
 
 	void MeshRenderer::Submit(CommandBatch& commandBatch) const
 	{
 		for (const auto& smr : m_submeshRenderers)
 		{
-			smr.Submit(commandBatch);
+			smr->Submit(commandBatch);
 		}
 	}
 }

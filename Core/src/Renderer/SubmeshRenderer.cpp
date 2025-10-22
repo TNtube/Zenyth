@@ -15,8 +15,8 @@ namespace Zenyth
 		m_material = renderer.GetMaterialManager().GetMaterial(submesh.GetMaterialDesc());
 
 		std::wstring wName(submesh.GetName().begin(), submesh.GetName().end());
-		m_vertexBuffer.Create(renderer.GetDevice(), std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), false, submesh.GetVertices().data());
-		m_indexBuffer .Create(renderer.GetDevice(), std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), false, submesh.GetIndices().data());
+		m_vertexBuffer.Create(std::format(L"Vertex Buffer #{}", wName), submesh.GetVertexCount(), sizeof(Vertex), submesh.GetVertices().data());
+		m_indexBuffer .Create(std::format(L"Index buffer #{}", wName), submesh.GetIndexCount(), sizeof(uint32_t), submesh.GetIndices().data());
 	}
 
 	void SubmeshRenderer::Submit(CommandBatch& commandBatch) const

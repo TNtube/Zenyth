@@ -2,6 +2,7 @@
 #include "Core.hpp"
 
 #include "Renderer/Renderer.hpp"
+#include <dxgidebug.h>
 
 namespace Zenyth
 {
@@ -33,7 +34,7 @@ namespace Zenyth
 			ComPtr<IDXGIAdapter> wrapAdapter;
 			ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&wrapAdapter)), "Failed to create warp adapter");
 
-			ThrowIfFailed(D3D12CreateDevice(wrapAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_Device)), "Failed to create device");
+			ThrowIfFailed(D3D12CreateDevice(wrapAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)), "Failed to create device");
 		}
 		else
 		{
@@ -43,17 +44,29 @@ namespace Zenyth
 			ThrowIfFailed(D3D12CreateDevice(
 				hardwareAdapter.Get(),
 				D3D_FEATURE_LEVEL_11_0,
-				IID_PPV_ARGS(&m_Device)
+				IID_PPV_ARGS(&m_device)
 			));
 		}
+	}
 
-		m_commandManager.Create(m_Device.Get());
+	void Renderer::Init()
+	{
+		m_commandManager.Create(m_device.Get());
 
-		m_resourceHeap.Create(
-			m_Device.Get(),
-			L"Resource Descriptor Heap",
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			2048); // Arbitrary large value
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Create(L"CBV SRV UAV Descriptor Heap", 4096);
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].Create(L"Sampler Descriptor Heap", 64);
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].Create(L"RTV Descriptor Heap", 64);
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].Create(L"DSV Descriptor Heap", FrameCount);
+	}
+
+	DescriptorHandle Renderer::AllocateDescriptor(const D3D12_DESCRIPTOR_HEAP_TYPE type, const int64_t count)
+	{
+		return m_descriptorHeaps[type].Alloc(count);
+	}
+
+	void Renderer::FreeDescriptor(const DescriptorHandle& handle, const int64_t count)
+	{
+		return m_descriptorHeaps[handle.GetType()].Free(handle, count);
 	}
 
 	void Renderer::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, const bool requestHighPerformanceAdapter)

@@ -2,16 +2,13 @@
 
 #include "Application.hpp"
 #include "Renderer/Buffers.hpp"
-#include "Renderer/Texture.hpp"
 #include "Camera.hpp"
-#include "Renderer/DescriptorHeap.hpp"
 #include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
 #include "Data/Light.hpp"
-#include "Renderer/DepthStencilBuffer.hpp"
 #include "Renderer/MeshRenderer.hpp"
 #include "Renderer/Pipeline.hpp"
-#include "Renderer/PixelBuffer.hpp"
+#include "Renderer/RenderTarget.hpp"
 
 class ModelGallery final : public Zenyth::Application
 {
@@ -26,7 +23,7 @@ public:
 
 	void OnWindowSizeChanged(int width, int height) override;
 
-	void LoadSizeDependentResources();
+	void LoadSizeDependentResources() const;
 
 private:
 	float m_aspectRatio;
@@ -53,24 +50,14 @@ private:
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-	std::unique_ptr<Zenyth::DescriptorHeap> m_rtvHeap {};
-	std::unique_ptr<Zenyth::DescriptorHeap> m_dsvHeap {};
-	std::unique_ptr<Zenyth::DepthStencilBuffer> m_depthStencilBuffer;
-
-	std::unique_ptr<Zenyth::PixelBuffer> m_renderTargets[FrameCount];
 
 	std::unique_ptr<Zenyth::Pipeline> m_pipelineGeometry;
 
+	std::unique_ptr<Zenyth::RenderTarget> m_renderTargets[FrameCount];
 
 	bool m_depthBoundsTestSupported = false;
 
-
-	// App resources.
 	std::unique_ptr<Zenyth::ImGuiLayer> m_imguiLayer {};
-
-	std::unique_ptr<Zenyth::Texture> m_tileset {};
-	std::unique_ptr<Zenyth::Texture> m_tilesetNormal {};
-	std::unique_ptr<Zenyth::Texture> m_tilesetSpecular {};
 
 	std::unique_ptr<Zenyth::UploadBuffer> m_lightUploadBuffer {};
 	std::unique_ptr<Zenyth::StructuredBuffer> m_lightBuffer {};
@@ -96,8 +83,6 @@ private:
 	void PopulateCommandList();
 
 	void MoveToNextFrame();
-
-	void LoadSizeDependentResources() const;
 
 	static std::wstring GetAssetFullPathW(const std::wstring& assetName);
 	static std::string GetAssetFullPath(const std::string& assetName);

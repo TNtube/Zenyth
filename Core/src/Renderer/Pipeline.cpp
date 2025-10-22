@@ -23,7 +23,7 @@ namespace Zenyth
 		// allocate arbitrary large size to prevent memory invalidation after shader compilation.
 		// TODO: encapsulate this into a class that hold shader specific data and use a utility
 		// TODO: function to compute root parameters from all compiled shader to prevent this.
-		m_descriptorRanges.reserve(256);
+		// m_descriptorRanges.reserve(256);
 
 		auto vertexBlob = CompileShader(vertexPath, ShaderType::Vertex, L"vs_6_0");
 		auto pixelBlob = CompileShader(pixelPath, ShaderType::Pixel, L"ps_6_0");
@@ -109,10 +109,9 @@ namespace Zenyth
 
 		if (m_utils == nullptr || m_compiler == nullptr || m_includeHandler == nullptr)
 			InitializeDXC();
-		m_descriptorRanges.reserve(256);
 
 		const auto computeBlob = CompileShader(computePath, ShaderType::Compute, L"cs_6_0");
-		auto& renderer = Application::Get().GetRenderer();
+		const auto& renderer = Application::Get().GetRenderer();
 
 		D3D12_COMPUTE_PIPELINE_STATE_DESC computeDesc {};
 		computeDesc.pRootSignature = m_rootSignature.Get();
@@ -131,10 +130,6 @@ namespace Zenyth
 
 		m_inputElementSemanticNames.clear();
 		m_inputElementDescs.clear();
-		m_rootParameterIndices.clear();
-		m_descriptorRanges.clear();
-		m_rootParameters.clear();
-		m_staticSamplers.clear();
 
 	}
 
@@ -237,77 +232,6 @@ namespace Zenyth
 							.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 							.InstanceDataStepRate = 0u,
 						});
-			}
-		}
-
-		// get root parameters names
-
-		// constant buffers
-		for (const uint32_t i : std::views::iota(0u, shaderDesc.BoundResources))
-		{
-			D3D12_SHADER_INPUT_BIND_DESC shaderInputBindDesc{};
-			ThrowIfFailed(shaderReflection->GetResourceBindingDesc(i, &shaderInputBindDesc));
-
-			if (shaderInputBindDesc.Type == D3D_SIT_CBUFFER)
-			{
-				m_rootParameterIndices[shaderInputBindDesc.Name] = static_cast<uint32_t>(m_rootParameters.size());
-				CD3DX12_DESCRIPTOR_RANGE1 cbvRange;
-				cbvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, shaderInputBindDesc.BindPoint, shaderInputBindDesc.Space, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-
-				m_descriptorRanges.push_back(cbvRange);
-
-				CD3DX12_ROOT_PARAMETER1 rootParameter;
-				rootParameter.InitAsDescriptorTable(1, &m_descriptorRanges.back(), shaderType == ShaderType::Vertex ? D3D12_SHADER_VISIBILITY_VERTEX : D3D12_SHADER_VISIBILITY_PIXEL);
-
-				m_rootParameters.push_back(rootParameter);
-			}
-
-			if (shaderInputBindDesc.Type == D3D_SIT_TEXTURE || shaderInputBindDesc.Type == D3D_SIT_STRUCTURED)
-			{
-				// For now, each individual texture belongs in its own descriptor table. This can cause the root signature to quickly exceed the 64WORD size limit.
-				m_rootParameterIndices[shaderInputBindDesc.Name] = static_cast<uint32_t>(m_rootParameters.size());
-				const CD3DX12_DESCRIPTOR_RANGE1 srvRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-										1u,
-										shaderInputBindDesc.BindPoint,
-										shaderInputBindDesc.Space,
-										D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-
-				m_descriptorRanges.push_back(srvRange);
-
-				const D3D12_ROOT_PARAMETER1 rootParameter
-				{
-					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-					.DescriptorTable =
-					{
-						.NumDescriptorRanges = 1u,
-						.pDescriptorRanges = &m_descriptorRanges.back(),
-					},
-					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
-				};
-
-				m_rootParameters.push_back(rootParameter);
-			}
-
-			if (shaderInputBindDesc.Type == D3D_SIT_SAMPLER)
-			{
-				const D3D12_STATIC_SAMPLER_DESC staticSampler
-				{
-					.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-					.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-					.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-					.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-					.MipLODBias = 0,
-					.MaxAnisotropy = 0,
-					.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-					.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK,
-					.MinLOD = 0.0f,
-					.MaxLOD = D3D12_FLOAT32_MAX,
-					.ShaderRegister = shaderInputBindDesc.BindPoint,
-					.RegisterSpace = shaderInputBindDesc.Space,
-					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL,
-				};
-
-				m_staticSamplers.push_back(staticSampler);
 			}
 		}
 

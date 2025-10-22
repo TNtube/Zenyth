@@ -10,12 +10,15 @@ namespace Zenyth
 	{
 		m_graphicsQueue.Create(device);
 		m_copyQueue.Create(device);
+		m_computeQueue.Create(device);
 	}
 
 	void CommandManager::Destroy()
 	{
+		IdleGPU();
 		m_graphicsQueue.Destroy();
 		m_copyQueue.Destroy();
+		m_computeQueue.Destroy();
 	}
 
 	void CommandManager::GetNewCommandList(const D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList **list, ID3D12CommandAllocator **allocator)
@@ -27,6 +30,9 @@ namespace Zenyth
 				break;
 			case D3D12_COMMAND_LIST_TYPE_COPY:
 				*allocator = m_copyQueue.AcquireAllocator();
+				break;
+			case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+				*allocator = m_computeQueue.AcquireAllocator();
 				break;
 			default:
 				assert(false);
