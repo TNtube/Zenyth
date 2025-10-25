@@ -157,11 +157,6 @@ void ModelGallery::LoadPipeline()
 	{
 		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(GetRenderer().GetDevice(), GetRenderer().GetCommandManager().GetGraphicsQueue().GetCommandQueue());
 	}
-
-	const auto generateMipsPipeline = std::make_unique<Zenyth::Pipeline>();
-
-	generateMipsPipeline->Create(L"Generate Mips PSO", GetAssetFullPathW(L"shaders/GenerateMipsCS.hlsl"));
-
 }
 
 void ModelGallery::LoadAssets()
@@ -268,8 +263,8 @@ void ModelGallery::PopulateCommandList()
 
 	const auto color0 = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::Color0);
 	const auto depth = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::DepthStencil);
-	commandBatch.TransitionBarrier(color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	commandBatch.TransitionBarrier(depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+	commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	commandBatch.TransitionBarrier(*depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 
 	const auto dsvHandle = depth->GetDSV();
@@ -284,13 +279,13 @@ void ModelGallery::PopulateCommandList()
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
-	commandBatch.TransitionBarrier(m_cameraConstantBuffer.get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
+	commandBatch.TransitionBarrier(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 	commandBatch.CopyBufferRegion(*m_sceneConstantBuffer, m_frameIndex * m_sceneConstantBuffer->GetElementSize(), *m_sceneUploadBuffer, 0, sizeof(Zenyth::CameraData));
-	commandBatch.TransitionBarrier(m_sceneConstantBuffer.get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, true);
+	commandBatch.TransitionBarrier(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 	commandBatch.CopyBufferRegion(*m_lightBuffer, m_frameIndex * m_lightBuffer->GetElementSize(), *m_lightUploadBuffer, 0, sizeof(Zenyth::LightData));
-	commandBatch.TransitionBarrier(m_lightBuffer.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+	commandBatch.TransitionBarrier(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 
 	commandBatch.SetRootParameter(0, m_meshConstantBuffer->GetCBV());
@@ -317,7 +312,7 @@ void ModelGallery::PopulateCommandList()
 	ImGui::End();
 	m_imguiLayer->Render(commandList);
 
-	commandBatch.TransitionBarrier(color0, D3D12_RESOURCE_STATE_PRESENT, true);
+	commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_PRESENT, true);
 
 
 	const auto fence = commandBatch.End();

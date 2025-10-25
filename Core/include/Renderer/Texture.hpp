@@ -22,7 +22,7 @@ namespace Zenyth
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const;
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetDSV() const;
 		[[nodiscard]] DescriptorHandle GetSRV() const;
-		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetUAV( uint32_t mip ) const;
+		[[nodiscard]] DescriptorHandle GetUAV() const;
 
 		[[nodiscard]] bool CheckRTVSupport() const;
 		[[nodiscard]] bool CheckDSVSupport() const;
@@ -32,6 +32,7 @@ namespace Zenyth
 		static std::unique_ptr<Texture> LoadTextureFromFile(const char *filename, bool sRGB = true);
 		static DXGI_FORMAT GetUAVCompatibleFormat( DXGI_FORMAT format );
 		static bool IsSRGBFormat( DXGI_FORMAT format );
+		static DXGI_FORMAT GetSRGBFormat(DXGI_FORMAT format);
 
 		static uint32_t loadedFile;
 	private:

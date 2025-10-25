@@ -2,6 +2,7 @@
 #include "Renderer/Material.hpp"
 
 #include "Application.hpp"
+#include "Renderer/CommandBatch.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -23,17 +24,27 @@ namespace Zenyth
 		m_specularMap = Texture::LoadTextureFromFile(matDesc.specularMap.c_str());
 	}
 
-	void Material::Submit(ID3D12GraphicsCommandList* commandList) const
+	void Material::Submit(CommandBatch& commandBatch) const
 	{
+		const auto commandList = commandBatch.GetCommandList();
 		commandList->SetPipelineState(m_pipeline->Get());
 		commandList->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 
 		if (m_diffuseMap)
+		{
+			commandBatch.TransitionBarrier(*m_diffuseMap, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 			commandList->SetGraphicsRootDescriptorTable(3, m_diffuseMap->GetSRV().GPU());
+		}
 		if (m_normalMap)
+		{
+			commandBatch.TransitionBarrier(*m_normalMap, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 			commandList->SetGraphicsRootDescriptorTable(4, m_normalMap->GetSRV().GPU());
+		}
 		if (m_specularMap)
+		{
+			commandBatch.TransitionBarrier(*m_specularMap, D3D12_RESOURCE_STATE_GENERIC_READ, true);
 			commandList->SetGraphicsRootDescriptorTable(5, m_specularMap->GetSRV().GPU());
+		}
 	}
 
 	std::shared_ptr<Material> MaterialManager::GetMaterial(const MaterialDesc& matDesc)

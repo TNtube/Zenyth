@@ -13,10 +13,52 @@
 
 namespace
 {
+	DXGI_FORMAT GetUAVFormat( DXGI_FORMAT defaultFormat )
+	{
+		switch (defaultFormat)
+		{
+			case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+			case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+				return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+			case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+				return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+			case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+				return DXGI_FORMAT_B8G8R8X8_UNORM;
+
+			case DXGI_FORMAT_R32_TYPELESS:
+			case DXGI_FORMAT_R32_FLOAT:
+				return DXGI_FORMAT_R32_FLOAT;
+
+#ifndef NDEBUG
+			case DXGI_FORMAT_R32G8X24_TYPELESS:
+			case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+			case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+			case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+			case DXGI_FORMAT_D32_FLOAT:
+			case DXGI_FORMAT_R24G8_TYPELESS:
+			case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+			case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+			case DXGI_FORMAT_D16_UNORM:
+
+				assert(false && "Requested a UAV Format for a depth stencil Format.");
+#endif
+
+			default:
+				return defaultFormat;
+		}
+	}
 D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(const D3D12_RESOURCE_DESC& resDesc, UINT mipSlice)
 {
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-	uavDesc.Format						   = resDesc.Format;
+	uavDesc.Format						   = GetUAVFormat(resDesc.Format);
 
 	switch ( resDesc.Dimension )
 	{
@@ -99,14 +141,14 @@ namespace Zenyth
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Format = desc.Format == DXGI_FORMAT_R32_TYPELESS ? DXGI_FORMAT_R32_FLOAT : desc.Format;
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = 1;
+			srvDesc.Texture2D.MipLevels = desc.MipLevels;
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			if (m_SRV.IsNull())
 				m_SRV = renderer.AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			device->CreateShaderResourceView(m_resource.Get(), &srvDesc, m_SRV.CPU());
 		}
 
-		if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0 && CheckUAVSupport() && desc.DepthOrArraySize == 1)
+		if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0 && desc.DepthOrArraySize == 1)
 		{
 			if (m_UAV.IsNull())
 				m_UAV = renderer.AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, desc.MipLevels);
@@ -144,15 +186,19 @@ namespace Zenyth
 		m_UsageState = D3D12_RESOURCE_STATE_COPY_DEST;
 
 		// Create texture resource
-		const D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(
+		D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(
 			sRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM,
 			width,
 			height,
 			1 );
 
+		desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
 		GpuResource::Create(desc, nullptr);
 
 		m_resource->SetName(name.data());
+
+		CreateViews();
 
 		if (initialData)
 		{
@@ -165,11 +211,11 @@ namespace Zenyth
 
 			if (m_resource->GetDesc().MipLevels > 1) // hardcoded 1 because we only have one subresource atm
 			{
-				// CommandBatch::GenerateMips(*this);
+				auto batch = CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+				batch.GenerateMips(*this);
+				batch.End();
 			}
 		}
-
-		CreateViews();
 	}
 
 	void Texture::Destroy()
@@ -218,9 +264,9 @@ namespace Zenyth
 		return m_SRV;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetUAV(const uint32_t mip) const
+	DescriptorHandle Texture::GetUAV() const
 	{
-		return m_UAV.CPU(mip);
+		return m_UAV;
 	}
 
 	bool Texture::CheckRTVSupport() const
@@ -311,5 +357,38 @@ namespace Zenyth
 			default:
 				return false;
 		}
+	}
+
+	DXGI_FORMAT Texture::GetSRGBFormat( DXGI_FORMAT format )
+	{
+		DXGI_FORMAT srgbFormat = format;
+		switch ( format )
+		{
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+				srgbFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+				break;
+			case DXGI_FORMAT_BC1_UNORM:
+				srgbFormat = DXGI_FORMAT_BC1_UNORM_SRGB;
+				break;
+			case DXGI_FORMAT_BC2_UNORM:
+				srgbFormat = DXGI_FORMAT_BC2_UNORM_SRGB;
+				break;
+			case DXGI_FORMAT_BC3_UNORM:
+				srgbFormat = DXGI_FORMAT_BC3_UNORM_SRGB;
+				break;
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+				srgbFormat = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+				break;
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+				srgbFormat = DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+				break;
+			case DXGI_FORMAT_BC7_UNORM:
+				srgbFormat = DXGI_FORMAT_BC7_UNORM_SRGB;
+				break;
+			default:
+				return srgbFormat;
+		}
+
+		return srgbFormat;
 	}
 }

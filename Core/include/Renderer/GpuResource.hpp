@@ -31,6 +31,8 @@ namespace Zenyth
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return m_GpuVirtualAddress; }
 		virtual ID3D12Resource** GetAddressOf() { return m_resource.GetAddressOf(); }
 
+		[[nodiscard]] D3D12_RESOURCE_STATES GetState() const { return m_UsageState; }
+
 		[[nodiscard]] bool CheckFormatSupport(D3D12_FORMAT_SUPPORT1 formatSupport ) const;
 		[[nodiscard]] bool CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const;
 

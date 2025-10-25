@@ -20,7 +20,7 @@ namespace Zenyth
 	class Material
 	{
 	public:
-		void Submit(ID3D12GraphicsCommandList* commandList) const;
+		void Submit(CommandBatch& commandBatch) const;
 
 		[[nodiscard]] const Pipeline& GetPipeline() const { return *m_pipeline; };
 
