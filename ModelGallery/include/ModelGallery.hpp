@@ -6,6 +6,7 @@
 #include "ImGuiLayer.hpp"
 #include "StepTimer.hpp"
 #include "Data/Light.hpp"
+#include "Data/Transform.hpp"
 #include "Renderer/MeshRenderer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/RenderTarget.hpp"
@@ -69,7 +70,10 @@ private:
 	std::unique_ptr<Zenyth::UploadBuffer> m_sceneUploadBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_sceneConstantBuffer {};
 
+	std::unique_ptr<Zenyth::UploadBuffer> m_meshUploadBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
+
+	Zenyth::Transform m_meshTransform;
 	std::unique_ptr<Zenyth::MeshRenderer> m_meshRenderer;
 
 	// Synchronization objects.

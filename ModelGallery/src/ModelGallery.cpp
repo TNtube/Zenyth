@@ -20,9 +20,15 @@ using namespace DirectX;
 using namespace DirectX::SimpleMath;
 using Microsoft::WRL::ComPtr;
 
+struct ObjectData
+{
+	Matrix world;
+	Matrix worldInverseTransform;
+};
+
 
 ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bool useWrapDevice)
-	:	Zenyth::Application(width, height, useWrapDevice),
+	:	Application(width, height, useWrapDevice),
 		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 		m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 		m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
@@ -75,6 +81,14 @@ void ModelGallery::OnUpdate()
 	sc.screenResolution = Vector2(m_width, m_height);
 
 	memcpy(m_sceneUploadBuffer->GetMappedData(), &sc, sizeof(SceneConstants));
+
+	m_meshTransform.SetEulerAngles(0, m_timer.GetTotalSeconds(), 0);
+	// m_meshTransform.SetPosition(0, m_timer.GetTotalSeconds(), 0);
+
+	ObjectData modelData = {m_meshTransform.GetTransformMatrix()};
+	modelData.worldInverseTransform = modelData.world.Invert().Transpose();
+
+	memcpy(m_meshUploadBuffer->GetMappedData(), &modelData, sizeof(modelData));
 }
 
 void ModelGallery::OnRender()
@@ -100,11 +114,6 @@ void ModelGallery::OnDestroy()
 {
 	GetRenderer().GetCommandManager().IdleGPU();
 }
-
-struct ModelData
-{
-	Matrix model;
-};
 
 void ModelGallery::LoadPipeline()
 {
@@ -193,17 +202,19 @@ void ModelGallery::LoadAssets()
 	}
 
 	{
-		Zenyth::Transform transform;
-		transform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
-		transform.SetScale(.1, .1, .1);
-		const ModelData modelData = {transform.GetTransformMatrix()};
+		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
+		m_meshTransform.SetScale(.1, .1, .1);
+
+		m_meshUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		m_meshUploadBuffer->Create(L"Mesh data upload buffer", sizeof(ObjectData));
+		m_meshUploadBuffer->Map();
 
 		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_meshConstantBuffer->Create(
 			L"Model Constant Buffer",
-			1,
-			sizeof(ModelData),
-			&modelData, true);
+			3,
+			sizeof(ObjectData),
+			nullptr, true);
 	}
 
 	{
@@ -277,6 +288,9 @@ void ModelGallery::PopulateCommandList()
 
 	// Record commands.
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	commandBatch.CopyBufferRegion(*m_meshConstantBuffer, m_frameIndex * m_meshConstantBuffer->GetElementSize(), *m_meshUploadBuffer, 0, sizeof(ObjectData));
+	commandBatch.TransitionBarrier(*m_meshConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
 	commandBatch.TransitionBarrier(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);

@@ -2,6 +2,7 @@
 
 cbuffer ObjectData : register(b0) {
 	float4x4 worldMatrix;
+	float4x4 worldInvertTranspose;
 	// add material properties ?
 };
 
@@ -31,8 +32,8 @@ Output main(Input input) {
 	output.worldPosition = mul( float4(input.position, 1.0f), worldMatrix).xyz;
 	output.uv = input.uv;
 
-	float3 normal  = normalize( mul( float4(input.normal,  1.0f), worldMatrix) ).xyz;
-	float3 tangent = normalize( mul( float4(input.tangent, 1.0f), worldMatrix) ).xyz;
+	float3 normal  = normalize( mul( float4(input.normal,  1.0f), worldInvertTranspose) ).xyz;
+	float3 tangent = normalize( mul( float4(input.tangent, 1.0f), worldInvertTranspose) ).xyz;
 	float3 bitangent = cross( normal, tangent);
 
 	output.matTBN = float3x3(tangent, bitangent, normal);

@@ -26,7 +26,9 @@ namespace Zenyth
 		[[nodiscard]] Quaternion GetRotation() const { return m_rotation; }
 		[[nodiscard]] Vector3 GetScale() const { return m_scale; }
 
-		[[nodiscard]] Matrix GetTransformMatrix() const { return m_transform; }
+		[[nodiscard]] bool IsDirty() const { return m_Dirty; }
+
+		Matrix GetTransformMatrix();
 
 	private:
 		void UpdateTransform();
@@ -36,5 +38,7 @@ namespace Zenyth
 		Vector3			m_scale;
 
 		Matrix			m_transform;
+
+		bool m_Dirty = false;
 	};
 }
