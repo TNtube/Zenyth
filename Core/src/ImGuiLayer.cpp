@@ -10,7 +10,6 @@ namespace Zenyth
 {
 	ImGuiLayer::ImGuiLayer(ID3D12Device *device, ID3D12CommandQueue* commandQueue)
 	{
-		m_resourceHeap.Create(device, L"ImGui Resource Heap", D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 
 		// Setup Dear ImGui context
 		IMGUI_CHECKVERSION();
@@ -46,20 +45,17 @@ namespace Zenyth
 		init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
 		// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
 		// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-		init_info.SrvDescriptorHeap = m_resourceHeap.GetHeapPointer();
-		init_info.UserData = &m_resourceHeap;
-		init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* init_info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
+		init_info.SrvDescriptorHeap = Application::Get().GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer();
+		init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
 		{
-			auto* heap = static_cast<DescriptorHeap*>(init_info->UserData);
-			const auto handle = heap->Alloc();
+			const auto handle = Application::Get().GetRenderer().AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			*out_cpu_handle = handle.CPU();
 			*out_gpu_handle = handle.GPU();
 		};
-		init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo* init_info, const D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, const D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle)
+		init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, const D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, const D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle)
 		{
-			auto* heap = static_cast<DescriptorHeap*>(init_info->UserData);
-			const DescriptorHandle handle(cpu_handle, gpu_handle);
-			heap->Free(handle);
+			const DescriptorHandle handle(cpu_handle, gpu_handle, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			Application::Get().GetRenderer().FreeDescriptor(handle);
 		};
 		ImGui_ImplDX12_Init(&init_info);
 	}
@@ -77,7 +73,7 @@ namespace Zenyth
 	{
 		(void)this;
 
-		ID3D12DescriptorHeap* ppHeaps[] = { m_resourceHeap.GetHeapPointer() };
+		ID3D12DescriptorHeap* ppHeaps[] = { Application::Get().GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer() };
 		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 		ImGui::Render();
@@ -113,7 +109,5 @@ namespace Zenyth
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 		ImGui::DestroyContext();
-
-		m_resourceHeap.Destroy();
 	}
 }

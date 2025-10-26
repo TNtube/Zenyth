@@ -2,6 +2,7 @@
 
 #include "Renderer/UploadAllocator.hpp"
 
+#include "Application.hpp"
 #include "Math/Utils.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -42,16 +43,19 @@ namespace Zenyth
 			}
 		}
 
-		if (!view.IsValid() && m_offset + size <= m_buffer.GetBufferSize())
+		if (view.IsValid())
 		{
-			view = {m_offset, size};
-			m_offset += size;
+			return { &m_buffer, view.offset, size };
 		}
 
-		BufferView newView = { &m_buffer, view.offset, size };
-		newView.data = m_buffer.GetMappedData() + view.offset;
+		if (m_offset + size <= m_buffer.GetBufferSize())
+		{
+			auto offset = m_offset;
+			m_offset += size;
+			return { &m_buffer, offset, size };
+		}
 
-		return newView;
+		return {};
 	}
 
 	void UploadAllocator::Return(uint64_t fenceValue, const BufferView &buffer)
@@ -61,8 +65,9 @@ namespace Zenyth
 
 	void UploadAllocator::FlushUsedViews()
 	{
-		std::erase_if(m_inUseViews, [this](const auto& inUseView) {
-			if (Renderer::pCommandManager->GetQueue(m_type).IsFenceComplete(inUseView.fenceValue))
+		auto& renderer = Application::Get().GetRenderer();
+		std::erase_if(m_inUseViews, [this, &renderer](const auto& inUseView) {
+			if (renderer.GetCommandManager().GetQueue(m_type).IsFenceComplete(inUseView.fenceValue))
 			{
 				m_availableView.emplace_back(inUseView.view);
 				return true;

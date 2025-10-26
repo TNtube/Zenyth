@@ -1,6 +1,7 @@
 #include "pch.hpp"
 #include "Renderer/CommandAllocatorPool.hpp"
 
+#include "Application.hpp"
 #include "Renderer/Renderer.hpp"
 
 namespace Zenyth
@@ -39,8 +40,10 @@ namespace Zenyth
 		// no available allocator, create a new one
 		if (!outAllocator)
 		{
+			const auto& renderer = Application::Get().GetRenderer();
+
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> newAllocator;
-			ThrowIfFailed(Renderer::pDevice->CreateCommandAllocator(m_type, IID_PPV_ARGS(&newAllocator)));
+			ThrowIfFailed(renderer.GetDevice()->CreateCommandAllocator(m_type, IID_PPV_ARGS(&newAllocator)));
 			outAllocator = newAllocator.Get();
 			m_commandAllocators.push_back(newAllocator);
 		}

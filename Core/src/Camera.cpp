@@ -73,14 +73,10 @@ namespace Zenyth
 		m_view = Matrix::CreateLookAt(m_camPos, m_camPos + forward, up);
 	}
 
-	CameraData Camera::GetCameraData(const DX::StepTimer& timer) const {
+	CameraData Camera::GetCameraData() const {
 
 		CameraData md {};
-		md.mView = m_view;
-		md.mProjection = m_projection;
-		md.mPosition = m_camPos;
-		md.mCamDir = Vector3::Transform(Vector3::Forward, m_camRot);
-		md.time = static_cast<float>(timer.GetTotalSeconds());
+		md.mViewProjection = m_view * m_projection;
 		return md;
 	}
 }

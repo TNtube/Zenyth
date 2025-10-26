@@ -2,16 +2,13 @@
 #include "Core.hpp"
 
 #include "Renderer/Renderer.hpp"
+#include <dxgidebug.h>
 
-namespace Zenyth::Renderer
+namespace Zenyth
 {
 	using Microsoft::WRL::ComPtr;
-	ComPtr<ID3D12Device> pDevice = nullptr;
-	std::unique_ptr<CommandManager> pCommandManager;
 
-	void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false);
-
-	void Initialize(const bool useWrapDevice)
+	Renderer::Renderer(const bool useWrapDevice)
 	{
 		UINT dxgiFactoryFlags = 0;
 
@@ -37,7 +34,7 @@ namespace Zenyth::Renderer
 			ComPtr<IDXGIAdapter> wrapAdapter;
 			ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&wrapAdapter)), "Failed to create warp adapter");
 
-			ThrowIfFailed(D3D12CreateDevice(wrapAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice)), "Failed to create device");
+			ThrowIfFailed(D3D12CreateDevice(wrapAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)), "Failed to create device");
 		}
 		else
 		{
@@ -47,17 +44,32 @@ namespace Zenyth::Renderer
 			ThrowIfFailed(D3D12CreateDevice(
 				hardwareAdapter.Get(),
 				D3D_FEATURE_LEVEL_11_0,
-				IID_PPV_ARGS(&pDevice)
+				IID_PPV_ARGS(&m_device)
 			));
 		}
-
-		pCommandManager = std::make_unique<CommandManager>();
-		pCommandManager->Create();
 	}
 
+	void Renderer::Init()
+	{
+		m_commandManager.Create(m_device.Get());
 
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Create(L"CBV SRV UAV Descriptor Heap", 4096);
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].Create(L"Sampler Descriptor Heap", 64);
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].Create(L"RTV Descriptor Heap", 64);
+		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].Create(L"DSV Descriptor Heap", FrameCount);
+	}
 
-	void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, const bool requestHighPerformanceAdapter)
+	DescriptorHandle Renderer::AllocateDescriptor(const D3D12_DESCRIPTOR_HEAP_TYPE type, const int64_t count)
+	{
+		return m_descriptorHeaps[type].Alloc(count);
+	}
+
+	void Renderer::FreeDescriptor(const DescriptorHandle& handle, const int64_t count)
+	{
+		return m_descriptorHeaps[handle.GetType()].Free(handle, count);
+	}
+
+	void Renderer::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, const bool requestHighPerformanceAdapter)
 	{
 		*ppAdapter = nullptr;
 
@@ -115,13 +127,5 @@ namespace Zenyth::Renderer
 		}
 
 		*ppAdapter = adapter.Detach();
-	}
-
-
-	void Shutdown()
-	{
-		pCommandManager->IdleGPU();
-		pCommandManager.reset();
-		pDevice.Reset();
 	}
 }

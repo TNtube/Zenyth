@@ -11,12 +11,9 @@ namespace Zenyth
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
+	// Sent to pixel shader
 	struct CameraData {
-		Matrix mView;
-		Matrix mProjection;
-		Vector3 mPosition; float pad0;
-		Vector3 mCamDir;
-		float time;
+		Matrix mViewProjection;
 	};
 
 	class Camera {
@@ -28,10 +25,12 @@ namespace Zenyth
 		void Update(float dt, const Keyboard::State &kb, Mouse* mouse);
 		void UpdateView();
 
+		const Vector3& GetPosition() const { return m_camPos; }
+
 		void SetPosition(const Vector3& pos) { m_camPos = pos; }
 		void SetRotation(const Quaternion& rot) { m_camRot = rot; }
 
-		[[nodiscard]] CameraData GetCameraData(const DX::StepTimer& timer) const;
+		[[nodiscard]] CameraData GetCameraData() const;
 	private:
 		float m_fov;
 		float m_nearPlane = 0.01f;

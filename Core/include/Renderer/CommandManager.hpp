@@ -6,15 +6,19 @@ namespace Zenyth
 	class CommandManager
 	{
 	public:
-		CommandManager() : m_graphicsQueue(D3D12_COMMAND_LIST_TYPE_DIRECT), m_copyQueue(D3D12_COMMAND_LIST_TYPE_COPY) {}
+		CommandManager()
+			: m_graphicsQueue(D3D12_COMMAND_LIST_TYPE_DIRECT),
+			  m_copyQueue(D3D12_COMMAND_LIST_TYPE_COPY),
+			  m_computeQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE) {}
 
-		void Create();
+		void Create(ID3D12Device* device);
 		void Destroy();
 
 		~CommandManager() { Destroy(); }
 
 		CommandQueue& GetGraphicsQueue() { return m_graphicsQueue; }
 		CommandQueue& GetCopyQueue() { return m_copyQueue; }
+		CommandQueue& GetComputeQueue() { return m_computeQueue; }
 
 		CommandQueue& GetQueue(const D3D12_COMMAND_LIST_TYPE type)
 		{
@@ -24,6 +28,8 @@ namespace Zenyth
 				return m_graphicsQueue;
 			case D3D12_COMMAND_LIST_TYPE_COPY:
 				return m_copyQueue;
+			case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+				return m_computeQueue;
 			default:
 				assert(false);
 				return m_graphicsQueue;
@@ -36,10 +42,12 @@ namespace Zenyth
 		{
 			m_graphicsQueue.WaitForIdle();
 			m_copyQueue.WaitForIdle();
+			m_computeQueue.WaitForIdle();
 		}
 
 	private:
 		CommandQueue m_graphicsQueue;
 		CommandQueue m_copyQueue;
+		CommandQueue m_computeQueue;
 	};
 }

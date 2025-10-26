@@ -6,10 +6,8 @@
 
 namespace Zenyth
 {
-	void CommandQueue::Create()
+	void CommandQueue::Create(ID3D12Device* device)
 	{
-		auto* device = Renderer::pDevice.Get();
-
 		// Describe and create the command queue.
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 

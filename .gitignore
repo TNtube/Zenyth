@@ -9,3 +9,12 @@ cmake-build-*/
 
 # DXC -- downloaded by DownloadDX.cmake
 Core/Deps/dxc
+
+# tinyobjloader -- downloaded by DownloadDX.cmake
+Core/Deps/tinyobjloader
+
+# stb_image -- downloaded by DownloadDX.cmake
+Core/Deps/stb
+
+# VS output folder
+out/

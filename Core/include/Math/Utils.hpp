@@ -1,6 +1,8 @@
 #pragma once
 
-namespace Math
+#include "Concepts.hpp"
+
+namespace Zenyth::Math
 {
 	template <typename T>
 	T AlignToMask(T size, T alignment) {
@@ -15,5 +17,11 @@ namespace Math
 		reverseZ._34 = 0.0f;
 
 		return proj * reverseZ;
+	}
+
+	template<floating_point T>
+	constexpr bool IsAlmostEqual(T l, T r)
+	{
+		return r == std::nextafter(l, r);
 	}
 }

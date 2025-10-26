@@ -5,6 +5,15 @@ include(DownloadDX.cmake)
 
 download_dxc("${CMAKE_SOURCE_DIR}/Core/Deps")
 
+download_single_file(
+        "${CMAKE_SOURCE_DIR}/Core/Deps/tinyobjloader"
+        "tinyobjloader"
+        "tinyobjloader"
+        "release"
+        "tiny_obj_loader.h")
+
+download_single_file("${CMAKE_SOURCE_DIR}/Core/Deps/stb" "nothings" "stb" "master" "stb_image.h")
+
 # DXC
 include_directories("${DXC_DIR}/inc")
 
@@ -23,6 +32,8 @@ add_library(ImGui STATIC
 target_include_directories(ImGui
     PUBLIC
         ${CMAKE_SOURCE_DIR}/Core/Deps/imgui
+        ${CMAKE_SOURCE_DIR}/Core/Deps/tinyobjloader
+        ${CMAKE_SOURCE_DIR}/Core/Deps/stb
 )
 
 
@@ -31,14 +42,12 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp include/*.hpp)
 
 add_library(Core STATIC
     ${SOURCES}
-        include/ImGuiLayer.hpp
-        src/ImGuiLayer.cpp
 )
 
 target_compile_features(Core PRIVATE cxx_std_20)
 
 target_include_directories(Core PUBLIC
-    ${CMAKE_SOURCE_DIR}/Core/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_precompile_headers(Core PUBLIC include/pch.hpp)
