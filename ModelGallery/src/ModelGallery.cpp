@@ -87,19 +87,12 @@ void ModelGallery::OnUpdate()
 
 	sceneConstants.activeLightCount = 1;
 	sceneConstants.cameraPosition = m_camera.GetPosition();
-	sceneConstants.time = m_timer.GetTotalSeconds();
-	sceneConstants.deltaTime = m_timer.GetElapsedSeconds();
-	sceneConstants.screenResolution = Vector2(m_width, m_height);
-
-	// memcpy(m_sceneUploadBuffer->GetMappedData(), &sc, sizeof(SceneConstants));
-
-	m_meshTransform.SetEulerAngles(0, m_timer.GetTotalSeconds(), 0);
-	// m_meshTransform.SetPosition(0, m_timer.GetTotalSeconds(), 0);
+	sceneConstants.time = static_cast<float>(m_timer.GetTotalSeconds());
+	sceneConstants.deltaTime = static_cast<float>(m_timer.GetElapsedSeconds());
+	sceneConstants.screenResolution = Vector2(static_cast<float>(m_width), static_cast<float>(m_height));
 
 	objectData.world = m_meshTransform.GetTransformMatrix();
 	objectData.worldInverseTransform = objectData.world.Invert().Transpose();
-
-	// memcpy(m_meshUploadBuffer->GetMappedData(), &modelData, sizeof(modelData));
 }
 
 void ModelGallery::OnRender()
@@ -115,7 +108,7 @@ void ModelGallery::OnRender()
 
 	m_imguiLayer->End();
 
-	// Present the frame. vsync enabled
+	// Present the frame. vsync disabled
 	ThrowIfFailed(m_swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
 
 	MoveToNextFrame();
@@ -159,9 +152,9 @@ void ModelGallery::LoadPipeline()
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 	{
-		for (UINT n = 0; n < FrameCount; n++)
+		for (auto & renderTarget : m_renderTargets)
 		{
-			const auto& renderTarget = m_renderTargets[n] = std::make_unique<Zenyth::RenderTarget>();
+			renderTarget = std::make_unique<Zenyth::RenderTarget>();
 
 			auto backBufferTexture = std::make_unique<Zenyth::Texture>();
 			auto depthStencilTexture = std::make_unique<Zenyth::Texture>();
@@ -190,9 +183,6 @@ void ModelGallery::LoadAssets()
 	}
 
 	{
-		// m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		// m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
-		// m_cameraCpuBuffer->Map();
 
 		m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_cameraConstantBuffer->Create(
@@ -200,25 +190,14 @@ void ModelGallery::LoadAssets()
 			3,
 			sizeof(Zenyth::CameraData), nullptr, true);
 
-
-		// m_sceneUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		// m_sceneUploadBuffer->Create(L"Scene Upload Buffer", sizeof(SceneConstants));
-		// m_sceneUploadBuffer->Map();
-
 		m_sceneConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_sceneConstantBuffer->Create(
 			L"Scene Constant Buffer",
 			3,
 			sizeof(SceneConstants), nullptr, true);
-	}
 
-	{
 		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
 		m_meshTransform.SetScale(.1, .1, .1);
-
-		// m_meshUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		// m_meshUploadBuffer->Create(L"Mesh data upload buffer", sizeof(ObjectData));
-		// m_meshUploadBuffer->Map();
 
 		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_meshConstantBuffer->Create(
@@ -226,28 +205,12 @@ void ModelGallery::LoadAssets()
 			3,
 			sizeof(ObjectData),
 			nullptr, true);
-	}
-
-	{
-		// Zenyth::ObjLoader doorObj(GetAssetFullPath(L"models/SM_Door/SM_Door.obj"));
-		//
-		// if (doorObj.LoadData())
-		// {
-		// 	m_meshes = doorObj.GenerateRenderers();
-		// }
 
 		Zenyth::Mesh mesh;
 		if (Zenyth::Mesh::FromObjFile(GetAssetFullPath("models/sponza/sponza.obj"), mesh))
 		{
 			m_meshRenderer = std::make_unique<Zenyth::MeshRenderer>(mesh);
 		}
-	}
-
-
-	{
-		// m_lightUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		// m_lightUploadBuffer->Create(L"Light Upload Buffer", sizeof(Zenyth::LightData));
-		// m_lightUploadBuffer->Map();
 
 		m_lightBuffer = std::make_unique<Zenyth::StructuredBuffer>();
 		m_lightBuffer->Create(
@@ -256,18 +219,11 @@ void ModelGallery::LoadAssets()
 			sizeof(Zenyth::LightData));
 	}
 
-	auto& commandManager = GetRenderer().GetCommandManager();
-	commandManager.IdleGPU();
-	// Create the texture.
-	// m_tileset = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_BC.png").c_str(), GetRenderer().GetResourceHeap());
-	// m_tilesetNormal = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_N.png").c_str(), GetRenderer().GetResourceHeap(), false);
-	// m_tilesetSpecular = Zenyth::Texture::LoadTextureFromFile(GetAssetFullPath("models/SM_Door/T_Door_R.png").c_str(), GetRenderer().GetResourceHeap());
-
+	GetRenderer().GetCommandManager().IdleGPU();
 }
 
 void ModelGallery::PopulateCommandList()
 {
-
 	auto commandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto* commandList = commandBatch.GetCommandList();
 
