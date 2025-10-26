@@ -38,6 +38,10 @@ namespace Zenyth {
 
 		queue.FreeAllocator(fence, m_commandAllocator);
 
+		// we are finished with those upload buffers, we can free them
+		for (const auto& bufferView : m_usedBufferViews)
+			queue.FreeUploadBufferView(fence, bufferView);
+
 		m_commandList.Reset();
 		m_commandList = nullptr;
 
@@ -50,23 +54,8 @@ namespace Zenyth {
 	void CommandBatch::InitializeBuffer(GpuBuffer& buffer, const void *data, const size_t size, const size_t offset)
 	{
 		CommandBatch batch = Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-		auto& renderer = Application::Get().GetRenderer();
-		CommandQueue& queue = renderer.GetCommandManager().GetQueue(batch.m_listType);
-
-		const BufferView bufferView = queue.AllocateUploadBufferView(size);
-
-		memcpy(bufferView.data, data, size);
-
-		const auto beforeState = buffer.GetState();
-
-		batch.TransitionBarrier(buffer, D3D12_RESOURCE_STATE_COPY_DEST, true);
-		batch.CopyBufferRegion(buffer, offset, *bufferView.buffer, bufferView.offset, size);
-		batch.TransitionBarrier(buffer, beforeState, true);
-
-		const auto fence = batch.End(true);
-
-		queue.FreeUploadBufferView(fence, bufferView);
+		batch.UploadToBuffer(buffer, data, size, offset);
+		batch.End(true);
 	}
 
 	void CommandBatch::InitializeTexture(Texture& texture, const size_t subresourceCount, const D3D12_SUBRESOURCE_DATA* subData)
@@ -231,7 +220,25 @@ namespace Zenyth {
 			SendResourceBarriers();
 	}
 
-	void CommandBatch::CopyResource(GpuResource& dst, GpuResource& src)
+	void CommandBatch::UploadToBuffer(GpuBuffer& buffer, const void* data, const size_t size, const uint32_t offset)
+	{
+		auto& renderer = Application::Get().GetRenderer();
+		CommandQueue& queue = renderer.GetCommandManager().GetQueue(m_listType);
+
+		const BufferView bufferView = queue.AllocateUploadBufferView(size);
+
+		memcpy(bufferView.data, data, size);
+
+		const auto beforeState = buffer.GetState();
+
+		TransitionBarrier(buffer, D3D12_RESOURCE_STATE_COPY_DEST, true);
+		CopyBufferRegion(buffer, offset, *bufferView.buffer, bufferView.offset, size);
+		TransitionBarrier(buffer, beforeState, true);
+
+		m_usedBufferViews.push_back(bufferView);
+	}
+
+	void CommandBatch::CopyBuffer(GpuResource& dst, GpuResource& src)
 	{
 		TransitionBarrier(dst, D3D12_RESOURCE_STATE_COPY_DEST);
 		TransitionBarrier(src, D3D12_RESOURCE_STATE_COPY_SOURCE, true);

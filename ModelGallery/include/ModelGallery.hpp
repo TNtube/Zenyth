@@ -29,22 +29,6 @@ public:
 private:
 	float m_aspectRatio;
 
-
-	struct SceneConstants
-	{
-		uint32_t activeLightCount;
-		float time;
-		float deltaTime;
-		uint32_t shadowMapCount;
-
-		DirectX::SimpleMath::Vector3 cameraPosition;
-		float _pad1;
-
-		DirectX::SimpleMath::Vector2 screenResolution;
-		DirectX::SimpleMath::Vector2 _pad0;
-
-	};
-
 	DWORD m_callbackCookie{};
 
 	// Pipeline objects.
@@ -60,17 +44,11 @@ private:
 
 	std::unique_ptr<Zenyth::ImGuiLayer> m_imguiLayer {};
 
-	std::unique_ptr<Zenyth::UploadBuffer> m_lightUploadBuffer {};
 	std::unique_ptr<Zenyth::StructuredBuffer> m_lightBuffer {};
 	float m_lightSpeed = 5.0f;
 
-	std::unique_ptr<Zenyth::UploadBuffer> m_cameraCpuBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_cameraConstantBuffer {};
-
-	std::unique_ptr<Zenyth::UploadBuffer> m_sceneUploadBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_sceneConstantBuffer {};
-
-	std::unique_ptr<Zenyth::UploadBuffer> m_meshUploadBuffer {};
 	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
 
 	Zenyth::Transform m_meshTransform;

@@ -26,6 +26,23 @@ struct ObjectData
 	Matrix worldInverseTransform;
 };
 
+struct SceneConstants
+{
+	uint32_t activeLightCount {};
+	float time {};
+	float deltaTime {};
+	uint32_t shadowMapCount {};
+
+	Vector3 cameraPosition;
+	float _pad1 {};
+
+	Vector2 screenResolution;
+	Vector2 _pad0;
+};
+
+ObjectData objectData;
+SceneConstants sceneConstants;
+
 
 ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bool useWrapDevice)
 	:	Application(width, height, useWrapDevice),
@@ -67,28 +84,22 @@ void ModelGallery::OnUpdate()
 	const auto dt = static_cast<float>(m_timer.GetElapsedSeconds());
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(dt, kb, m_mouse.get());
-	const auto cameraData = m_camera.GetCameraData();
-	memcpy(m_cameraCpuBuffer->GetMappedData(), &cameraData, sizeof(Zenyth::CameraData));
 
-	memcpy(m_lightUploadBuffer->GetMappedData(), &m_directionalLight, sizeof(Zenyth::LightData));
+	sceneConstants.activeLightCount = 1;
+	sceneConstants.cameraPosition = m_camera.GetPosition();
+	sceneConstants.time = m_timer.GetTotalSeconds();
+	sceneConstants.deltaTime = m_timer.GetElapsedSeconds();
+	sceneConstants.screenResolution = Vector2(m_width, m_height);
 
-	SceneConstants sc;
-
-	sc.activeLightCount = 1;
-	sc.cameraPosition = m_camera.GetPosition();
-	sc.time = m_timer.GetTotalSeconds();
-	sc.deltaTime = m_timer.GetElapsedSeconds();
-	sc.screenResolution = Vector2(m_width, m_height);
-
-	memcpy(m_sceneUploadBuffer->GetMappedData(), &sc, sizeof(SceneConstants));
+	// memcpy(m_sceneUploadBuffer->GetMappedData(), &sc, sizeof(SceneConstants));
 
 	m_meshTransform.SetEulerAngles(0, m_timer.GetTotalSeconds(), 0);
 	// m_meshTransform.SetPosition(0, m_timer.GetTotalSeconds(), 0);
 
-	ObjectData modelData = {m_meshTransform.GetTransformMatrix()};
-	modelData.worldInverseTransform = modelData.world.Invert().Transpose();
+	objectData.world = m_meshTransform.GetTransformMatrix();
+	objectData.worldInverseTransform = objectData.world.Invert().Transpose();
 
-	memcpy(m_meshUploadBuffer->GetMappedData(), &modelData, sizeof(modelData));
+	// memcpy(m_meshUploadBuffer->GetMappedData(), &modelData, sizeof(modelData));
 }
 
 void ModelGallery::OnRender()
@@ -179,9 +190,9 @@ void ModelGallery::LoadAssets()
 	}
 
 	{
-		m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
-		m_cameraCpuBuffer->Map();
+		// m_cameraCpuBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		// m_cameraCpuBuffer->Create(L"Camera Upload Buffer", sizeof(Zenyth::CameraData));
+		// m_cameraCpuBuffer->Map();
 
 		m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_cameraConstantBuffer->Create(
@@ -190,9 +201,9 @@ void ModelGallery::LoadAssets()
 			sizeof(Zenyth::CameraData), nullptr, true);
 
 
-		m_sceneUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		m_sceneUploadBuffer->Create(L"Scene Upload Buffer", sizeof(SceneConstants));
-		m_sceneUploadBuffer->Map();
+		// m_sceneUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		// m_sceneUploadBuffer->Create(L"Scene Upload Buffer", sizeof(SceneConstants));
+		// m_sceneUploadBuffer->Map();
 
 		m_sceneConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_sceneConstantBuffer->Create(
@@ -205,9 +216,9 @@ void ModelGallery::LoadAssets()
 		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
 		m_meshTransform.SetScale(.1, .1, .1);
 
-		m_meshUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		m_meshUploadBuffer->Create(L"Mesh data upload buffer", sizeof(ObjectData));
-		m_meshUploadBuffer->Map();
+		// m_meshUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		// m_meshUploadBuffer->Create(L"Mesh data upload buffer", sizeof(ObjectData));
+		// m_meshUploadBuffer->Map();
 
 		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
 		m_meshConstantBuffer->Create(
@@ -234,9 +245,9 @@ void ModelGallery::LoadAssets()
 
 
 	{
-		m_lightUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
-		m_lightUploadBuffer->Create(L"Light Upload Buffer", sizeof(Zenyth::LightData));
-		m_lightUploadBuffer->Map();
+		// m_lightUploadBuffer = std::make_unique<Zenyth::UploadBuffer>();
+		// m_lightUploadBuffer->Create(L"Light Upload Buffer", sizeof(Zenyth::LightData));
+		// m_lightUploadBuffer->Map();
 
 		m_lightBuffer = std::make_unique<Zenyth::StructuredBuffer>();
 		m_lightBuffer->Create(
@@ -289,16 +300,16 @@ void ModelGallery::PopulateCommandList()
 	// Record commands.
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	commandBatch.CopyBufferRegion(*m_meshConstantBuffer, m_frameIndex * m_meshConstantBuffer->GetElementSize(), *m_meshUploadBuffer, 0, sizeof(ObjectData));
+	commandBatch.UploadToBuffer(*m_meshConstantBuffer, objectData, m_frameIndex * m_meshConstantBuffer->GetElementSize());
 	commandBatch.TransitionBarrier(*m_meshConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-	commandBatch.CopyBufferRegion(*m_cameraConstantBuffer, m_frameIndex * m_cameraConstantBuffer->GetElementSize(), *m_cameraCpuBuffer, 0, sizeof(Zenyth::CameraData));
+	commandBatch.UploadToBuffer(*m_cameraConstantBuffer, m_camera.GetCameraData(), m_frameIndex * m_cameraConstantBuffer->GetElementSize());
 	commandBatch.TransitionBarrier(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-	commandBatch.CopyBufferRegion(*m_sceneConstantBuffer, m_frameIndex * m_sceneConstantBuffer->GetElementSize(), *m_sceneUploadBuffer, 0, sizeof(Zenyth::CameraData));
+	commandBatch.UploadToBuffer(*m_sceneConstantBuffer, sceneConstants, m_frameIndex * m_sceneConstantBuffer->GetElementSize());
 	commandBatch.TransitionBarrier(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-	commandBatch.CopyBufferRegion(*m_lightBuffer, m_frameIndex * m_lightBuffer->GetElementSize(), *m_lightUploadBuffer, 0, sizeof(Zenyth::LightData));
+	commandBatch.UploadToBuffer(*m_lightBuffer, m_directionalLight, m_frameIndex * m_lightBuffer->GetElementSize());
 	commandBatch.TransitionBarrier(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 

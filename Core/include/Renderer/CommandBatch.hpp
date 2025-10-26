@@ -6,6 +6,7 @@
 #include "Texture.hpp"
 
 namespace Zenyth {
+	struct BufferView;
 
 	class CommandBatch
 	{
@@ -20,6 +21,7 @@ namespace Zenyth {
 
 		static void InitializeBuffer(GpuBuffer& buffer, const void* data, size_t size, size_t offset = 0);
 		static void InitializeTexture(Texture& texture, size_t subresourceCount, const D3D12_SUBRESOURCE_DATA *subData);
+
 		void GenerateMips(Texture& texture);
 		void GenerateMips(Texture& texture, bool isSRGB);
 
@@ -27,7 +29,11 @@ namespace Zenyth {
 		void AliasingBarrier(GpuResource& beforeResource, GpuResource& afterResource, bool sendBarriers = false);
 		void UAVBarrier(GpuResource& resource, bool sendBarriers = false);
 
-		void CopyResource(GpuResource& dst, GpuResource& src);
+		template<typename T>
+		void UploadToBuffer(GpuBuffer& buffer, const T& data, const uint32_t offset) { UploadToBuffer(buffer, &data, sizeof(data), offset); }
+		void UploadToBuffer(GpuBuffer& buffer, const void* data, size_t size, uint32_t offset);
+
+		void CopyBuffer(GpuResource& dst, GpuResource& src);
 		void CopyBufferRegion(GpuBuffer& dst, uint64_t dstOffset, GpuBuffer& src, uint64_t srcOffset, uint64_t numBytes);
 
 		void SubmitMaterial(std::shared_ptr<Material> material);
@@ -53,7 +59,9 @@ namespace Zenyth {
 
 		std::shared_ptr<Material>                         m_currentMaterial = nullptr;
 
-		std::vector<std::pair<uint32_t, DescriptorHandle>> m_rootParameters {};
+		std::vector<std::pair<uint32_t, DescriptorHandle>>m_rootParameters {};
+
+		std::vector<BufferView>                           m_usedBufferViews {};
 	};
 
 }
