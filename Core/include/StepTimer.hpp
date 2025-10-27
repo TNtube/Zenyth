@@ -1,10 +1,6 @@
-//
-// StepTimer.hpp - A simple timer that provides elapsed time information
-//
-
 #pragma once
 
-namespace DX
+namespace Zenyth
 {
 	// Helper class for animation and simulation timing.
 	class StepTimer
@@ -74,9 +70,6 @@ namespace DX
 			}
 
 			m_leftOverTicks = 0;
-			m_framesPerSecond = 0;
-			m_framesThisSecond = 0;
-			m_qpcSecondCounter = 0;
 		}
 
 		// Update timer state, calling the specified Update function the appropriate number of times.

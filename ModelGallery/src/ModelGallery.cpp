@@ -279,7 +279,7 @@ void ModelGallery::PopulateCommandList()
 
 
 	ImGui::Begin("Helper");
-	ImGui::Text("FPS: %.2f", 1.0f / m_timer.GetElapsedSeconds());
+	ImGui::Text("FPS: %i", m_timer.GetFramesPerSecond());
 	ImGui::Text("loaded files %i", Zenyth::Texture::loadedFile);
 
 	// m_camera.OnImGui();

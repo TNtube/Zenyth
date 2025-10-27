@@ -71,7 +71,7 @@ private:
 
 	Zenyth::Camera m_camera;
 	// Rendering loop timer.
-	DX::StepTimer							m_timer;
+	Zenyth::StepTimer						m_timer;
 
 	// Input devices.
 	std::unique_ptr<DirectX::Keyboard>		m_keyboard;
