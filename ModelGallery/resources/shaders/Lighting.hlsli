@@ -1,0 +1,41 @@
+void AntiAliasSpecular( inout float3 texNormal, inout float gloss )
+{
+	float normalLenSq = dot(texNormal, texNormal);
+	float invNormalLen = rsqrt(normalLenSq);
+	texNormal *= invNormalLen;
+	float normalLen = normalLenSq * invNormalLen;
+	float flatness = saturate(1 - abs(ddx(normalLen)) - abs(ddy(normalLen)));
+	gloss = exp2(lerp(0, log2(gloss), flatness));
+}
+
+
+// Apply fresnel to modulate the specular albedo
+void FSchlick( inout float3 specular, inout float3 diffuse, float3 lightDir, float3 halfVec )
+{
+	float fresnel = pow(1.0 - saturate(dot(lightDir, halfVec)), 5.0);
+	specular = lerp(specular, 1, fresnel);
+	diffuse = lerp(diffuse, 0, fresnel);
+}
+
+float3 ApplyLightCommon(
+	float3	diffuseColor,	// Diffuse albedo
+	float3	specularColor,	// Specular albedo
+	float	specularMask,	// Where is it shiny or dingy?
+	float	gloss,			// Specular power
+	float3	normal,			// World-space normal
+	float3	viewDir,		// World-space vector from eye to point
+	float3	lightDir,		// World-space vector from point to light
+	float3	lightColor		// Radiance of directional light
+	)
+{
+	float3 halfVec = normalize(lightDir - viewDir);
+	float nDotH = saturate(dot(halfVec, normal));
+
+	FSchlick( diffuseColor, specularColor, lightDir, halfVec );
+
+	float specularFactor = specularMask * pow(nDotH, gloss) * (gloss + 2) / 8;
+
+	float nDotL = saturate(dot(normal, lightDir));
+
+	return nDotL * lightColor * (diffuseColor + specularFactor * specularColor);
+}

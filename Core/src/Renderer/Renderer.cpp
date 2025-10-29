@@ -4,6 +4,8 @@
 #include "Renderer/Renderer.hpp"
 #include <dxgidebug.h>
 
+#include "Profiling/GpuTimer.hpp"
+
 namespace Zenyth
 {
 	using Microsoft::WRL::ComPtr;
@@ -57,6 +59,13 @@ namespace Zenyth
 		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].Create(L"Sampler Descriptor Heap", 64);
 		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].Create(L"RTV Descriptor Heap", 64);
 		m_descriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].Create(L"DSV Descriptor Heap", FrameCount);
+
+		GpuTimeManager::Init();
+	}
+
+	Renderer::~Renderer()
+	{
+		GpuTimeManager::Destroy();
 	}
 
 	DescriptorHandle Renderer::AllocateDescriptor(const D3D12_DESCRIPTOR_HEAP_TYPE type, const int64_t count)

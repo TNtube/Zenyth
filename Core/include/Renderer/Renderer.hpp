@@ -9,9 +9,10 @@ namespace Zenyth
 	public:
 		DELETE_COPY_CTOR(Renderer)
 		DELETE_MOVE_CTOR(Renderer)
-		~Renderer() = default;
 
 		void Init();
+		~Renderer();
+
 
 		[[nodiscard]] ID3D12Device* GetDevice() const { return m_device.Get(); };
 		CommandManager& GetCommandManager() { return m_commandManager; }

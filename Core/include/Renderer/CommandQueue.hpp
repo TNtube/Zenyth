@@ -9,7 +9,11 @@ namespace Zenyth
 	{
 	public:
 		explicit CommandQueue(const D3D12_COMMAND_LIST_TYPE type)
-			: m_type(type), m_allocatorPool(type), m_uploadAllocatorPool(type) {}
+			: m_type(type),
+			  m_currentFenceValue(static_cast<uint64_t>(type) << 56 | 1),
+			  m_lastCompletedFenceValue(static_cast<uint64_t>(type) << 56),
+			  m_allocatorPool(type),
+			  m_uploadAllocatorPool(type) {}
 
 		DELETE_COPY_CTOR(CommandQueue)
 		DELETE_MOVE_CTOR(CommandQueue)

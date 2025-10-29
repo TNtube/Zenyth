@@ -39,6 +39,9 @@ namespace Zenyth {
 		void SubmitMaterial(std::shared_ptr<Material> material);
 		void SetRootParameter(uint32_t idx, const DescriptorHandle& handle);
 
+		void InsertTimeStamp(ID3D12QueryHeap* queryHeap, uint32_t queryIdx) const;
+		void ResolveTimeStamps(ID3D12Resource* readbackHeap, ID3D12QueryHeap* queryHeap, uint32_t numQueries) const;
+
 		void Dispatch(uint32_t x, uint32_t y, uint32_t z) const;
 
 		[[nodiscard]] ID3D12GraphicsCommandList* GetCommandList() const { return m_commandList.Get(); }

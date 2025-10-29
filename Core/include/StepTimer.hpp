@@ -56,6 +56,7 @@ namespace Zenyth
 		static constexpr uint64_t TicksPerSecond = 10000000;
 
 		static constexpr double TicksToSeconds(const uint64_t ticks) noexcept { return static_cast<double>(ticks) / TicksPerSecond; }
+		static constexpr double TicksToMilliseconds(const uint64_t ticks) noexcept { return TicksToSeconds(ticks) * 1000.0; }
 		static constexpr uint64_t SecondsToTicks(const double seconds) noexcept { return static_cast<uint64_t>(seconds * TicksPerSecond); }
 
 		// After an intentional timing discontinuity (for instance a blocking IO operation)

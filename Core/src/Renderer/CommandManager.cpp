@@ -21,6 +21,16 @@ namespace Zenyth
 		m_computeQueue.Destroy();
 	}
 
+	bool CommandManager::IsFenceComplete(const uint64_t fenceValue)
+	{
+		return GetQueue(static_cast<D3D12_COMMAND_LIST_TYPE>(fenceValue >> 56)).IsFenceComplete(fenceValue);
+	}
+
+	void CommandManager::WaitForFence(const uint64_t fenceValue)
+	{
+		GetQueue(static_cast<D3D12_COMMAND_LIST_TYPE>(fenceValue >> 56)).WaitForFence(fenceValue);
+	}
+
 	void CommandManager::GetNewCommandList(const D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList **list, ID3D12CommandAllocator **allocator)
 	{
 		switch (type)

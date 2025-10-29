@@ -19,6 +19,7 @@ namespace Zenyth
 
 		SUCCEEDED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		SUCCEEDED(m_fence->SetName(std::format(L"Command Queue Fence {}", static_cast<int>(m_type)).c_str()));
+		SUCCEEDED(m_fence->Signal(static_cast<uint64_t>(m_type) << 56));
 
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	}

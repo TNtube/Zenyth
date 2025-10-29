@@ -13,6 +13,7 @@
 #include "Data/Transform.hpp"
 #include "Data/Light.hpp"
 #include "Data/Mesh.hpp"
+#include "Profiling/Profiler.hpp"
 #include "Renderer/CommandBatch.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -71,6 +72,8 @@ void ModelGallery::OnInit()
 }
 
 void ModelGallery::Tick() {
+	Zenyth::EngineProfiling::Update();
+
 	m_timer.Tick([&]() {
 		OnUpdate();
 	});
@@ -81,6 +84,7 @@ void ModelGallery::Tick() {
 
 void ModelGallery::OnUpdate()
 {
+	Zenyth::ScopedTimer _prof("Update App");
 	const auto dt = static_cast<float>(m_timer.GetElapsedSeconds());
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(dt, kb, m_mouse.get());
@@ -225,76 +229,87 @@ void ModelGallery::LoadAssets()
 void ModelGallery::PopulateCommandList()
 {
 	auto commandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto* commandList = commandBatch.GetCommandList();
+
+	{
+		Zenyth::ScopedTimer _prof("PopulateCommandList", commandBatch);
+
+		auto* commandList = commandBatch.GetCommandList();
 
 
-	commandList->SetPipelineState(m_pipelineGeometry->Get());
+		commandList->SetPipelineState(m_pipelineGeometry->Get());
 
-	commandList->SetGraphicsRootSignature(m_pipelineGeometry->GetRootSignature());
+		commandList->SetGraphicsRootSignature(m_pipelineGeometry->GetRootSignature());
 
-	ID3D12DescriptorHeap* ppHeaps[] = { GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer() };
-	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-
-	commandList->RSSetViewports(1, &m_viewport);
-	commandList->RSSetScissorRects(1, &m_scissorRect);
-
-	const auto color0 = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::Color0);
-	const auto depth = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::DepthStencil);
-	commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	commandBatch.TransitionBarrier(*depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+		ID3D12DescriptorHeap* ppHeaps[] = { GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer() };
+		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 
-	const auto dsvHandle = depth->GetDSV();
-	const auto rtvHandle = color0->GetRTV();
+		commandList->RSSetViewports(1, &m_viewport);
+		commandList->RSSetScissorRects(1, &m_scissorRect);
 
-	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-	commandList->ClearRenderTargetView(rtvHandle, Color{0.2f, 0.2f, 0.2f, 1.0f}, 0, nullptr);
-	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
-
-	// Record commands.
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	commandBatch.UploadToBuffer(*m_meshConstantBuffer, objectData, m_frameIndex * m_meshConstantBuffer->GetElementSize());
-	commandBatch.TransitionBarrier(*m_meshConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-	commandBatch.UploadToBuffer(*m_cameraConstantBuffer, m_camera.GetCameraData(), m_frameIndex * m_cameraConstantBuffer->GetElementSize());
-	commandBatch.TransitionBarrier(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-	commandBatch.UploadToBuffer(*m_sceneConstantBuffer, sceneConstants, m_frameIndex * m_sceneConstantBuffer->GetElementSize());
-	commandBatch.TransitionBarrier(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-	commandBatch.UploadToBuffer(*m_lightBuffer, m_directionalLight, m_frameIndex * m_lightBuffer->GetElementSize());
-	commandBatch.TransitionBarrier(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+		const auto color0 = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::Color0);
+		const auto depth = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::DepthStencil);
+		commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+		commandBatch.TransitionBarrier(*depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 
-	commandBatch.SetRootParameter(0, m_meshConstantBuffer->GetCBV());
-	commandBatch.SetRootParameter(1, m_cameraConstantBuffer->GetCBV());
-	commandBatch.SetRootParameter(2, m_sceneConstantBuffer->GetCBV());
-	commandBatch.SetRootParameter(6, m_lightBuffer->GetSRV());
+		const auto dsvHandle = depth->GetDSV();
+		const auto rtvHandle = color0->GetRTV();
 
-	// will submit material, should be used
-	m_meshRenderer->Submit(commandBatch);
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+		commandList->ClearRenderTargetView(rtvHandle, Color{0.2f, 0.2f, 0.2f, 1.0f}, 0, nullptr);
+		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
+
+		// Record commands.
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		commandBatch.UploadToBuffer(*m_meshConstantBuffer, objectData, m_frameIndex * m_meshConstantBuffer->GetElementSize());
+		commandBatch.TransitionBarrier(*m_meshConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+		commandBatch.UploadToBuffer(*m_cameraConstantBuffer, m_camera.GetCameraData(), m_frameIndex * m_cameraConstantBuffer->GetElementSize());
+		commandBatch.TransitionBarrier(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+		commandBatch.UploadToBuffer(*m_sceneConstantBuffer, sceneConstants, m_frameIndex * m_sceneConstantBuffer->GetElementSize());
+		commandBatch.TransitionBarrier(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+		commandBatch.UploadToBuffer(*m_lightBuffer, m_directionalLight, m_frameIndex * m_lightBuffer->GetElementSize());
+		commandBatch.TransitionBarrier(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 
-	ImGui::Begin("Helper");
-	ImGui::Text("FPS: %i", m_timer.GetFramesPerSecond());
-	ImGui::Text("loaded files %i", Zenyth::Texture::loadedFile);
+		commandBatch.SetRootParameter(0, m_meshConstantBuffer->GetCBV());
+		commandBatch.SetRootParameter(1, m_cameraConstantBuffer->GetCBV());
+		commandBatch.SetRootParameter(2, m_sceneConstantBuffer->GetCBV());
+		commandBatch.SetRootParameter(6, m_lightBuffer->GetSRV());
+		{
+			Zenyth::ScopedTimer _prof1("Mesh Submit", commandBatch);
+			// will submit material, should be used
+			m_meshRenderer->Submit(commandBatch);
+		}
 
-	// m_camera.OnImGui();
 
-	ImGui::TreePush("Foo");
-	ImGui::DragFloat3("Sun Direction", &m_directionalLight.direction.x, 0.01f);
-	ImGui::ColorEdit3("Sun Color", &m_directionalLight.color.x);
-	ImGui::TreePop();
+		{
+			Zenyth::ScopedTimer _prof2("ImGui", commandBatch);
+			ImGui::Begin("Helper");
+			ImGui::Text("FPS: %i", m_timer.GetFramesPerSecond());
+			ImGui::Text("loaded files %i", Zenyth::Texture::loadedFile);
+
+			// m_camera.OnImGui();
+
+			ImGui::TreePush("Foo");
+			ImGui::DragFloat3("Sun Direction", &m_directionalLight.direction.x, 0.01f);
+			ImGui::ColorEdit3("Sun Color", &m_directionalLight.color.x);
+			ImGui::TreePop();
+
+			Zenyth::EngineProfiling::OnImGui();
 
 
-	ImGui::End();
-	m_imguiLayer->Render(commandList);
+			ImGui::End();
+			m_imguiLayer->Render(commandList);
+		}
 
-	commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_PRESENT, true);
-
+		commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_PRESENT, true);
+	}
 
 	const auto fence = commandBatch.End();
 	m_fenceValues[m_frameIndex] = fence;

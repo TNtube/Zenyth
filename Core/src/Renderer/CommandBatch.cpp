@@ -274,6 +274,16 @@ namespace Zenyth {
 
 	}
 
+	void CommandBatch::InsertTimeStamp(ID3D12QueryHeap* queryHeap, const uint32_t queryIdx) const
+	{
+		m_commandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, queryIdx);
+	}
+
+	void CommandBatch::ResolveTimeStamps(ID3D12Resource* readbackHeap, ID3D12QueryHeap* queryHeap, const uint32_t numQueries) const
+	{
+		m_commandList->ResolveQueryData(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, numQueries, readbackHeap, 0);
+	}
+
 	void CommandBatch::Dispatch(const uint32_t x, const uint32_t y, const uint32_t z) const
 	{
 		m_commandList->Dispatch(x, y, z);

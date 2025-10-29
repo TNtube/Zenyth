@@ -1,4 +1,5 @@
 #include "Common.hlsli"
+#include "Lighting.hlsli"
 
 #define MAX_LIGHT 128
 
@@ -51,23 +52,22 @@ struct Output {
 
 StructuredBuffer<LightData> lightBuffer;
 
-float3 CalcDirectionalLight(LightData light, float3 normalMap, float3 diffMap, float3 viewDir, float specMask);
-
 [RootSignature( Default_RootSig )]
 Output main(Input input) {
 	float4 albedo = AlbedoMap.Sample(TexSampler, input.uv);
-	if (albedo.a < 0.05f) clip(-1);
+	if (albedo.a < 0.01f) clip(-1);
 
 	float3 ambient = 0.05f;
 	float3 color = albedo.rgb * ambient;
 	float3 normal = 0.0f;
+	float3 specularAlbedo = float3( 0.56, 0.56, 0.56 );
 	float specularMask = SpecularMap.Sample(TexSampler, input.uv).r;
-
+	float gloss = 128.0;
 	float3 viewDir = normalize(cameraPosition - input.worldPosition);
 
 	if (abs(dot(input.matTBN[0], input.matTBN[0])) > 0.000001) {
-		normal = NormalMap.Sample(TexSampler, input.uv).rgb;
-		normal = normalize(normal * 2.0 - 1.0);
+		normal = NormalMap.Sample(TexSampler, input.uv).rgb * 2.0 - 1.0;
+		AntiAliasSpecular(normal, gloss);
 		normal = normalize(mul(normal, input.matTBN));
 	} else {
 		normal = input.matTBN[2];
@@ -78,7 +78,7 @@ Output main(Input input) {
 	{
 		LightData light = lightBuffer[lightIndex];
 		if (light.type == 2) {
-			color += CalcDirectionalLight(light, normal, albedo.rgb, viewDir, specularMask);
+			color += ApplyLightCommon(albedo.rgb, specularAlbedo, specularMask, gloss, normal, viewDir, light.direction, light.color);
 		}
 	}
 
@@ -90,26 +90,4 @@ Output main(Input input) {
 // 	output.color = float4(normal, albedo.a);
 
 	return output;
-}
-
-float3 CalcDirectionalLight(LightData light, float3 N, float3 albedo, float3 V, float specMask)
-{
-	float3 L = normalize(-light.direction);
-	float3 H = normalize(L + V);
-
-	// Diffuse
-	float NdotL = max(dot(N, L), 0.0);
-	float3 diffuse = light.color * NdotL;
-
-	// Specular
-	float NdotH = max(dot(N, H), 0.0);
-	float specular = pow(NdotH, 64.0f) * 0.5f * specMask; // 32 : shininess, 0.5 : specular strength
-	float3 specularColor = light.color * specular * step(0.0, NdotL);
-
-	// Ambient
-	float3 ambient = light.color * 0.1f; // 0.1: ambient strength
-
-	// Combine
-	float3 finalColor = albedo * (ambient + diffuse) + specularColor;
-	return finalColor;
 }
