@@ -19,32 +19,24 @@ namespace Zenyth
 
 		m_pipeline->Create(wName, wVsPath, wPsPath, true);
 
-		m_diffuseMap = Texture::LoadTextureFromFile(matDesc.diffuseMap.c_str());
-		m_normalMap = Texture::LoadTextureFromFile(matDesc.normalMap.c_str(), false);
-		m_specularMap = Texture::LoadTextureFromFile(matDesc.specularMap.c_str());
+		auto diff = TextureManager::GetTexture(matDesc.diffuseMap);
+		if (!diff) diff = TextureManager::GetDefault(DefaultTexture::Magenta);
+		auto norm = TextureManager::GetTexture(matDesc.normalMap, false);
+		if (!norm) norm = TextureManager::GetDefault(DefaultTexture::Normal);
+		auto spec = TextureManager::GetTexture(matDesc.specularMap);
+		if (!spec) spec = TextureManager::GetDefault(DefaultTexture::White);
+
+		m_diffuseMap = diff->GetSRV();
+		m_normalMap = norm->GetSRV();
+		m_specularMap = spec->GetSRV();
 	}
 
 	void Material::Submit(CommandBatch& commandBatch) const
 	{
-		const auto commandList = commandBatch.GetCommandList();
-		commandList->SetPipelineState(m_pipeline->Get());
-		commandList->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
-
-		if (m_diffuseMap)
-		{
-			commandBatch.TransitionBarrier(*m_diffuseMap, D3D12_RESOURCE_STATE_GENERIC_READ, true);
-			commandList->SetGraphicsRootDescriptorTable(3, m_diffuseMap->GetSRV().GPU());
-		}
-		if (m_normalMap)
-		{
-			commandBatch.TransitionBarrier(*m_normalMap, D3D12_RESOURCE_STATE_GENERIC_READ, true);
-			commandList->SetGraphicsRootDescriptorTable(4, m_normalMap->GetSRV().GPU());
-		}
-		if (m_specularMap)
-		{
-			commandBatch.TransitionBarrier(*m_specularMap, D3D12_RESOURCE_STATE_GENERIC_READ, true);
-			commandList->SetGraphicsRootDescriptorTable(5, m_specularMap->GetSRV().GPU());
-		}
+		commandBatch.SetPipeline(*m_pipeline);
+		commandBatch.SetRootParameter(3, m_diffuseMap);
+		commandBatch.SetRootParameter(4, m_normalMap);
+		commandBatch.SetRootParameter(5, m_specularMap);
 	}
 
 	std::shared_ptr<Material> MaterialManager::GetMaterial(const MaterialDesc& matDesc)

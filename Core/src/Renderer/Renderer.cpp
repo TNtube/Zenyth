@@ -66,6 +66,7 @@ namespace Zenyth
 	Renderer::~Renderer()
 	{
 		GpuTimeManager::Destroy();
+		TextureManager::ClearTextures();
 	}
 
 	DescriptorHandle Renderer::AllocateDescriptor(const D3D12_DESCRIPTOR_HEAP_TYPE type, const int64_t count)

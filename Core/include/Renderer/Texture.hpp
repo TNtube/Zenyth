@@ -43,6 +43,25 @@ namespace Zenyth
 		DescriptorHandle m_SRV;
 		DescriptorHandle m_UAV;
 	};
+	namespace DefaultTexture
+	{
+		enum Type
+		{
+			White,
+			Black,
+			Magenta,
+			Normal,
+			Size
+		};
+	}
+
+	namespace TextureManager
+	{
+
+		void ClearTextures();
+		std::shared_ptr<Texture> GetTexture(const std::string& name, bool sRGB = true);
+		std::shared_ptr<Texture> GetDefault(DefaultTexture::Type texture);
+	}
 
 
 }

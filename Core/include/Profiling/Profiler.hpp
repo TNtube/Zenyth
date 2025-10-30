@@ -18,7 +18,7 @@ namespace Zenyth
 	class ScopedTimer
 	{
 	public:
-		explicit ScopedTimer(const std::wstring&) {}
+		explicit ScopedTimer(const std::string&) {}
 		ScopedTimer(const std::string&, CommandBatch&) {}
 	};
 #else

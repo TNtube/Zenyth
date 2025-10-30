@@ -35,9 +35,9 @@ namespace Zenyth
 
 		ConstantBuffer m_constantBuffer;
 
-		std::unique_ptr<Texture> m_diffuseMap;
-		std::unique_ptr<Texture> m_specularMap;
-		std::unique_ptr<Texture> m_normalMap;
+		DescriptorHandle m_diffuseMap;
+		DescriptorHandle m_specularMap;
+		DescriptorHandle m_normalMap;
 
 		MaterialDesc m_description;
 	};

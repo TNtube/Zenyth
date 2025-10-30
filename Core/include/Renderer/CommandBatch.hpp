@@ -37,7 +37,9 @@ namespace Zenyth {
 		void CopyBufferRegion(GpuBuffer& dst, uint64_t dstOffset, GpuBuffer& src, uint64_t srcOffset, uint64_t numBytes);
 
 		void SubmitMaterial(std::shared_ptr<Material> material);
-		void SetRootParameter(uint32_t idx, const DescriptorHandle& handle);
+		void SetRootParameter(uint32_t idx, const DescriptorHandle& handle) const;
+
+		void SetPipeline(const Pipeline& pipeline);
 
 		void InsertTimeStamp(ID3D12QueryHeap* queryHeap, uint32_t queryIdx) const;
 		void ResolveTimeStamps(ID3D12Resource* readbackHeap, ID3D12QueryHeap* queryHeap, uint32_t numQueries) const;
@@ -62,9 +64,9 @@ namespace Zenyth {
 
 		std::shared_ptr<Material>                         m_currentMaterial = nullptr;
 
-		std::vector<std::pair<uint32_t, DescriptorHandle>>m_rootParameters {};
-
 		std::vector<BufferView>                           m_usedBufferViews {};
+
+		const Pipeline* m_lastPipeline {};
 	};
 
 }

@@ -55,55 +55,59 @@ namespace
 				return defaultFormat;
 		}
 	}
-D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(const D3D12_RESOURCE_DESC& resDesc, UINT mipSlice)
-{
-	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-	uavDesc.Format						   = GetUAVFormat(resDesc.Format);
-
-	switch ( resDesc.Dimension )
+	D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(const D3D12_RESOURCE_DESC& resDesc, UINT mipSlice)
 	{
-	case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
-		if ( resDesc.DepthOrArraySize > 1 )
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.Format						   = GetUAVFormat(resDesc.Format);
+
+		switch ( resDesc.Dimension )
 		{
-			uavDesc.ViewDimension                  = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
-			uavDesc.Texture1DArray.ArraySize       = resDesc.DepthOrArraySize - 0;
-			uavDesc.Texture1DArray.FirstArraySlice = 0;
-			uavDesc.Texture1DArray.MipSlice        = mipSlice;
+		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+			if ( resDesc.DepthOrArraySize > 1 )
+			{
+				uavDesc.ViewDimension                  = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
+				uavDesc.Texture1DArray.ArraySize       = resDesc.DepthOrArraySize - 0;
+				uavDesc.Texture1DArray.FirstArraySlice = 0;
+				uavDesc.Texture1DArray.MipSlice        = mipSlice;
+			}
+			else
+			{
+				uavDesc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE1D;
+				uavDesc.Texture1D.MipSlice = mipSlice;
+			}
+			break;
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			if ( resDesc.DepthOrArraySize > 1 )
+			{
+				uavDesc.ViewDimension                  = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+				uavDesc.Texture2DArray.ArraySize       = resDesc.DepthOrArraySize - 0;
+				uavDesc.Texture2DArray.FirstArraySlice = 0;
+				uavDesc.Texture2DArray.PlaneSlice      = 0;
+				uavDesc.Texture2DArray.MipSlice        = mipSlice;
+			}
+			else
+			{
+				uavDesc.ViewDimension        = D3D12_UAV_DIMENSION_TEXTURE2D;
+				uavDesc.Texture2D.PlaneSlice = 0;
+				uavDesc.Texture2D.MipSlice   = mipSlice;
+			}
+			break;
+		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+			uavDesc.ViewDimension         = D3D12_UAV_DIMENSION_TEXTURE3D;
+			uavDesc.Texture3D.WSize       = resDesc.DepthOrArraySize - 0;
+			uavDesc.Texture3D.FirstWSlice = 0;
+			uavDesc.Texture3D.MipSlice    = mipSlice;
+			break;
+		default:
+			throw std::exception( "Invalid resource dimension." );
 		}
-		else
-		{
-			uavDesc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE1D;
-			uavDesc.Texture1D.MipSlice = mipSlice;
-		}
-		break;
-	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-		if ( resDesc.DepthOrArraySize > 1 )
-		{
-			uavDesc.ViewDimension                  = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-			uavDesc.Texture2DArray.ArraySize       = resDesc.DepthOrArraySize - 0;
-			uavDesc.Texture2DArray.FirstArraySlice = 0;
-			uavDesc.Texture2DArray.PlaneSlice      = 0;
-			uavDesc.Texture2DArray.MipSlice        = mipSlice;
-		}
-		else
-		{
-			uavDesc.ViewDimension        = D3D12_UAV_DIMENSION_TEXTURE2D;
-			uavDesc.Texture2D.PlaneSlice = 0;
-			uavDesc.Texture2D.MipSlice   = mipSlice;
-		}
-		break;
-	case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
-		uavDesc.ViewDimension         = D3D12_UAV_DIMENSION_TEXTURE3D;
-		uavDesc.Texture3D.WSize       = resDesc.DepthOrArraySize - 0;
-		uavDesc.Texture3D.FirstWSlice = 0;
-		uavDesc.Texture3D.MipSlice    = mipSlice;
-		break;
-	default:
-		throw std::exception( "Invalid resource dimension." );
+
+		return uavDesc;
 	}
 
-	return uavDesc;
-}
+
+	std::unordered_map<std::string, std::shared_ptr<Zenyth::Texture>> s_textureCache;
+	std::array<std::shared_ptr<Zenyth::Texture>, Zenyth::DefaultTexture::Size> s_defaultTextures;
 }
 
 namespace Zenyth
@@ -215,6 +219,10 @@ namespace Zenyth
 				batch.GenerateMips(*this);
 				batch.End();
 			}
+
+			auto batch = CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
+			batch.TransitionBarrier(*this, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+			batch.End();
 		}
 	}
 
@@ -390,5 +398,44 @@ namespace Zenyth
 		}
 
 		return srgbFormat;
+	}
+
+	void TextureManager::ClearTextures()
+	{
+		s_textureCache.clear();
+	}
+
+	std::shared_ptr<Texture> TextureManager::GetTexture(const std::string& name, const bool sRGB)
+	{
+		auto& texture = s_textureCache[name];
+
+		if (!texture)
+			texture = Texture::LoadTextureFromFile(name.c_str(), sRGB);
+
+		return texture;
+	}
+
+	std::shared_ptr<Texture> TextureManager::GetDefault(const DefaultTexture::Type texture)
+	{
+		if (auto def = s_defaultTextures[texture])
+			return def;
+
+		constexpr uint32_t white = 0xFFFFFFFF;
+		s_defaultTextures[DefaultTexture::White] = std::make_shared<Texture>();
+		s_defaultTextures[DefaultTexture::White]->Create(L"Default White", 1, 1, true, &white);
+
+		constexpr uint32_t black = 0xFF000000;
+		s_defaultTextures[DefaultTexture::Black] = std::make_shared<Texture>();
+		s_defaultTextures[DefaultTexture::Black]->Create(L"Default Black", 1, 1, true, &black);
+
+		constexpr uint32_t magenta = 0xFFFF00FF;
+		s_defaultTextures[DefaultTexture::Magenta] = std::make_shared<Texture>();
+		s_defaultTextures[DefaultTexture::Magenta]->Create(L"Default Magenta", 1, 1, true, &magenta);
+
+		constexpr uint32_t normal = 0x00FF8080;
+		s_defaultTextures[DefaultTexture::Normal] = std::make_shared<Texture>();
+		s_defaultTextures[DefaultTexture::Normal]->Create(L"Default Normal", 1, 1, false, &normal);
+
+		return s_defaultTextures[texture];
 	}
 }

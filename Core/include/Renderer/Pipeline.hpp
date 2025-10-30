@@ -28,6 +28,8 @@ namespace Zenyth
 		void Create(const std::wstring& name, const std::wstring& computePath);
 		void Destroy();
 
+		const Shader& GetShader() const { return m_shader; }
+
 		[[nodiscard]] ID3D12PipelineState* Get() const { return m_pipelineState.Get(); }
 		[[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return m_shader.GetRootSignature(); }
 

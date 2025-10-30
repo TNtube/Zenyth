@@ -34,6 +34,8 @@ namespace Zenyth {
 		auto& renderer = Application::Get().GetRenderer();
 		CommandQueue& queue = renderer.GetCommandManager().GetQueue(m_listType);
 
+		SendResourceBarriers();
+
 		const auto fence = queue.ExecuteCommandList(m_commandList.Get());
 
 		queue.FreeAllocator(fence, m_commandAllocator);
@@ -260,18 +262,21 @@ namespace Zenyth {
 		m_currentMaterial = std::move(material);
 
 		m_currentMaterial->Submit(*this);
-
-		for (const auto& [idx, handle] : m_rootParameters)
-			m_commandList->SetGraphicsRootDescriptorTable(idx, handle.GPU());
 	}
 
-	void CommandBatch::SetRootParameter(const uint32_t idx, const DescriptorHandle& handle)
+	void CommandBatch::SetRootParameter(const uint32_t idx, const DescriptorHandle& handle) const
 	{
-		if (m_currentMaterial)
-			m_commandList->SetGraphicsRootDescriptorTable(idx, handle.GPU());
-		else
-			m_rootParameters.emplace_back(idx, handle);
+		m_commandList->SetGraphicsRootDescriptorTable(idx, handle.GPU());
+	}
 
+	void CommandBatch::SetPipeline(const Pipeline& pipeline)
+	{
+		if ((m_lastPipeline && m_lastPipeline->GetShader() != pipeline.GetShader()) || !m_lastPipeline)
+		{
+			m_commandList->SetPipelineState(pipeline.Get());
+			m_commandList->SetGraphicsRootSignature(pipeline.GetRootSignature());
+			m_lastPipeline = &pipeline;
+		}
 	}
 
 	void CommandBatch::InsertTimeStamp(ID3D12QueryHeap* queryHeap, const uint32_t queryIdx) const

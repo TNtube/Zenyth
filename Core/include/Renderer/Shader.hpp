@@ -46,6 +46,8 @@ namespace Zenyth
 
 		[[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return m_rootSignature.Get(); }
 
+		bool operator==(const Shader& other) const { return m_shaderStages == other.m_shaderStages; };
+
 	private:
 		bool Compile();
 		IDxcBlob* CompileShader(const ShaderData& data);
@@ -64,7 +66,7 @@ namespace Zenyth
 		std::vector<InputElemData> m_inputElemsData {};
 		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputElementsDesc {};
 
-		bool m_isCompute;
+		bool m_isCompute {};
 	};
 
 }
