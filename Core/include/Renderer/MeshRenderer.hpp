@@ -11,4 +11,5 @@ public:
 
 private:
 	std::vector<std::shared_ptr<SubmeshRenderer>> m_submeshRenderers;
+	std::vector<std::shared_ptr<Material>> m_materials;
 };

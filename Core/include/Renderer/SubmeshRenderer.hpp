@@ -9,9 +9,10 @@ class SubmeshRenderer
 public:
 	explicit SubmeshRenderer(const Submesh& submesh);
 
-	void Submit(CommandBatch& commandBatch) const;
+	[[nodiscard]] uint32_t GetMaterialIndex() const { return m_materialIndex; }
+	void Submit(const CommandBatch& commandBatch) const;
 private:
-	std::shared_ptr<Material> m_material;
+	uint32_t m_materialIndex;
 	VertexBuffer m_vertexBuffer;
 	IndexBuffer m_indexBuffer;
 };

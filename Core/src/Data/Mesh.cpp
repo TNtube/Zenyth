@@ -15,7 +15,7 @@ Mesh::Mesh(std::vector<Submesh> submeshes, std::string name)
 	if (!name.empty()) m_name = std::move(name);
 
 	std::ranges::sort(m_submeshes, [](const Submesh& sma, const Submesh& smb) {
-		return sma.GetMaterialDesc() < smb.GetMaterialDesc();
+		return sma.GetMaterialIndex() < smb.GetMaterialIndex();
 	});
 }
 
@@ -56,6 +56,27 @@ bool Mesh::FromObjFile(const std::string& path, Mesh& output)
 	auto& attrib = reader.GetAttrib();
 	auto& shapes = reader.GetShapes();
 	auto& materials = reader.GetMaterials();
+	std::vector<MaterialDesc> materialDescs;
+	materialDescs.reserve(materials.size());
+
+	for (auto& mat : materials)
+	{
+		auto& matDesc = materialDescs.emplace_back();
+
+		matDesc.name = mat.name;
+
+		memcpy(&matDesc.ambient, mat.ambient, sizeof(Vector3));
+		memcpy(&matDesc.diffuse, mat.diffuse, sizeof(Vector3));
+		memcpy(&matDesc.specular, mat.specular, sizeof(Vector3));
+
+		matDesc.diffuseMap.reserve(directory.length() + mat.diffuse_texname.length());
+		matDesc.normalMap.reserve(directory.length() + mat.normal_texname.length());
+		matDesc.specularMap.reserve(directory.length() + mat.specular_highlight_texname.length());
+		matDesc.diffuseMap.append(directory).append(mat.diffuse_texname);
+		matDesc.normalMap.append(directory).append(mat.normal_texname);
+		matDesc.specularMap.append(directory).append(mat.specular_highlight_texname);
+	}
+
 
 
 	std::vector<Submesh> submeshes;
@@ -108,26 +129,13 @@ bool Mesh::FromObjFile(const std::string& path, Mesh& output)
 			index_offset += fv;
 		}
 
-		const tinyobj::material_t& mat = materials[shape.mesh.material_ids.front()];
-		auto& matDesc = currentSubmesh.GetMaterialDesc();
-
-		matDesc.name = mat.name;
-
-		memcpy(&matDesc.ambient, mat.ambient, sizeof(Vector3));
-		memcpy(&matDesc.diffuse, mat.diffuse, sizeof(Vector3));
-		memcpy(&matDesc.specular, mat.specular, sizeof(Vector3));
-
-		matDesc.diffuseMap.reserve(directory.length() + mat.diffuse_texname.length());
-		matDesc.normalMap.reserve(directory.length() + mat.normal_texname.length());
-		matDesc.specularMap.reserve(directory.length() + mat.specular_highlight_texname.length());
-		matDesc.diffuseMap.append(directory).append(mat.diffuse_texname);
-		matDesc.normalMap.append(directory).append(mat.normal_texname);
-		matDesc.specularMap.append(directory).append(mat.specular_highlight_texname);
+		currentSubmesh.GetMaterialIndex() = shape.mesh.material_ids.front();
 	}
 
 
 	output.m_name = path.substr(pos + 1);
 	output.m_submeshes = std::move(submeshes);
+	output.m_materialDesc = std::move(materialDescs);
 
 	output.ComputeTangents();
 

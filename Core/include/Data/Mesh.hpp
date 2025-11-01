@@ -18,4 +18,5 @@ private:
 	friend class MeshRenderer;
 	std::string m_name = "DefaultMesh";
 	std::vector<Submesh> m_submeshes;
+	std::vector<MaterialDesc> m_materialDesc;
 };

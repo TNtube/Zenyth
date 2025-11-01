@@ -21,8 +21,8 @@ public:
 	[[nodiscard]] const std::vector<uint32_t>& GetIndices() const { return m_indices; }
 	std::vector<uint32_t>& GetIndices() { return m_indices; }
 
-	[[nodiscard]] const MaterialDesc& GetMaterialDesc() const { return m_materialDesc; }
-	MaterialDesc& GetMaterialDesc() { return m_materialDesc; }
+	[[nodiscard]] uint32_t GetMaterialIndex() const { return m_materialIndex; }
+	[[nodiscard]] uint32_t& GetMaterialIndex() { return m_materialIndex; }
 
 	[[nodiscard]] std::size_t GetVertexCount() const { return m_vertices.size(); }
 	[[nodiscard]] std::size_t GetIndexCount() const { return m_indices.size(); }
@@ -33,5 +33,5 @@ private:
 	std::string m_name = "Default";
 	std::vector<Vertex> m_vertices;
 	std::vector<uint32_t> m_indices;
-	MaterialDesc m_materialDesc;
+	uint32_t m_materialIndex;
 };
