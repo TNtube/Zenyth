@@ -4,7 +4,6 @@
 
 #include <DirectXColors.h>
 
-#include "Core.hpp"
 #include "Keyboard.h"
 #include "Mouse.h"
 #include "Win32Application.hpp"
@@ -50,13 +49,12 @@ ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bo
 		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 		m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 		m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
-		m_frameIndex(0),
 		m_camera(XMConvertToRadians(80), m_aspectRatio)
 {
 	m_camera.SetPosition({0, 1, 3});
 
 	m_directionalLight.direction = Vector3{0.3, -1.0, 0.2};
-	m_directionalLight.type = Zenyth::LightType::Directional;
+	m_directionalLight.type = LightType::Directional;
 	m_directionalLight.color = Colors::LightYellow;
 
 }
@@ -66,25 +64,18 @@ void ModelGallery::OnInit()
 	// Create input devices
 	m_keyboard = std::make_unique<Keyboard>();
 	m_mouse = std::make_unique<Mouse>();
-	m_mouse->SetWindow(Zenyth::Win32Application::GetHwnd());
+	m_mouse->SetWindow(Win32Application::GetHwnd());
 	LoadPipeline();
 	LoadAssets();
 }
 
-void ModelGallery::Tick() {
-	Zenyth::EngineProfiling::Update();
-
-	m_timer.Tick([&]() {
-		OnUpdate();
-	});
-
-
-	OnRender();
-}
-
 void ModelGallery::OnUpdate()
 {
-	Zenyth::ScopedTimer _prof("Update App");
+	m_timer.Tick();
+
+	EngineProfiling::Update();
+
+	ScopedTimer _prof("Update App");
 	const auto dt = static_cast<float>(m_timer.GetElapsedSeconds());
 	auto const kb = m_keyboard->GetState();
 	m_camera.Update(dt, kb, m_mouse.get());
@@ -107,131 +98,12 @@ void ModelGallery::OnRender()
 
 	m_imguiLayer->Begin();
 
-	// Record all the commands we need to render the scene into the command list.
-	PopulateCommandList();
+	const auto frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-	m_imguiLayer->End();
-
-	// Present the frame. vsync disabled
-	ThrowIfFailed(m_swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
-
-	MoveToNextFrame();
-}
-
-void ModelGallery::OnDestroy()
-{
-	GetRenderer().GetCommandManager().IdleGPU();
-}
-
-void ModelGallery::LoadPipeline()
-{
-	ComPtr<IDXGIFactory4> factory;
-	ThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&factory)), "Failed to create DXGIFactory");
-
-	// Describe and create the swap chain.
-
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.BufferCount = FrameCount;
-	swapChainDesc.Width = GetWidth();
-	swapChainDesc.Height = GetHeight();
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.SampleDesc.Count = 1;
-	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-
-	ComPtr<IDXGISwapChain1> swapChain;
-
-	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		GetRenderer().GetCommandManager().GetGraphicsQueue().GetCommandQueue(),// Swap chain needs the queue so that it can force a flush on it.
-		Zenyth::Win32Application::GetHwnd(),
-		&swapChainDesc,
-		nullptr, nullptr,
-		&swapChain), "Failed to create swap chain");
-
-	// This sample does not support fullscreen transitions.
-	ThrowIfFailed(factory->MakeWindowAssociation(Zenyth::Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER), "Failed to make window association");
-
-	ThrowIfFailed(swapChain.As(&m_swapChain), "Failed to get swap chain");
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	auto commandBatch = CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
 	{
-		for (auto & renderTarget : m_renderTargets)
-		{
-			renderTarget = std::make_unique<Zenyth::RenderTarget>();
-
-			auto backBufferTexture = std::make_unique<Zenyth::Texture>();
-			auto depthStencilTexture = std::make_unique<Zenyth::Texture>();
-
-			renderTarget->AttachTexture(Zenyth::AttachmentPoint::Color0, std::move(backBufferTexture));
-			renderTarget->AttachTexture(Zenyth::AttachmentPoint::DepthStencil, std::move(depthStencilTexture));
-		}
-	}
-
-	LoadSizeDependentResources();
-
-	// load imgui
-	{
-		m_imguiLayer = std::make_unique<Zenyth::ImGuiLayer>(GetRenderer().GetDevice(), GetRenderer().GetCommandManager().GetGraphicsQueue().GetCommandQueue());
-	}
-}
-
-void ModelGallery::LoadAssets()
-{
-	{
-		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
-		m_depthBoundsTestSupported = SUCCEEDED(GetRenderer().GetDevice()->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
-
-		m_pipelineGeometry = std::make_unique<Zenyth::Pipeline>();
-		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPathW(L"shaders/basic_vs.hlsl"), GetAssetFullPathW(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
-	}
-
-	{
-
-		m_cameraConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
-		m_cameraConstantBuffer->Create(
-			L"Camera Constant Buffer",
-			3,
-			sizeof(Zenyth::CameraData), nullptr, true);
-
-		m_sceneConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
-		m_sceneConstantBuffer->Create(
-			L"Scene Constant Buffer",
-			3,
-			sizeof(SceneConstants), nullptr, true);
-
-		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
-		m_meshTransform.SetScale(.1, .1, .1);
-
-		m_meshConstantBuffer = std::make_unique<Zenyth::ConstantBuffer>();
-		m_meshConstantBuffer->Create(
-			L"Model Constant Buffer",
-			3,
-			sizeof(ObjectData),
-			nullptr, true);
-
-		Zenyth::Mesh mesh;
-		if (Zenyth::Mesh::FromObjFile(GetAssetFullPath("models/sponza/sponza.obj"), mesh))
-		{
-			m_meshRenderer = std::make_unique<Zenyth::MeshRenderer>(mesh);
-		}
-
-		m_lightBuffer = std::make_unique<Zenyth::StructuredBuffer>();
-		m_lightBuffer->Create(
-			L"Light Structured Buffer",
-			3,
-			sizeof(Zenyth::LightData));
-	}
-
-	GetRenderer().GetCommandManager().IdleGPU();
-}
-
-void ModelGallery::PopulateCommandList()
-{
-	auto commandBatch = Zenyth::CommandBatch::Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-	{
-		Zenyth::ScopedTimer _prof("PopulateCommandList", commandBatch);
+		ScopedTimer _prof("PopulateCommandList", commandBatch);
 
 		auto* commandList = commandBatch.GetCommandList();
 
@@ -247,14 +119,13 @@ void ModelGallery::PopulateCommandList()
 		commandList->RSSetViewports(1, &m_viewport);
 		commandList->RSSetScissorRects(1, &m_scissorRect);
 
-		const auto color0 = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::Color0);
-		const auto depth = m_renderTargets[m_frameIndex]->GetTexture(Zenyth::AttachmentPoint::DepthStencil);
-		commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-		commandBatch.TransitionBarrier(*depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+		auto& color0 = m_swapChain->GetCurrentBackBufferTexture();
+		commandBatch.TransitionBarrier(color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+		commandBatch.TransitionBarrier(m_depthStencilTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 
-		const auto dsvHandle = depth->GetDSV();
-		const auto rtvHandle = color0->GetRTV();
+		const auto dsvHandle = m_depthStencilTexture.GetDSV();
+		const auto rtvHandle = color0.GetRTV();
 
 		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
@@ -264,16 +135,16 @@ void ModelGallery::PopulateCommandList()
 		// Record commands.
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		commandBatch.UploadToBuffer(*m_meshConstantBuffer, objectData, m_frameIndex * m_meshConstantBuffer->GetElementSize());
+		commandBatch.UploadToBuffer(*m_meshConstantBuffer, objectData, frameIndex * m_meshConstantBuffer->GetElementSize());
 		commandBatch.TransitionBarrier(*m_meshConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-		commandBatch.UploadToBuffer(*m_cameraConstantBuffer, m_camera.GetCameraData(), m_frameIndex * m_cameraConstantBuffer->GetElementSize());
+		commandBatch.UploadToBuffer(*m_cameraConstantBuffer, m_camera.GetCameraData(), frameIndex * m_cameraConstantBuffer->GetElementSize());
 		commandBatch.TransitionBarrier(*m_cameraConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-		commandBatch.UploadToBuffer(*m_sceneConstantBuffer, sceneConstants, m_frameIndex * m_sceneConstantBuffer->GetElementSize());
+		commandBatch.UploadToBuffer(*m_sceneConstantBuffer, sceneConstants, frameIndex * m_sceneConstantBuffer->GetElementSize());
 		commandBatch.TransitionBarrier(*m_sceneConstantBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-		commandBatch.UploadToBuffer(*m_lightBuffer, m_directionalLight, m_frameIndex * m_lightBuffer->GetElementSize());
+		commandBatch.UploadToBuffer(*m_lightBuffer, m_directionalLight, frameIndex * m_lightBuffer->GetElementSize());
 		commandBatch.TransitionBarrier(*m_lightBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 
 
@@ -282,17 +153,17 @@ void ModelGallery::PopulateCommandList()
 		commandBatch.SetRootParameter(2, m_sceneConstantBuffer->GetCBV());
 		commandBatch.SetRootParameter(6, m_lightBuffer->GetSRV());
 		{
-			Zenyth::ScopedTimer _prof1("Mesh Submit", commandBatch);
+			ScopedTimer _prof1("Mesh Submit", commandBatch);
 			// will submit material, should be used
 			m_meshRenderer->Submit(commandBatch);
 		}
 
 
 		{
-			Zenyth::ScopedTimer _prof2("ImGui", commandBatch);
+			ScopedTimer _prof2("ImGui", commandBatch);
 			ImGui::Begin("Helper");
 			ImGui::Text("FPS: %i", m_timer.GetFramesPerSecond());
-			ImGui::Text("loaded files %i", Zenyth::Texture::loadedFile);
+			ImGui::Text("loaded files %i", Texture::loadedFile);
 
 			// m_camera.OnImGui();
 
@@ -301,27 +172,86 @@ void ModelGallery::PopulateCommandList()
 			ImGui::ColorEdit3("Sun Color", &m_directionalLight.color.x);
 			ImGui::TreePop();
 
-			Zenyth::EngineProfiling::OnImGui();
+			EngineProfiling::OnImGui();
 
 
 			ImGui::End();
 			m_imguiLayer->Render(commandList);
 		}
 
-		commandBatch.TransitionBarrier(*color0, D3D12_RESOURCE_STATE_PRESENT, true);
+		commandBatch.TransitionBarrier(color0, D3D12_RESOURCE_STATE_PRESENT, true);
 	}
 
 	const auto fence = commandBatch.End();
-	m_fenceValues[m_frameIndex] = fence;
+
+	m_imguiLayer->End();
+
+	m_swapChain->Present(fence);
 }
 
-void ModelGallery::MoveToNextFrame()
+void ModelGallery::OnDestroy()
 {
-	auto& graphicsQueue = GetRenderer().GetCommandManager().GetGraphicsQueue();
+	GetRenderer().GetCommandManager().IdleGPU();
+}
 
-	// Update the frame index.
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-	graphicsQueue.WaitForFence(m_fenceValues[m_frameIndex]);
+void ModelGallery::LoadPipeline()
+{
+	auto& graphicQueue = GetRenderer().GetCommandManager().GetGraphicsQueue();
+	m_swapChain = std::make_unique<SwapChain>(m_width, m_height, graphicQueue);
+	LoadSizeDependentResources();
+
+	// load imgui
+	m_imguiLayer = std::make_unique<ImGuiLayer>(GetRenderer().GetDevice(), graphicQueue.GetCommandQueue());
+
+}
+
+void ModelGallery::LoadAssets()
+{
+	{
+		D3D12_FEATURE_DATA_D3D12_OPTIONS2 featureOption = {};
+		m_depthBoundsTestSupported = SUCCEEDED(GetRenderer().GetDevice()->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &featureOption, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2))) && featureOption.DepthBoundsTestSupported;
+
+		m_pipelineGeometry = std::make_unique<Pipeline>();
+		m_pipelineGeometry->Create(L"Geometry Pipeline", GetAssetFullPathW(L"shaders/basic_vs.hlsl"), GetAssetFullPathW(L"shaders/basic_ps.hlsl"), m_depthBoundsTestSupported);
+	}
+
+	{
+		m_cameraConstantBuffer = std::make_unique<ConstantBuffer>();
+		m_cameraConstantBuffer->Create(
+			L"Camera Constant Buffer",
+			3,
+			sizeof(CameraData), nullptr, true);
+
+		m_sceneConstantBuffer = std::make_unique<ConstantBuffer>();
+		m_sceneConstantBuffer->Create(
+			L"Scene Constant Buffer",
+			3,
+			sizeof(SceneConstants), nullptr, true);
+
+		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
+		m_meshTransform.SetScale(.1, .1, .1);
+
+		m_meshConstantBuffer = std::make_unique<ConstantBuffer>();
+		m_meshConstantBuffer->Create(
+			L"Model Constant Buffer",
+			3,
+			sizeof(ObjectData),
+			nullptr, true);
+
+		Mesh mesh;
+		if (Mesh::FromObjFile(GetAssetFullPath("models/sponza/sponza.obj"), mesh))
+		{
+			m_meshRenderer = std::make_unique<MeshRenderer>(mesh);
+		}
+
+		m_lightBuffer = std::make_unique<StructuredBuffer>();
+		m_lightBuffer->Create(
+			L"Light Structured Buffer",
+			3,
+			sizeof(LightData));
+	}
+
+	GetRenderer().GetCommandManager().IdleGPU();
 }
 
 std::wstring ModelGallery::GetAssetFullPathW(const std::wstring& assetName)
@@ -350,59 +280,27 @@ void ModelGallery::OnWindowSizeChanged(const int width, const int height)
 	m_scissorRect.bottom = static_cast<LONG>(height);
 
 	// Determine if the swap buffers and other resources need to be resized or not.
-	if ((width != m_width || height != m_height))
+	if (width != m_width || height != m_height)
 	{
 		m_width = width;
 		m_height = height;
 		// Flush all current GPU commands.
 		GetRenderer().GetCommandManager().IdleGPU();
-
-		// Release the resources holding references to the swap chain (requirement of
-		// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
-		// current fence value.
-		for (UINT n = 0; n < FrameCount; n++)
-		{
-			m_renderTargets[n]->Destroy();
-			m_fenceValues[n] = m_fenceValues[m_frameIndex];
-		}
-
-		// Resize the swap chain to the desired dimensions.
-		DXGI_SWAP_CHAIN_DESC desc = {};
-		m_swapChain->GetDesc(&desc);
-		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, desc.BufferDesc.Format, desc.Flags));
-
-		BOOL fullscreenState;
-		ThrowIfFailed(m_swapChain->GetFullscreenState(&fullscreenState, nullptr));
-
-		// Reset the frame index to the current back buffer index.
-		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 		LoadSizeDependentResources();
 	}
 }
 
 
-void ModelGallery::LoadSizeDependentResources() const
+void ModelGallery::LoadSizeDependentResources()
 {
 	// Create frame resources.
 	{
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
 		optimizedClearValue.DepthStencil = { 0.0F, 0 };
-
 		const auto depthTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_TYPELESS, m_width, m_height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-		for (UINT n = 0; n < FrameCount; n++)
-		{
-			ComPtr<ID3D12Resource> backBuffer = nullptr;
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(backBuffer.GetAddressOf())), "Failed to get buffer");
-
-			const auto& renderTarget = m_renderTargets[n];
-
-			const auto color0 = renderTarget->GetTexture(Zenyth::AttachmentPoint::Color0);
-			color0->Create(std::format(L"Render Target #{}", n), backBuffer, nullptr);
-
-			const auto depthStencil = renderTarget->GetTexture(Zenyth::AttachmentPoint::DepthStencil);
-			depthStencil->Create(L"Depth Stencil Texture", depthTextureDesc, &optimizedClearValue );
-		}
+		m_depthStencilTexture.Create(L"Depth Stencil Texture", depthTextureDesc, &optimizedClearValue);
+		m_swapChain->Resize(m_width, m_height);
 	}
 }

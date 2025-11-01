@@ -5,109 +5,108 @@
 #include "Win32Application.hpp"
 #include "backends/imgui_impl_win32.h"
 #include "backends/imgui_impl_dx12.h"
+#include "Renderer/SwapChain.hpp"
 
-namespace Zenyth
+
+ImGuiLayer::ImGuiLayer(ID3D12Device *device, ID3D12CommandQueue* commandQueue)
 {
-	ImGuiLayer::ImGuiLayer(ID3D12Device *device, ID3D12CommandQueue* commandQueue)
+
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;	 // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;	  // Enable Gamepad Controls
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;		 // Enable Docking
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;	   // Enable Multi-Viewport / Platform Windows
+	//io.ConfigViewportsNoAutoMerge = true;
+	//io.ConfigViewportsNoTaskBarIcon = true;
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsLight();
+
+	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+	ImGuiStyle& style = ImGui::GetStyle();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
-
-		// Setup Dear ImGui context
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;	 // Enable Keyboard Controls
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;	  // Enable Gamepad Controls
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;		 // Enable Docking
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;	   // Enable Multi-Viewport / Platform Windows
-		//io.ConfigViewportsNoAutoMerge = true;
-		//io.ConfigViewportsNoTaskBarIcon = true;
-
-		// Setup Dear ImGui style
-		ImGui::StyleColorsDark();
-		//ImGui::StyleColorsLight();
-
-		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-		ImGuiStyle& style = ImGui::GetStyle();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			style.WindowRounding = 0.0f;
-			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-		}
-
-		// Setup Platform/Renderer backends
-		ImGui_ImplWin32_Init(Zenyth::Win32Application::GetHwnd());
-
-		ImGui_ImplDX12_InitInfo init_info = {};
-		init_info.Device = device;
-		init_info.CommandQueue = commandQueue;
-		init_info.NumFramesInFlight = Application::FrameCount;
-		init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-		init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
-		// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
-		// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-		init_info.SrvDescriptorHeap = Application::Get().GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer();
-		init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
-		{
-			const auto handle = Application::Get().GetRenderer().AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			*out_cpu_handle = handle.CPU();
-			*out_gpu_handle = handle.GPU();
-		};
-		init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, const D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, const D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle)
-		{
-			const DescriptorHandle handle(cpu_handle, gpu_handle, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			Application::Get().GetRenderer().FreeDescriptor(handle);
-		};
-		ImGui_ImplDX12_Init(&init_info);
+		style.WindowRounding = 0.0f;
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 
-	void ImGuiLayer::Begin() const
+	// Setup Platform/Renderer backends
+	ImGui_ImplWin32_Init(Win32Application::GetHwnd());
+
+	ImGui_ImplDX12_InitInfo init_info = {};
+	init_info.Device = device;
+	init_info.CommandQueue = commandQueue;
+	init_info.NumFramesInFlight = SwapChain::BufferCount;
+	init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
+	// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
+	init_info.SrvDescriptorHeap = Application::Get().GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer();
+	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
 	{
-		(void)this;
-
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
-	}
-
-	void ImGuiLayer::Render(ID3D12GraphicsCommandList *commandList) const
+		const auto handle = Application::Get().GetRenderer().AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		*out_cpu_handle = handle.CPU();
+		*out_gpu_handle = handle.GPU();
+	};
+	init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, const D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, const D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle)
 	{
-		(void)this;
+		const DescriptorHandle handle(cpu_handle, gpu_handle, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		Application::Get().GetRenderer().FreeDescriptor(handle);
+	};
+	ImGui_ImplDX12_Init(&init_info);
+}
 
-		ID3D12DescriptorHeap* ppHeaps[] = { Application::Get().GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer() };
-		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+void ImGuiLayer::Begin() const
+{
+	(void)this;
 
-		ImGui::Render();
-		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
-	}
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+}
 
-	void ImGuiLayer::End() const
+void ImGuiLayer::Render(ID3D12GraphicsCommandList *commandList) const
+{
+	(void)this;
+
+	ID3D12DescriptorHeap* ppHeaps[] = { Application::Get().GetRenderer().GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).GetHeapPointer() };
+	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	ImGui::Render();
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+}
+
+void ImGuiLayer::End() const
+{
+	(void)this;
+
+	const ImGuiIO& io = ImGui::GetIO();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
-		(void)this;
-
-		const ImGuiIO& io = ImGui::GetIO();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-		}
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
 	}
+}
 
-	void ImGuiLayer::OnWindowSizeChanged(uint32_t width, uint32_t height) const
-	{
-		(void)this;
+void ImGuiLayer::OnWindowSizeChanged(uint32_t width, uint32_t height) const
+{
+	(void)this;
 
-		if (width == 0 || height == 0)
-			return;
+	if (width == 0 || height == 0)
+		return;
 
-		ImGuiIO& io = ImGui::GetIO();
-		io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
-	}
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
+}
 
 
-	ImGuiLayer::~ImGuiLayer()
-	{
-		ImGui_ImplDX12_Shutdown();
-		ImGui_ImplWin32_Shutdown();
-		ImGui::DestroyContext();
-	}
+ImGuiLayer::~ImGuiLayer()
+{
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 }

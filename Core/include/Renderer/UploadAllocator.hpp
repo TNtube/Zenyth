@@ -3,78 +3,75 @@
 #include "Core.hpp"
 
 
-namespace Zenyth
+struct BufferView
 {
-	struct BufferView
+	BufferView(UploadBuffer* baseBuffer, const size_t offset, const size_t size)
+		: buffer(baseBuffer), offset(offset),
+		  size(size), data(baseBuffer->GetMappedData() + offset) {}
+
+	BufferView() = default;
+
+	UploadBuffer* buffer = nullptr;
+	size_t offset = 0;
+	size_t size = 0;
+	void* data = nullptr;
+};
+
+class UploadAllocator
+{
+	friend class UploadAllocatorPool;
+public:
+	explicit UploadAllocator(const D3D12_COMMAND_LIST_TYPE type) : m_type(type) {};
+
+	DELETE_COPY_CTOR(UploadAllocator)
+	DEFAULT_MOVE_CTOR(UploadAllocator)
+
+	~UploadAllocator() = default;
+
+	BufferView Allocate(size_t size, size_t alignment = 256);
+	void Return(uint64_t fenceValue, const BufferView &buffer);
+
+
+private:
+	void FlushUsedViews();
+	void MergeAvailableViews();
+
+	struct View
 	{
-		BufferView(UploadBuffer* baseBuffer, const size_t offset, const size_t size)
-			: buffer(baseBuffer), offset(offset),
-			  size(size), data(baseBuffer->GetMappedData() + offset) {}
+		size_t offset;
+		size_t size;
 
-		BufferView() = default;
-
-		UploadBuffer* buffer = nullptr;
-		size_t offset = 0;
-		size_t size = 0;
-		void* data = nullptr;
+		[[nodiscard]] bool IsValid() const { return size != 0; }
 	};
 
-	class UploadAllocator
+	struct InUseView
 	{
-		friend class UploadAllocatorPool;
-	public:
-		explicit UploadAllocator(const D3D12_COMMAND_LIST_TYPE type) : m_type(type) {};
-
-		DELETE_COPY_CTOR(UploadAllocator)
-		DEFAULT_MOVE_CTOR(UploadAllocator)
-
-		~UploadAllocator() = default;
-
-		BufferView Allocate(size_t size, size_t alignment = 256);
-		void Return(uint64_t fenceValue, const BufferView &buffer);
-
-
-	private:
-		void FlushUsedViews();
-		void MergeAvailableViews();
-
-		struct View
-		{
-			size_t offset;
-			size_t size;
-
-			[[nodiscard]] bool IsValid() const { return size != 0; }
-		};
-
-		struct InUseView
-		{
-			uint64_t fenceValue;
-			View view;
-		};
-
-		D3D12_COMMAND_LIST_TYPE m_type;
-		UploadBuffer m_buffer;
-		size_t m_offset = 0;
-		std::vector<InUseView> m_inUseViews;
-		std::vector<View> m_availableView;
-		static constexpr size_t BUFFER_SIZE = 0x200000; // 2MB
+		uint64_t fenceValue;
+		View view;
 	};
 
-	class UploadAllocatorPool
-	{
-	public:
-		explicit UploadAllocatorPool(const D3D12_COMMAND_LIST_TYPE type) : m_type(type) {};
+	D3D12_COMMAND_LIST_TYPE m_type;
+	UploadBuffer m_buffer;
+	size_t m_offset = 0;
+	std::vector<InUseView> m_inUseViews;
+	std::vector<View> m_availableView;
+	static constexpr size_t BUFFER_SIZE = 0x200000; // 2MB
+};
 
-		DELETE_COPY_CTOR(UploadAllocatorPool)
-		DEFAULT_MOVE_CTOR(UploadAllocatorPool)
+class UploadAllocatorPool
+{
+public:
+	explicit UploadAllocatorPool(const D3D12_COMMAND_LIST_TYPE type) : m_type(type) {};
 
-		~UploadAllocatorPool() = default;
+	DELETE_COPY_CTOR(UploadAllocatorPool)
+	DEFAULT_MOVE_CTOR(UploadAllocatorPool)
 
-		BufferView Allocate(size_t size, size_t alignment = 256);
-		void Return(uint64_t fenceValue, const BufferView &buffer) const;
+	~UploadAllocatorPool() = default;
 
-	private:
-		D3D12_COMMAND_LIST_TYPE m_type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		std::vector<std::unique_ptr<UploadAllocator>> m_allocators;
-	};
-}
+	BufferView Allocate(size_t size, size_t alignment = 256);
+	void Return(uint64_t fenceValue, const BufferView &buffer) const;
+
+private:
+	D3D12_COMMAND_LIST_TYPE m_type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	std::vector<std::unique_ptr<UploadAllocator>> m_allocators;
+};

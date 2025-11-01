@@ -10,21 +10,21 @@
 #include "Renderer/MeshRenderer.hpp"
 #include "Renderer/Pipeline.hpp"
 #include "Renderer/RenderTarget.hpp"
+#include "Renderer/SwapChain.hpp"
 
-class ModelGallery final : public Zenyth::Application
+class ModelGallery final : public Application
 {
 public:
 	ModelGallery(uint32_t width, uint32_t height, bool useWrapDevice);
 
 	void OnInit() override;
-	void Tick() override;
 	void OnUpdate() override;
 	void OnRender() override;
 	void OnDestroy() override;
 
 	void OnWindowSizeChanged(int width, int height) override;
 
-	void LoadSizeDependentResources() const;
+	void LoadSizeDependentResources();
 
 private:
 	float m_aspectRatio;
@@ -34,49 +34,41 @@ private:
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
-	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
+	std::unique_ptr<SwapChain> m_swapChain;
 
-	std::unique_ptr<Zenyth::Pipeline> m_pipelineGeometry;
+	std::unique_ptr<Pipeline> m_pipelineGeometry;
 
-	std::unique_ptr<Zenyth::RenderTarget> m_renderTargets[FrameCount];
+	Texture m_depthStencilTexture;
 
 	bool m_depthBoundsTestSupported = false;
 
-	std::unique_ptr<Zenyth::ImGuiLayer> m_imguiLayer {};
+	std::unique_ptr<ImGuiLayer> m_imguiLayer {};
 
-	std::unique_ptr<Zenyth::StructuredBuffer> m_lightBuffer {};
+	std::unique_ptr<StructuredBuffer> m_lightBuffer {};
 	float m_lightSpeed = 5.0f;
 
-	std::unique_ptr<Zenyth::ConstantBuffer> m_cameraConstantBuffer {};
-	std::unique_ptr<Zenyth::ConstantBuffer> m_sceneConstantBuffer {};
-	std::unique_ptr<Zenyth::ConstantBuffer> m_meshConstantBuffer;
+	std::unique_ptr<ConstantBuffer> m_cameraConstantBuffer {};
+	std::unique_ptr<ConstantBuffer> m_sceneConstantBuffer {};
+	std::unique_ptr<ConstantBuffer> m_meshConstantBuffer;
 
-	Zenyth::Transform m_meshTransform;
-	std::unique_ptr<Zenyth::MeshRenderer> m_meshRenderer;
-
-	// Synchronization objects.
-	UINT m_frameIndex;
-	uint64_t m_fenceValues[FrameCount] {};
+	Transform m_meshTransform;
+	std::unique_ptr<MeshRenderer> m_meshRenderer;
 
 
 	void LoadPipeline();
 	void LoadAssets();
 
-	void PopulateCommandList();
-
-	void MoveToNextFrame();
-
 	static std::wstring GetAssetFullPathW(const std::wstring& assetName);
 	static std::string GetAssetFullPath(const std::string& assetName);
 
-	Zenyth::Camera m_camera;
+	Camera m_camera;
 	// Rendering loop timer.
-	Zenyth::StepTimer						m_timer;
+	StepTimer						m_timer;
 
 	// Input devices.
 	std::unique_ptr<DirectX::Keyboard>		m_keyboard;
 	std::unique_ptr<DirectX::Mouse>			m_mouse;
 
 
-	Zenyth::LightData m_directionalLight;
+	LightData m_directionalLight;
 };

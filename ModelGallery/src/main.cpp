@@ -11,7 +11,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	{
 		ModelGallery app(1280, 720, false);
-		Zenyth::Win32Application::Run(&app, hInstance, nShowCmd);
+		Win32Application::Run(&app, hInstance, nShowCmd);
 	}
 
 

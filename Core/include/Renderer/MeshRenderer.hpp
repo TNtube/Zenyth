@@ -2,16 +2,13 @@
 #include "SubmeshRenderer.hpp"
 #include "Data/Mesh.hpp"
 
-namespace Zenyth
+class MeshRenderer
 {
-	class MeshRenderer
-	{
-	public:
-		explicit MeshRenderer(const Mesh& mesh);
+public:
+	explicit MeshRenderer(const Mesh& mesh);
 
-		void Submit(CommandBatch& commandBatch) const;
+	void Submit(CommandBatch& commandBatch) const;
 
-	private:
-		std::vector<std::shared_ptr<SubmeshRenderer>> m_submeshRenderers;
-	};
-}
+private:
+	std::vector<std::shared_ptr<SubmeshRenderer>> m_submeshRenderers;
+};

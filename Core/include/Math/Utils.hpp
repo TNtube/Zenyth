@@ -2,7 +2,7 @@
 
 #include "Concepts.hpp"
 
-namespace Zenyth::Math
+namespace Math
 {
 	template <typename T>
 	T AlignToMask(T size, T alignment) {

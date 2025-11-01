@@ -5,37 +5,34 @@
 
 #include "Shader.hpp"
 
-namespace Zenyth
+enum class ShaderType
 {
-	enum class ShaderType
-	{
-		Vertex,
-		Compute,
-		Pixel
-	};
+	Vertex,
+	Compute,
+	Pixel
+};
 
-	class Pipeline
-	{
-	public:
-		Pipeline() = default;
+class Pipeline
+{
+public:
+	Pipeline() = default;
 
-		DELETE_COPY_CTOR(Pipeline)
-		DEFAULT_MOVE_CTOR(Pipeline)
+	DELETE_COPY_CTOR(Pipeline)
+	DEFAULT_MOVE_CTOR(Pipeline)
 
-		~Pipeline() = default;
+	~Pipeline() = default;
 
-		void Create(const std::wstring& name, const std::wstring& vertexPath, const std::wstring& pixelPath, bool depthBoundsTestSupported);
-		void Create(const std::wstring& name, const std::wstring& computePath);
-		void Destroy();
+	void Create(const std::wstring& name, const std::wstring& vertexPath, const std::wstring& pixelPath, bool depthBoundsTestSupported);
+	void Create(const std::wstring& name, const std::wstring& computePath);
+	void Destroy();
 
-		const Shader& GetShader() const { return m_shader; }
+	const Shader& GetShader() const { return m_shader; }
 
-		[[nodiscard]] ID3D12PipelineState* Get() const { return m_pipelineState.Get(); }
-		[[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return m_shader.GetRootSignature(); }
+	[[nodiscard]] ID3D12PipelineState* Get() const { return m_pipelineState.Get(); }
+	[[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return m_shader.GetRootSignature(); }
 
-	private:
-		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
-		Shader m_shader;
+private:
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+	Shader m_shader;
 
-	};
-}
+};

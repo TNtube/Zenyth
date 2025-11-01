@@ -8,7 +8,6 @@
 
 namespace
 {
-	using namespace Zenyth;
 	int64_t GetCurrentTick()
 	{
 		LARGE_INTEGER currentTick;
@@ -70,13 +69,13 @@ namespace
 	public:
 		explicit TimerNode(std::string name, TimerNode* parent = nullptr) : m_parent(parent), m_name(std::move(name)) {}
 
-		TimerNode* Parent() const { return m_parent; }
+		[[nodiscard]] TimerNode* Parent() const { return m_parent; }
 
-		const std::vector<std::unique_ptr<TimerNode>>& GetChildren() const { return m_children; }
-		const std::string& GetName() const { return m_name; }
+		[[nodiscard]] const std::vector<std::unique_ptr<TimerNode>>& GetChildren() const { return m_children; }
+		[[nodiscard]] const std::string& GetName() const { return m_name; }
 
-		float GetCpuTime() const { return m_cpuTime.GetAvg(); }
-		float GetGpuTime() const { return m_gpuTime.GetAvg(); }
+		[[nodiscard]] float GetCpuTime() const { return m_cpuTime.GetAvg(); }
+		[[nodiscard]] float GetGpuTime() const { return m_gpuTime.GetAvg(); }
 
 		TimerNode* GetChild(const std::string& name)
 		{
@@ -150,89 +149,86 @@ namespace
 
 }
 
-namespace Zenyth
+void EngineProfiling::Update()
 {
-	void EngineProfiling::Update()
+	const auto frame = FrameIndex++;
+
+	GpuTimeManager::BeginReadback();
+	s_rootNode->ComputeTimes(frame);
+	GpuTimeManager::EndReadback();
+
+	float TotalCpuTime, TotalGpuTime;
+	s_rootNode->SumAllTimes(TotalCpuTime, TotalGpuTime);
+	s_totalCpuTime.RecordStat(frame, TotalCpuTime);
+	s_totalGpuTime.RecordStat(frame, TotalGpuTime);
+}
+
+void EngineProfiling::BeginBlock(const std::string& name, const CommandBatch* batch)
+{
+	s_currentNode = s_currentNode->GetChild(name);
+	s_currentNode->StartTimer(batch);
+}
+
+void EngineProfiling::EndBlock(const CommandBatch* batch)
+{
+	s_currentNode->EndTimer(batch);
+	s_currentNode = s_currentNode->Parent();
+}
+
+
+void DisplayNode(const TimerNode* node, const bool root = false)
+{
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	const bool is_folder = !node->GetChildren().empty();
+
+	constexpr ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_LabelSpanAllColumns;
+
+	const auto cpu = root ? s_totalCpuTime.GetAvg() : node->GetCpuTime();
+	const auto gpu = root ? s_totalGpuTime.GetAvg() : node->GetGpuTime();
+
+	if (is_folder)
 	{
-		const auto frame = FrameIndex++;
+		const auto open = ImGui::TreeNodeEx(node->GetName().c_str(), node_flags);
 
-		GpuTimeManager::BeginReadback();
-		s_rootNode->ComputeTimes(frame);
-		GpuTimeManager::EndReadback();
-
-		float TotalCpuTime, TotalGpuTime;
-		s_rootNode->SumAllTimes(TotalCpuTime, TotalGpuTime);
-		s_totalCpuTime.RecordStat(frame, TotalCpuTime);
-		s_totalGpuTime.RecordStat(frame, TotalGpuTime);
-	}
-
-	void EngineProfiling::BeginBlock(const std::string& name, const CommandBatch* batch)
-	{
-		s_currentNode = s_currentNode->GetChild(name);
-		s_currentNode->StartTimer(batch);
-	}
-
-	void EngineProfiling::EndBlock(const CommandBatch* batch)
-	{
-		s_currentNode->EndTimer(batch);
-		s_currentNode = s_currentNode->Parent();
-	}
-
-
-	void DisplayNode(const TimerNode* node, const bool root = false)
-	{
-		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
-		const bool is_folder = !node->GetChildren().empty();
+		ImGui::Text("%f", cpu);
+		ImGui::TableNextColumn();
+		ImGui::Text("%f", gpu);
 
-		constexpr ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_LabelSpanAllColumns;
-
-		const auto cpu = root ? s_totalCpuTime.GetAvg() : node->GetCpuTime();
-		const auto gpu = root ? s_totalGpuTime.GetAvg() : node->GetGpuTime();
-
-		if (is_folder)
+		if (open)
 		{
-			const auto open = ImGui::TreeNodeEx(node->GetName().c_str(), node_flags);
 
-			ImGui::TableNextColumn();
-			ImGui::Text("%f", cpu);
-			ImGui::TableNextColumn();
-			ImGui::Text("%f", gpu);
-
-			if (open)
-			{
-
-				for (const auto& child : node->GetChildren())
-					DisplayNode(child.get());
-				ImGui::TreePop();
-			}
-		}
-		else
-		{
-			ImGui::TreeNodeEx(node->GetName().c_str(), node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
-			ImGui::TableNextColumn();
-			ImGui::Text("%f", cpu);
-			ImGui::TableNextColumn();
-			ImGui::Text("%f", gpu);
+			for (const auto& child : node->GetChildren())
+				DisplayNode(child.get());
+			ImGui::TreePop();
 		}
 	}
-
-	void EngineProfiling::OnImGui()
+	else
 	{
-		static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
-		const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
+		ImGui::TreeNodeEx(node->GetName().c_str(), node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+		ImGui::TableNextColumn();
+		ImGui::Text("%f", cpu);
+		ImGui::TableNextColumn();
+		ImGui::Text("%f", gpu);
+	}
+}
 
-		if (ImGui::BeginTable("3ways", 3, table_flags))
-		{
-			// The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
-			ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
-			ImGui::TableSetupColumn("Cpu Timer", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
-			ImGui::TableSetupColumn("Gpu Timer", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
-			ImGui::TableHeadersRow();
+void EngineProfiling::OnImGui()
+{
+	static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+	const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
 
-			DisplayNode(s_rootNode.get(), true);
+	if (ImGui::BeginTable("3ways", 3, table_flags))
+	{
+		// The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+		ImGui::TableSetupColumn("Cpu Timer", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
+		ImGui::TableSetupColumn("Gpu Timer", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
+		ImGui::TableHeadersRow();
 
-			ImGui::EndTable();
-		}
+		DisplayNode(s_rootNode.get(), true);
+
+		ImGui::EndTable();
 	}
 }

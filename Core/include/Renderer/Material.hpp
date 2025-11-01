@@ -4,51 +4,49 @@
 #include "Texture.hpp"
 #include "Data/MaterialDesc.hpp"
 
-namespace Zenyth
+
+struct MaterialData
 {
-	struct MaterialData
-	{
-		Vector3 Ambient;
-		float _pad0;
-		Vector3 Diffuse;
-		float _pad1;
-		Vector3 Specular;
-		float SpecularStrength;
-	};
+	Vector3 Ambient;
+	float _pad0;
+	Vector3 Diffuse;
+	float _pad1;
+	Vector3 Specular;
+	float SpecularStrength;
+};
 
 
-	class Material
-	{
-	public:
-		void Submit(CommandBatch& commandBatch) const;
+class Material
+{
+public:
+	void Submit(CommandBatch& commandBatch) const;
 
-		[[nodiscard]] const Pipeline& GetPipeline() const { return *m_pipeline; };
+	[[nodiscard]] const Pipeline& GetPipeline() const { return *m_pipeline; };
 
-		bool operator==(const Material& other) const { return m_description == other.m_description; }
-		bool operator==(const MaterialDesc& other) const { return m_description == other; }
+	bool operator==(const Material& other) const { return m_description == other.m_description; }
+	bool operator==(const MaterialDesc& other) const { return m_description == other; }
 
-	private:
-		explicit Material(const MaterialDesc& matDesc);
+private:
+	explicit Material(const MaterialDesc& matDesc);
 
-		friend class MaterialManager;
-		std::unique_ptr<Pipeline> m_pipeline;
+	friend class MaterialManager;
+	std::unique_ptr<Pipeline> m_pipeline;
 
-		ConstantBuffer m_constantBuffer;
+	ConstantBuffer m_constantBuffer;
 
-		DescriptorHandle m_diffuseMap;
-		DescriptorHandle m_specularMap;
-		DescriptorHandle m_normalMap;
+	DescriptorHandle m_diffuseMap;
+	DescriptorHandle m_specularMap;
+	DescriptorHandle m_normalMap;
 
-		MaterialDesc m_description;
-	};
+	MaterialDesc m_description;
+};
 
-	class MaterialManager
-	{
-	public:
-		MaterialManager() = default;
-		std::shared_ptr<Material> GetMaterial(const MaterialDesc& matDesc);
+class MaterialManager
+{
+public:
+	MaterialManager() = default;
+	std::shared_ptr<Material> GetMaterial(const MaterialDesc& matDesc);
 
-	private:
-		std::vector<std::shared_ptr<Material>> m_materialInstances {};
-	};
-}
+private:
+	std::vector<std::shared_ptr<Material>> m_materialInstances {};
+};
