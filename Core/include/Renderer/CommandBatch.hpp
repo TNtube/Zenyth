@@ -35,7 +35,6 @@ public:
 	void CopyBuffer(GpuResource& dst, GpuResource& src);
 	void CopyBufferRegion(GpuBuffer& dst, uint64_t dstOffset, GpuBuffer& src, uint64_t srcOffset, uint64_t numBytes);
 
-	void SubmitMaterial(std::shared_ptr<Material> material);
 	void SetRootParameter(uint32_t idx, const DescriptorHandle& handle) const;
 
 	void SetPipeline(const Pipeline& pipeline);
@@ -60,8 +59,6 @@ private:
 
 	D3D12_RESOURCE_BARRIER                            m_resourceBarriers[ResourceBarrierCount] = {};
 	uint32_t                                          m_barrierIndex = 0;
-
-	std::shared_ptr<Material>                         m_currentMaterial = nullptr;
 
 	std::vector<BufferView>                           m_usedBufferViews {};
 

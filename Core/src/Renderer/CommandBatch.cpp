@@ -256,14 +256,6 @@ void CommandBatch::CopyBufferRegion(GpuBuffer& dst, uint64_t dstOffset, GpuBuffe
 	m_commandList->CopyBufferRegion(dst.GetResource(), dstOffset, src.GetResource(), srcOffset, numBytes);
 }
 
-void CommandBatch::SubmitMaterial(std::shared_ptr<Material> material)
-{
-	if (material == m_currentMaterial) return;
-	m_currentMaterial = std::move(material);
-
-	m_currentMaterial->Submit(*this);
-}
-
 void CommandBatch::SetRootParameter(const uint32_t idx, const DescriptorHandle& handle) const
 {
 	m_commandList->SetGraphicsRootDescriptorTable(idx, handle.GPU());
