@@ -22,7 +22,7 @@ Material::Material(const MaterialDesc& matDesc)
 	auto norm = TextureManager::GetTexture(matDesc.normalMap, false);
 	if (!norm) norm = TextureManager::GetDefault(DefaultTexture::Normal);
 	auto spec = TextureManager::GetTexture(matDesc.specularMap);
-	if (!spec) spec = TextureManager::GetDefault(DefaultTexture::White);
+	if (!spec) spec = TextureManager::GetDefault(DefaultTexture::Black);
 
 	m_diffuseMap = diff->GetSRV();
 	m_normalMap = norm->GetSRV();

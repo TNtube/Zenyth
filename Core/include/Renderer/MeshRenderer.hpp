@@ -7,7 +7,7 @@ class MeshRenderer
 public:
 	explicit MeshRenderer(const Mesh& mesh);
 
-	void Submit(CommandBatch& commandBatch) const;
+	void Submit(CommandBatch& commandBatch, bool shadowPass = false) const;
 
 private:
 	std::vector<std::shared_ptr<SubmeshRenderer>> m_submeshRenderers;

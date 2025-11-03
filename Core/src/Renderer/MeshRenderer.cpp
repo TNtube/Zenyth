@@ -22,12 +22,12 @@ MeshRenderer::MeshRenderer(const Mesh& mesh)
 		m_materials.emplace_back(renderer.GetMaterialManager().GetMaterial(matDesc));
 }
 
-void MeshRenderer::Submit(CommandBatch& commandBatch) const
+void MeshRenderer::Submit(CommandBatch& commandBatch, bool shadowPass) const
 {
 	auto lastIdx = -1;
 	for (const auto& smr : m_submeshRenderers)
 	{
-		if (lastIdx != smr->GetMaterialIndex())
+		if (lastIdx != smr->GetMaterialIndex() && !shadowPass)
 		{
 			m_materials[smr->GetMaterialIndex()]->Submit(commandBatch);
 			lastIdx = smr->GetMaterialIndex();

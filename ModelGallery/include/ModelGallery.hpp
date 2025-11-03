@@ -53,6 +53,7 @@ private:
 
 	Transform m_meshTransform;
 	std::unique_ptr<MeshRenderer> m_meshRenderer;
+	std::unique_ptr<MeshRenderer> m_groundRenderer;
 
 
 	void LoadPipeline();

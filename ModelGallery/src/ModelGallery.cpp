@@ -120,7 +120,7 @@ void ModelGallery::OnRender()
 		commandList->RSSetScissorRects(1, &m_scissorRect);
 
 		auto& color0 = m_swapChain->GetCurrentBackBufferTexture();
-		commandBatch.TransitionBarrier(color0, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+		commandBatch.TransitionBarrier(color0, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		commandBatch.TransitionBarrier(m_depthStencilTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
 
 
@@ -156,6 +156,7 @@ void ModelGallery::OnRender()
 			ScopedTimer _prof1("Mesh Submit", commandBatch);
 			// will submit material, should be used
 			m_meshRenderer->Submit(commandBatch);
+			m_groundRenderer->Submit(commandBatch);
 		}
 
 
@@ -229,7 +230,8 @@ void ModelGallery::LoadAssets()
 			sizeof(SceneConstants), nullptr, true);
 
 		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
-		m_meshTransform.SetScale(.1, .1, .1);
+		// m_meshTransform.SetScale(.1, .1, .1);
+		m_meshTransform.SetScale(3, 3, 3);
 
 		m_meshConstantBuffer = std::make_unique<ConstantBuffer>();
 		m_meshConstantBuffer->Create(
@@ -238,10 +240,16 @@ void ModelGallery::LoadAssets()
 			sizeof(ObjectData),
 			nullptr, true);
 
-		Mesh mesh;
-		if (Mesh::FromObjFile(GetAssetFullPath("models/sponza/sponza.obj"), mesh))
+		Mesh door;
+		if (Mesh::FromObjFile(GetAssetFullPath("models/SM_Door/SM_Door.obj"), door))
 		{
-			m_meshRenderer = std::make_unique<MeshRenderer>(mesh);
+			m_meshRenderer = std::make_unique<MeshRenderer>(door);
+		}
+
+		Mesh ground;
+		if (Mesh::FromObjFile(GetAssetFullPath("models/plane/plane.obj"), ground))
+		{
+			m_groundRenderer = std::make_unique<MeshRenderer>(ground);
 		}
 
 		m_lightBuffer = std::make_unique<StructuredBuffer>();

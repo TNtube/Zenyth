@@ -3,9 +3,9 @@
 
 #define MAX_LIGHT 128
 
-Texture2D AlbedoMap;
-Texture2D NormalMap;
-Texture2D SpecularMap;
+Texture2D AlbedoMap : register(t0);
+Texture2D NormalMap : register(t1);
+Texture2D SpecularMap : register(t2);
 SamplerState TexSampler : register(s0);
 
 cbuffer SceneConstants : register(b2)
@@ -50,7 +50,7 @@ struct Output {
 	float4 color: SV_TARGET0;
 };
 
-StructuredBuffer<LightData> lightBuffer;
+StructuredBuffer<LightData> lightBuffer : register(t3);
 
 [RootSignature( Default_RootSig )]
 Output main(Input input) {

@@ -17,7 +17,8 @@ void Pipeline::Create(const std::wstring& name, const std::wstring& vertexPath, 
 	auto& renderer = Application::Get().GetRenderer();
 
 	m_shader.AddStage(ShaderStage::Vertex, vertexPath);
-	m_shader.AddStage(ShaderStage::Pixel, pixelPath);
+	if (!pixelPath.empty())
+		m_shader.AddStage(ShaderStage::Pixel, pixelPath);
 
 	auto psoDesc = m_shader.GetGraphicPipelineStateDesc();
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -37,9 +38,8 @@ void Pipeline::Create(const std::wstring& name, const std::wstring& vertexPath, 
 
 		psoDesc.DepthStencilState = depthStencilDesc;
 		psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-		psoDesc.NumRenderTargets = 2;
+		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	} else
 	{
 		psoDesc.DepthStencilState.DepthEnable = FALSE;

@@ -28,8 +28,9 @@ struct Output {
 Output main(Input input) {
 	Output output = (Output)0;
 
-	output.position = mul( mul( float4(input.position, 1.0f), worldMatrix), viewProjection );
-	output.worldPosition = mul( float4(input.position, 1.0f), worldMatrix).xyz;
+	float4 worldPos = mul(float4(input.position, 1.0f), worldMatrix);
+	output.worldPosition = worldPos.xyz;
+	output.position = mul(worldPos, viewProjection);
 	output.uv = input.uv;
 
 	float3 normal  = normalize( mul( float4(input.normal,  1.0f), worldInvertTranspose) ).xyz;
