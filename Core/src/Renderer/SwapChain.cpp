@@ -62,6 +62,7 @@ void SwapChain::Resize(const uint32_t width, const uint32_t height)
 	ThrowIfFailed(m_swapChain->ResizeBuffers(BufferCount, width, height, desc.BufferDesc.Format, desc.Flags));
 
 	CreateBackBufferTextures();
+	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 uint32_t SwapChain::GetCurrentBackBufferIndex() const
