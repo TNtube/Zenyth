@@ -53,7 +53,7 @@ ModelGallery::ModelGallery(const uint32_t width, const uint32_t height, const bo
 {
 	m_camera.SetPosition({0, 1, 3});
 
-	m_directionalLight.direction = Vector3{0.3, -1.0, 0.2};
+	m_directionalLight.direction = Vector3{-0.2f, -1.0f, -0.3f};
 	m_directionalLight.type = LightType::Directional;
 	m_directionalLight.color = Colors::LightYellow;
 
@@ -231,7 +231,7 @@ void ModelGallery::LoadAssets()
 
 		m_meshTransform.SetEulerAngles(0, XMConvertToRadians(-180), 0);
 		// m_meshTransform.SetScale(.1, .1, .1);
-		m_meshTransform.SetScale(3, 3, 3);
+		// m_meshTransform.SetScale(3, 3, 3);
 
 		m_meshConstantBuffer = std::make_unique<ConstantBuffer>();
 		m_meshConstantBuffer->Create(

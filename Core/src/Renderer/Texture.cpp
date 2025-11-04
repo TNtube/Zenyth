@@ -118,7 +118,7 @@ void Texture::CreateViews()
 	const auto device = renderer.GetDevice();
 	const CD3DX12_RESOURCE_DESC desc( m_resource->GetDesc() );
 
-	if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 && CheckRTVSupport())
+	if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
 	{
 		if (m_RTV.IsNull())
 			m_RTV = renderer.AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -273,28 +273,6 @@ DescriptorHandle Texture::GetSRV() const
 DescriptorHandle Texture::GetUAV() const
 {
 	return m_UAV;
-}
-
-bool Texture::CheckRTVSupport() const
-{
-	return CheckFormatSupport( D3D12_FORMAT_SUPPORT1_RENDER_TARGET );
-}
-
-bool Texture::CheckDSVSupport() const
-{
-	return CheckFormatSupport( D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL );
-}
-
-bool Texture::CheckSRVSupport() const
-{
-	return CheckFormatSupport( D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE );
-}
-
-bool Texture::CheckUAVSupport() const
-{
-	return CheckFormatSupport( D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW )
-		&& CheckFormatSupport( D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD )
-		&& CheckFormatSupport( D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE );
 }
 
 std::unique_ptr<Texture> Texture::LoadTextureFromFile(const char *filename, const bool sRGB)

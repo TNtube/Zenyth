@@ -23,15 +23,11 @@ public:
 	[[nodiscard]] DescriptorHandle GetSRV() const;
 	[[nodiscard]] DescriptorHandle GetUAV() const;
 
-	[[nodiscard]] bool CheckRTVSupport() const;
-	[[nodiscard]] bool CheckDSVSupport() const;
-	[[nodiscard]] bool CheckSRVSupport() const;
-	[[nodiscard]] bool CheckUAVSupport() const;
-
-	static std::unique_ptr<Texture> LoadTextureFromFile(const char *filename, bool sRGB = true);
 	static DXGI_FORMAT GetUAVCompatibleFormat( DXGI_FORMAT format );
 	static bool IsSRGBFormat( DXGI_FORMAT format );
 	static DXGI_FORMAT GetSRGBFormat(DXGI_FORMAT format);
+
+	static std::unique_ptr<Texture> LoadTextureFromFile(const char *filename, bool sRGB = true);
 
 	static uint32_t loadedFile;
 private:

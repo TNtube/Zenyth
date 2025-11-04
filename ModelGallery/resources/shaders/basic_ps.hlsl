@@ -73,12 +73,11 @@ Output main(Input input) {
 		normal = input.matTBN[2];
 	}
 
-	[unroll(MAX_LIGHT)]
 	for (uint lightIndex = 0; lightIndex < activeLightCount; lightIndex++)
 	{
 		LightData light = lightBuffer[lightIndex];
 		if (light.type == 2) {
-			color += ApplyLightCommon(albedo.rgb, specularAlbedo, specularMask, gloss, normal, viewDir, light.direction, light.color);
+			color += ApplyLightCommon(albedo.rgb, specularAlbedo, specularMask, gloss, normal, viewDir, -light.direction, light.color);
 		}
 	}
 

@@ -2,8 +2,6 @@
 
 #include "Renderer/Pipeline.hpp"
 
-#include <ranges>
-
 #include "Application.hpp"
 #include "CommonStates.h"
 #include "Renderer/Renderer.hpp"
