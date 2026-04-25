@@ -10,6 +10,7 @@ project ("Zenyth")
 
 
 add_subdirectory(Core)
+add_subdirectory(Renderer)
 add_subdirectory(Sandbox)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
