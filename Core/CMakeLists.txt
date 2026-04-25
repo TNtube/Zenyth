@@ -11,7 +11,7 @@ target_include_directories(Core
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(Core
-    PUBLIC d3d12.lib dxgi.lib
+    PUBLIC d3d12.lib dxgi.lib glm
 )
 
 target_precompile_headers(Core PUBLIC include/pch.hpp)
