@@ -50,7 +50,7 @@ namespace Zenyth {
 		Window(Window&&) = delete;
 		Window& operator=(Window&&) = delete;
 
-		[[nodiscard]] bool PumpMessages();
+		[[nodiscard]] bool PumpMessages() const;
 
 		void SetEventCallback(EventCallback cb) { m_callback = std::move(cb); }
 
@@ -59,7 +59,7 @@ namespace Zenyth {
 		[[nodiscard]] uint32_t GetHeight() const { return m_height; }
 
 	private:
-		void RegisterWindowClass();
+		void RegisterWindowClass() const;
 		void CreateNativeWindow(const WindowDesc& desc);
 
 		static LRESULT CALLBACK WndProcStatic(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
