@@ -18,4 +18,4 @@ target_link_libraries(Renderer
     PRIVATE d3d12.lib dxgi.lib d3dcompiler.lib dxguid.lib
 )
 
-target_compile_features(Renderer PRIVATE cxx_std_20)
+target_compile_features(Renderer PRIVATE cxx_std_23)

@@ -9,7 +9,7 @@ namespace Zenyth {
         : m_width(desc.width)
         , m_height(desc.height)
         , m_resizable(desc.resizable)
-        , m_hinst(::GetModuleHandleW(nullptr))
+        , m_hInst(::GetModuleHandleW(nullptr))
     {
         // Unique class name per window instance
         m_className = L"EngineWindow_" + std::to_wstring(s_windowCount++);
@@ -23,7 +23,7 @@ namespace Zenyth {
             ::DestroyWindow(m_hwnd);
             m_hwnd = nullptr;
         }
-        ::UnregisterClassW(m_className.c_str(), m_hinst);
+        ::UnregisterClassW(m_className.c_str(), m_hInst);
     }
 
     void Window::RegisterWindowClass() {
@@ -31,7 +31,7 @@ namespace Zenyth {
         wc.cbSize = sizeof(WNDCLASSEXW);
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = WndProcStatic;
-        wc.hInstance = m_hinst;
+        wc.hInstance = m_hInst;
         wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
         wc.lpszClassName = m_className.c_str();
@@ -61,7 +61,7 @@ namespace Zenyth {
             rc.right - rc.left,
             rc.bottom - rc.top,
             nullptr, nullptr,
-            m_hinst,
+            m_hInst,
             this   // passed to WM_NCCREATE → stored in GWLP_USERDATA
         );
 
