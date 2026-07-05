@@ -12,6 +12,7 @@ project ("Zenyth" LANGUAGES CXX)
 add_subdirectory(Core)
 add_subdirectory(Renderer)
 add_subdirectory(Sandbox)
+add_subdirectory(Tests)
 
 if (CMAKE_VERSION VERSION_GREATER 3.20)
     set_property(TARGET Core PROPERTY CXX_STANDARD 23)

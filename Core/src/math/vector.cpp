@@ -51,7 +51,7 @@ namespace zenyth::math {
 	}
 
 	float vec3::x() const noexcept { return m_components.m_x; }
-	float vec3::y() const noexcept { return m_components.m_z; }
+	float vec3::y() const noexcept { return m_components.m_y; }
 	float vec3::z() const noexcept { return m_components.m_z; }
 
 	float& vec3::x() noexcept { return m_components.m_x; }
@@ -70,6 +70,7 @@ namespace zenyth::math {
 
 	vec3 vec3::operator-() const noexcept { return vec3{_mm_sub_ps(_mm_setzero_ps(), m_simd)}; }
 
+	vec3 vec3::normalize() const noexcept { return *this * (1.0f / length()); }
 	vec3 vec3::cross(const vec3& other) const noexcept
 	{
 		// left term
@@ -84,10 +85,15 @@ namespace zenyth::math {
 
 		return vec3{_mm_sub_ps(left, right)};
 	}
-
 	float vec3::dot(const vec3& other) const noexcept { return _mm_cvtss_f32(_mm_dp_ps(m_simd, other.m_simd, 0xF1)); }
 	float vec3::length_sq() const noexcept { return dot(*this); }
 	float vec3::length() const noexcept { return std::sqrtf(length_sq()); }
+
+	vec3 vec3::cross(const vec3& a, const vec3& b) noexcept { return a.cross(b); }
+	vec3 vec3::normalize(const vec3& vec) noexcept { return vec.normalize(); }
+	float vec3::dot(const vec3& a, const vec3& b) noexcept { return a.dot(b); }
+	float vec3::length_sq(const vec3& vec) noexcept { return vec.length(); }
+	float vec3::length(const vec3& vec) noexcept { return vec.length_sq(); }
 #pragma endregion
 
 #pragma region vec4
@@ -122,8 +128,14 @@ namespace zenyth::math {
 
 	vec4 vec4::operator-() const noexcept { return vec4{_mm_sub_ps(_mm_setzero_ps(), m_simd)}; }
 
+	vec4 vec4::normalize() const noexcept { return *this * (1.0f / length()); }
 	float vec4::dot(const vec4& other) const noexcept { return _mm_cvtss_f32(_mm_dp_ps(m_simd, other.m_simd, 0xF1)); }
 	float vec4::length_sq() const noexcept { return dot(*this); }
 	float vec4::length() const noexcept { return std::sqrtf(length_sq()); }
+
+	vec4 vec4::normalize(const vec4 &vec) noexcept { return vec.normalize(); }
+	float vec4::dot(const vec4 &a, const vec4 &b) noexcept { return a.dot(b); }
+	float vec4::length_sq(const vec4 &vec) noexcept { return vec.length_sq(); }
+	float vec4::length(const vec4 &vec) noexcept { return vec.length(); }
 #pragma endregion
 }

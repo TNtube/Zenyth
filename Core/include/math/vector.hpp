@@ -58,11 +58,17 @@ namespace zenyth::math {
 
 		[[nodiscard]] vec3 operator-() const noexcept;
 
+		[[nodiscard]] vec3 normalize() const noexcept;
 		[[nodiscard]] vec3 cross(const vec3& other) const noexcept;
-
 		[[nodiscard]] float dot(const vec3& other) const noexcept;
 		[[nodiscard]] float length_sq() const noexcept;
 		[[nodiscard]] float length() const noexcept;
+
+		[[nodiscard]] static vec3 normalize(const vec3& vec) noexcept;
+		[[nodiscard]] static vec3 cross(const vec3& a, const vec3& b) noexcept;
+		[[nodiscard]] static float dot(const vec3& a, const vec3& b) noexcept;
+		[[nodiscard]] static float length_sq(const vec3& vec) noexcept;
+		[[nodiscard]] static float length(const vec3& vec) noexcept;
 	protected:
 		explicit vec3(const __m128 simd) : m_simd(simd) {};
 
@@ -100,9 +106,16 @@ namespace zenyth::math {
 
 		[[nodiscard]] vec4 operator-() const noexcept;
 
+
+		[[nodiscard]] vec4 normalize() const noexcept;
 		[[nodiscard]] float dot(const vec4& other) const noexcept;
 		[[nodiscard]] float length_sq() const noexcept;
 		[[nodiscard]] float length() const noexcept;
+
+		[[nodiscard]] static vec4 normalize(const vec4& vec) noexcept;
+		[[nodiscard]] static float dot(const vec4& a, const vec4& b) noexcept;
+		[[nodiscard]] static float length_sq(const vec4& vec) noexcept;
+		[[nodiscard]] static float length(const vec4& vec) noexcept;
 	private:
 		friend class mat4;
 		explicit vec4(const __m128 simd) : m_simd(simd) {};
