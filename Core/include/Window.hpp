@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Zenyth {
+namespace zenyth {
 	enum class EventType {
 		WindowClose,
 		WindowResize,
@@ -79,4 +79,4 @@ namespace Zenyth {
 		static uint32_t s_windowCount;
 	};
 
-} // namespace Zenyth
+} // namespace zenyth

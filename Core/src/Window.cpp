@@ -1,7 +1,7 @@
 ﻿#include "pch.hpp"
 #include "Window.hpp"
 
-namespace Zenyth {
+namespace zenyth {
 
 	uint32_t Window::s_windowCount = 0;
 
@@ -212,4 +212,4 @@ namespace Zenyth {
 			m_callback(e);
 	}
 
-} // namespace Zenyth
+} // namespace zenyth

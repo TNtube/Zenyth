@@ -4,7 +4,7 @@
 #include "Timer.hpp"
 #include "IRenderer.hpp"
 
-namespace Zenyth {
+namespace zenyth {
 
 	struct AppDesc {
 		std::wstring title = L"Engine";
@@ -50,4 +50,4 @@ namespace Zenyth {
 		AppDesc  m_desc;
 	};
 
-} // namespace Zenyth
+} // namespace zenyth

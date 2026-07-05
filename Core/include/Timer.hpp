@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace Zenyth {
+namespace zenyth {
 
 	class Timer {
 	public:
@@ -26,4 +26,4 @@ namespace Zenyth {
 		uint64_t m_frameCount = 0;
 	};
 
-} // namespace Zenyth
+} // namespace zenyth

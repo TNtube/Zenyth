@@ -1,7 +1,7 @@
 #include "pch.hpp"
 #include "Application.hpp"
 
-namespace Zenyth {
+namespace zenyth {
 	Application::Application(const AppDesc& desc)
 		: m_desc(desc)
 	{
@@ -76,4 +76,4 @@ namespace Zenyth {
 			break;
 		}
 	}
-} // namespace Zenyth
+} // namespace zenyth

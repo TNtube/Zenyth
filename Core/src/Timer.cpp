@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-namespace Zenyth {
+namespace zenyth {
 
 	Timer::Timer() {
 		LARGE_INTEGER freq, now;
@@ -43,4 +43,4 @@ namespace Zenyth {
 		return m_deltaTime;
 	}
 
-} // namespace Zenyth
+} // namespace zenyth

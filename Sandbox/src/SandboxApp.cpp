@@ -12,7 +12,7 @@ void SandboxApp::OnRender()
 {
 }
 
-void SandboxApp::OnEvent(const Zenyth::Event& e)
+void SandboxApp::OnEvent(const zenyth::Event& e)
 {
 	Application::OnEvent(e);
 }

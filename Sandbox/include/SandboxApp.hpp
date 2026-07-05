@@ -1,7 +1,7 @@
 #pragma once
 #include "Application.hpp"
 
-class SandboxApp : public Zenyth::Application {
+class SandboxApp : public zenyth::Application {
 public:
 	explicit SandboxApp() : Application({ .title = L"Sandbox", .width = 1280, .height = 720 }) {}
 
@@ -10,7 +10,7 @@ protected:
 	void OnUpdate(float dt) override;
 	void OnRender() override;
 
-	void OnEvent(const Zenyth::Event& e) override;
+	void OnEvent(const zenyth::Event& e) override;
 
 	void OnShutdown() override;
 };
