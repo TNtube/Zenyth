@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Zenyth {
+namespace zenyth::renderer {
 
 	class IRenderer {
 	public:

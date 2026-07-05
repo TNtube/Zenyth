@@ -18,7 +18,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
 	SandboxApp app;
 
-	std::unique_ptr<Zenyth::IRenderer> renderer = std::make_unique<Zenyth::D3D12Renderer>();
+	std::unique_ptr<zenyth::renderer::IRenderer> renderer = std::make_unique<zenyth::renderer::D3D12Renderer>();
 	app.SetRenderer(std::move(renderer));
 
 	app.Run();

@@ -14,7 +14,7 @@ target_include_directories(Renderer
 target_precompile_headers(Renderer REUSE_FROM Core)
 
 target_link_libraries(Renderer
-    PUBLIC Core
+    PUBLIC Core DirectX-Headers
     PRIVATE d3d12.lib dxgi.lib d3dcompiler.lib dxguid.lib
 )
 

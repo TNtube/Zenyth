@@ -24,13 +24,13 @@ namespace Zenyth {
 		Application& operator=(Application&&) = delete;
 
 		// takes ownership
-		void SetRenderer(std::unique_ptr<IRenderer> renderer);
+		void SetRenderer(std::unique_ptr<zenyth::renderer::IRenderer> renderer);
 		void Run();
 		void Stop() { m_running = false; }
 
 		[[nodiscard]] Window& GetWindow() const { return *m_window; }
 		[[nodiscard]] Timer& GetTimer() const { return *m_timer; }
-		[[nodiscard]] IRenderer* GetRenderer() const { return m_renderer.get(); }
+		[[nodiscard]] zenyth::renderer::IRenderer* GetRenderer() const { return m_renderer.get(); }
 
 	protected:
 		virtual void OnInit() {}
@@ -44,7 +44,7 @@ namespace Zenyth {
 
 		std::unique_ptr<Window>    m_window;
 		std::unique_ptr<Timer>     m_timer;
-		std::unique_ptr<IRenderer> m_renderer;
+		std::unique_ptr<zenyth::renderer::IRenderer> m_renderer;
 
 		bool     m_running = false;
 		AppDesc  m_desc;

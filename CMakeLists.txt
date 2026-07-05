@@ -13,6 +13,7 @@ add_subdirectory(Core)
 add_subdirectory(Renderer)
 add_subdirectory(Sandbox)
 add_subdirectory(Tests)
+add_subdirectory(Deps/DirectX-Headers)
 
 if (CMAKE_VERSION VERSION_GREATER 3.20)
     set_property(TARGET Core PROPERTY CXX_STANDARD 23)

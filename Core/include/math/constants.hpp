@@ -1,5 +1,6 @@
 #pragma once
 #include <numbers>
+#include <limits>
 
 namespace zenyth::math {
 	inline constexpr float epsilon = std::numeric_limits<float>::epsilon();

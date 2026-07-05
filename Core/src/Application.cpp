@@ -19,7 +19,7 @@ namespace Zenyth {
 		});
 	}
 
-	void Application::SetRenderer(std::unique_ptr<IRenderer> renderer) {
+	void Application::SetRenderer(std::unique_ptr<zenyth::renderer::IRenderer> renderer) {
 		m_renderer = std::move(renderer);
 	}
 
