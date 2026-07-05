@@ -1,6 +1,8 @@
 #include "pch.hpp"
 #include "D3D12Renderer.hpp"
 
+#include "Filesystem.hpp"
+
 using Microsoft::WRL::ComPtr;
 
 std::string HrToString(const HRESULT hr)
@@ -25,50 +27,6 @@ inline void ThrowIfFailed(const HRESULT hr)
 	{
 		throw HrException(hr);
 	}
-}
-
-inline HRESULT ReadDataFromFile(const LPCWSTR filename, byte** data, UINT* size)
-{
-	using namespace Microsoft::WRL;
-
-#if WINVER >= _WIN32_WINNT_WIN8
-	CREATEFILE2_EXTENDED_PARAMETERS extendedParams = {};
-	extendedParams.dwSize = sizeof(CREATEFILE2_EXTENDED_PARAMETERS);
-	extendedParams.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
-	extendedParams.dwFileFlags = FILE_FLAG_SEQUENTIAL_SCAN;
-	extendedParams.dwSecurityQosFlags = SECURITY_ANONYMOUS;
-	extendedParams.lpSecurityAttributes = nullptr;
-	extendedParams.hTemplateFile = nullptr;
-
-	const Wrappers::FileHandle file(CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, &extendedParams));
-#else
-	Wrappers::FileHandle file(CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS, nullptr));
-#endif
-	if (file.Get() == INVALID_HANDLE_VALUE)
-	{
-		throw std::exception();
-	}
-
-	FILE_STANDARD_INFO fileInfo = {};
-	if (!GetFileInformationByHandleEx(file.Get(), FileStandardInfo, &fileInfo, sizeof(fileInfo)))
-	{
-		throw std::exception();
-	}
-
-	if (fileInfo.EndOfFile.HighPart != 0)
-	{
-		throw std::exception();
-	}
-
-	*data = static_cast<byte*>(malloc(fileInfo.EndOfFile.LowPart));
-	*size = fileInfo.EndOfFile.LowPart;
-
-	if (!ReadFile(file.Get(), *data, fileInfo.EndOfFile.LowPart, nullptr, nullptr))
-	{
-		throw std::exception();
-	}
-
-	return S_OK;
 }
 
 std::wstring GetAssetFullPath(LPCWSTR assetName)
@@ -225,13 +183,8 @@ namespace zenyth::renderer {
 
 		// Create the pipeline state, which includes compiling and loading shaders.
 		{
-			UINT8* pVertexShaderData = nullptr;
-			UINT8* pPixelShaderData = nullptr;
-			UINT vertexShaderDataLength = 0;
-			UINT pixelShaderDataLength = 0;
-
-			ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"shaders_VSMain.cso").c_str(), &pVertexShaderData, &vertexShaderDataLength));
-			ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"shaders_PSMain.cso").c_str(), &pPixelShaderData, &pixelShaderDataLength));
+			auto vertexShaderData = fs::readFileToByteArray(GetAssetFullPath(L"shaders_VSMain.cso").c_str());
+			auto pixelShaderData = fs::readFileToByteArray(GetAssetFullPath(L"shaders_PSMain.cso").c_str());
 
 			// Define the vertex input layout.
 			D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -244,8 +197,8 @@ namespace zenyth::renderer {
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 			psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 			psoDesc.pRootSignature = m_rootSignature.Get();
-			psoDesc.VS = CD3DX12_SHADER_BYTECODE(pVertexShaderData, vertexShaderDataLength);
-			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pPixelShaderData, pixelShaderDataLength);
+			psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShaderData.data(), vertexShaderData.size());
+			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShaderData.data(), pixelShaderData.size());
 			psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 			psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 			psoDesc.DepthStencilState.DepthEnable = FALSE;
