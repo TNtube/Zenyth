@@ -6,7 +6,7 @@
 namespace zenyth::fs
 {
 	std::string wideToUtf8(const std::wstring& wstr) {
-		if (wstr.empty()) return std::string();
+		if (wstr.empty()) return {};
 
 		const int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
 		std::string strTo(sizeNeeded, 0);
@@ -45,7 +45,7 @@ namespace zenyth::fs
 			throw std::runtime_error("Failed to open file: " + str);
 		}
 
-		std::streamsize size = file.tellg();
+		const std::streamsize size = file.tellg();
 		file.seekg(0, std::ios::beg);
 		std::vector<uint8_t> buffer(size);
 

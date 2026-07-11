@@ -9,7 +9,7 @@ std::string HrToString(const HRESULT hr)
 {
 	char s_str[64] = {};
 	sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
-	return std::string(s_str);
+	return {s_str};
 }
 
 class HrException : public std::runtime_error
@@ -43,8 +43,8 @@ namespace zenyth::renderer {
 		m_width = width;
 		m_height = height;
 
-		m_viewport.Width = width;
-		m_viewport.Height = height;
+		m_viewport.Width = static_cast<float>(width);
+		m_viewport.Height = static_cast<float>(height);
 
 		m_scissorRect.right = m_scissorRect.left + static_cast<LONG>(width);
 		m_scissorRect.bottom = m_scissorRect.top + static_cast<LONG>(height);
@@ -169,7 +169,6 @@ namespace zenyth::renderer {
 
 	void D3D12Renderer::LoadAssets()
 	{
-
 		// Create an empty root signature.
 		{
 			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
@@ -183,8 +182,8 @@ namespace zenyth::renderer {
 
 		// Create the pipeline state, which includes compiling and loading shaders.
 		{
-			auto vertexShaderData = fs::readFileToByteArray(GetAssetFullPath(L"shaders_VSMain.cso").c_str());
-			auto pixelShaderData = fs::readFileToByteArray(GetAssetFullPath(L"shaders_PSMain.cso").c_str());
+			auto vertexShaderData = fs::readFileToByteArray(GetAssetFullPath(L"shaders_VSMain.cso"));
+			auto pixelShaderData = fs::readFileToByteArray(GetAssetFullPath(L"shaders_PSMain.cso"));
 
 			// Define the vertex input layout.
 			D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -230,7 +229,7 @@ namespace zenyth::renderer {
 				{ { -0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
 			};
 
-			const UINT vertexBufferSize = sizeof(triangleVertices);
+			constexpr UINT vertexBufferSize = sizeof(triangleVertices);
 
 			// Note: using upload heaps to transfer static data like vert buffers is not
 			// recommended. Every time the GPU needs it, the upload heap will be marshalled
@@ -300,11 +299,11 @@ namespace zenyth::renderer {
 		auto rtBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_commandList->ResourceBarrier(1, &rtBarrier);
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+		const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<int>(m_frameIndex), m_rtvDescriptorSize);
 		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 		// Record commands.
-		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);

@@ -17,3 +17,6 @@ CMakeUserPresets.json
 
 # CLion
 /.idea
+
+# Compiled shaders
+*.cso

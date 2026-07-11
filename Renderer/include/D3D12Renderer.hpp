@@ -39,7 +39,7 @@ namespace zenyth::renderer {
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView{};
 
 		// Synchronization objects.
-		UINT m_frameIndex {};
+		std::uint32_t m_frameIndex {};
 		HANDLE m_fenceEvent {};
 		Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
 		UINT64 m_fenceValue {};
