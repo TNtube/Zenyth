@@ -17,7 +17,7 @@ namespace zenyth::renderer {
 		struct Vertex
 		{
 			zenyth::math::vec3 position;
-			zenyth::math::vec4 color;
+			zenyth::math::vec2 uv;
 		};
 
 		// Pipeline objects.
@@ -30,6 +30,7 @@ namespace zenyth::renderer {
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
 		UINT m_rtvDescriptorSize {};
@@ -37,6 +38,7 @@ namespace zenyth::renderer {
 		// App resources.
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView{};
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 
 		// Synchronization objects.
 		std::uint32_t m_frameIndex {};
@@ -51,6 +53,8 @@ namespace zenyth::renderer {
 
 		void LoadPipeline();
 		void LoadAssets();
+
+		static std::vector<UINT8> GenerateTextureData();
 		void PopulateCommandList() const;
 		void WaitForPreviousFrame();
 
