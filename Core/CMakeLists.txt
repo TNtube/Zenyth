@@ -7,8 +7,20 @@ add_library(Core STATIC
     ${SOURCES}
 )
 
+include(FetchContent)
+
+FetchContent_Declare(
+        stb
+        GIT_REPOSITORY https://github.com/nothings/stb
+        GIT_TAG        master
+        GIT_SHALLOW    TRUE
+)
+
+FetchContent_MakeAvailable(stb)
+
 target_include_directories(Core
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC ${stb_SOURCE_DIR}
 )
 target_link_libraries(Core
     PUBLIC d3d12.lib dxgi.lib

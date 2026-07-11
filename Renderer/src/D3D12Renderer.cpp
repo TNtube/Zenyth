@@ -1,7 +1,9 @@
 #include "pch.hpp"
+#include "Texture.hpp"
 #include "D3D12Renderer.hpp"
 
 #include "Filesystem.hpp"
+#include "stb_image.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -36,9 +38,6 @@ std::wstring GetAssetFullPath(LPCWSTR assetName)
 }
 
 namespace zenyth::renderer {
-	constexpr UINT TextureWidth = 256;
-	constexpr UINT TextureHeight = 256;
-	constexpr UINT TexturePixelSize = 4;
 	void D3D12Renderer::Init(const HWND hwnd, const uint32_t width, const uint32_t height)
 	{
 		m_hwnd = hwnd;
@@ -305,12 +304,16 @@ namespace zenyth::renderer {
 
 		// Create the texture.
 		{
+			// Copy data to the intermediate upload heap and then schedule a copy
+			// from the upload heap to the Texture2D.
+			auto [width, height, channels, data] = GenerateTextureData();
+
 			// Describe and create a Texture2D.
 			D3D12_RESOURCE_DESC textureDesc = {};
 			textureDesc.MipLevels = 1;
 			textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			textureDesc.Width = TextureWidth;
-			textureDesc.Height = TextureHeight;
+			textureDesc.Width = width;
+			textureDesc.Height = height;
 			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 			textureDesc.DepthOrArraySize = 1;
 			textureDesc.SampleDesc.Count = 1;
@@ -339,14 +342,10 @@ namespace zenyth::renderer {
 				nullptr,
 				IID_PPV_ARGS(&textureUploadHeap)));
 
-			// Copy data to the intermediate upload heap and then schedule a copy
-			// from the upload heap to the Texture2D.
-			std::vector<UINT8> texture = GenerateTextureData();
-
 			D3D12_SUBRESOURCE_DATA textureData = {};
-			textureData.pData = &texture[0];
-			textureData.RowPitch = TextureWidth * TexturePixelSize;
-			textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+			textureData.pData = data.data();
+			textureData.RowPitch = width * channels;
+			textureData.SlicePitch = textureData.RowPitch * height;
 
 			auto pixelShaderTransition = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
@@ -385,40 +384,11 @@ namespace zenyth::renderer {
 		}
 	}
 
-	std::vector<UINT8> D3D12Renderer::GenerateTextureData()
+	Texture D3D12Renderer::GenerateTextureData()
 	{
-		constexpr UINT rowPitch = TextureWidth * TexturePixelSize;
-		constexpr UINT cellPitch = rowPitch >> 3;         // The width of a cell in the checkboard texture.
-		constexpr UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
-		constexpr UINT textureSize = rowPitch * TextureHeight;
-
-		std::vector<UINT8> data(textureSize);
-		UINT8* pData = &data[0];
-
-		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
-		{
-			const UINT x = n % rowPitch;
-			const UINT y = n / rowPitch;
-			const UINT i = x / cellPitch;
-			const UINT j = y / cellHeight;
-
-			if (i % 2 == j % 2)
-			{
-				pData[n] = 0x00;        // R
-				pData[n + 1] = 0x00;    // G
-				pData[n + 2] = 0x00;    // B
-				pData[n + 3] = 0xff;    // A
-			}
-			else
-			{
-				pData[n] = 0xff;        // R
-				pData[n + 1] = 0xff;    // G
-				pData[n + 2] = 0xff;    // B
-				pData[n + 3] = 0xff;    // A
-			}
-		}
-
-		return data;
+		int width, height, channels;
+		unsigned char* data = stbi_load("assets/textures/container.jpg", &width, &height, &channels, 4);
+		return Texture{width, height, 4, {data, data + width * height * 4} };
 	}
 
 	void D3D12Renderer::PopulateCommandList() const

@@ -3,6 +3,7 @@
 #include "directx/d3dx12.h"
 #include <dxgi1_6.h>
 #include "math/vector.hpp"
+#include "Texture.hpp"
 
 namespace zenyth::renderer {
 	class D3D12Renderer : public IRenderer {
@@ -54,7 +55,7 @@ namespace zenyth::renderer {
 		void LoadPipeline();
 		void LoadAssets();
 
-		static std::vector<UINT8> GenerateTextureData();
+		static Texture GenerateTextureData();
 		void PopulateCommandList() const;
 		void WaitForPreviousFrame();
 
