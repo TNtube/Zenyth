@@ -20,6 +20,11 @@ namespace zenyth::renderer {
 			zenyth::math::vec3 position;
 			zenyth::math::vec2 uv;
 		};
+		struct SceneConstantBuffer
+		{
+			zenyth::math::vec4 offset;
+			float padding[60]; // Padding so the constant buffer is 256-byte aligned.
+		};
 
 		// Pipeline objects.
 		CD3DX12_VIEWPORT m_viewport{};
@@ -34,12 +39,15 @@ namespace zenyth::renderer {
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
-		UINT m_rtvDescriptorSize {};
+		std::uint32_t m_rtvDescriptorSize {};
 
 		// App resources.
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView{};
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
+		SceneConstantBuffer m_constantBufferData {};
+		std::uint8_t* m_pCbvDataBegin {};
 
 		// Synchronization objects.
 		std::uint32_t m_frameIndex {};
