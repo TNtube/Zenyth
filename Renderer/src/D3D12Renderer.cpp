@@ -55,38 +55,6 @@ namespace zenyth::renderer {
 		LoadAssets();
 	}
 
-	void D3D12Renderer::BeginFrame()
-	{
-		const float translationSpeed = 0.005f;
-		const float offsetBounds = 1.25f;
-
-		m_constantBufferData.offset.x() += translationSpeed;
-		if (m_constantBufferData.offset.x() > offsetBounds)
-		{
-			m_constantBufferData.offset.x() = -offsetBounds;
-		}
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
-
-		// Record all the commands we need to render the scene into the command list.
-		PopulateCommandList();
-	}
-
-	void D3D12Renderer::EndFrame()
-	{
-		// Execute the command list.
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-		// Present the frame.
-		ThrowIfFailed(m_swapChain->Present(1, 0));
-
-		WaitForPreviousFrame();
-	}
-
-	void D3D12Renderer::Resize(uint32_t width, uint32_t height)
-	{
-	}
-
 	void D3D12Renderer::LoadPipeline() {
 
 		UINT dxgiFactoryFlags = 0;
@@ -155,7 +123,7 @@ namespace zenyth::renderer {
 		{
 			// Describe and create a render target view (RTV) descriptor heap.
 			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-			rtvHeapDesc.NumDescriptors = FrameCount;
+			rtvHeapDesc.NumDescriptors = FrameCount*10;
 			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
@@ -164,26 +132,35 @@ namespace zenyth::renderer {
 
 			// Describe and create a shader resource view (SRV) heap for the texture.
 			D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-			srvHeapDesc.NumDescriptors = 2;
+			srvHeapDesc.NumDescriptors = FrameCount*10;
 			srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+
+			m_cbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		}
 
 		// Create frame resources.
 		{
 			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
 			// Create a RTV for each frame.
 			for (UINT n = 0; n < FrameCount; n++)
 			{
-				ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-				m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+				auto& frameResource = m_frameResources[n];
+				ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&frameResource.RenderTarget)));
+				m_device->CreateRenderTargetView(frameResource.RenderTarget.Get(), nullptr, rtvHandle);
 				rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+
+				ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frameResource.CommandAllocator)));
+
+				// Create the command list.
+				ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frameResource.CommandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&frameResource.CommandList)));
+				ThrowIfFailed(frameResource.CommandList->Close());
 			}
 		}
-
-		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 	}
 
 	void D3D12Renderer::LoadAssets()
@@ -270,8 +247,6 @@ namespace zenyth::renderer {
 			ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
 
-		// Create the command list.
-		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
 		// Create the vertex buffer.
 		{
@@ -316,7 +291,9 @@ namespace zenyth::renderer {
 		}
 
 		// Create the constant buffer.
+		for (int n = 0; n < FrameCount; n++)
 		{
+			auto& frameResource = m_frameResources[n];
 			const UINT constantBufferSize = sizeof(SceneConstantBuffer);    // CB size is required to be 256-byte aligned.
 
 			CD3DX12_HEAP_PROPERTIES cboHeapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -327,19 +304,20 @@ namespace zenyth::renderer {
 				&cboBufferDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&m_constantBuffer)));
+				IID_PPV_ARGS(&frameResource.ConstantBuffer)));
 
 			// Describe and create a constant buffer view.
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-			cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
+			cbvDesc.BufferLocation = frameResource.ConstantBuffer->GetGPUVirtualAddress();
 			cbvDesc.SizeInBytes = constantBufferSize;
-			m_device->CreateConstantBufferView(&cbvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), n * ResourceCount, m_cbvSrvDescriptorSize);
+			m_device->CreateConstantBufferView(&cbvDesc, cbvHandle);
 
 			// Map and initialize the constant buffer. We don't unmap this until the
 			// app closes. Keeping things mapped for the lifetime of the resource is okay.
 			CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
-			memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+			ThrowIfFailed(frameResource.ConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&frameResource.pCbvDataBegin)));
+			memcpy(frameResource.pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 		}
 
 
@@ -348,6 +326,10 @@ namespace zenyth::renderer {
 		// We will flush the GPU at the end of this method to ensure the resource is not
 		// prematurely destroyed.
 		ComPtr<ID3D12Resource> textureUploadHeap;
+
+		auto& frameResource = m_frameResources[0];
+		ThrowIfFailed(frameResource.CommandAllocator->Reset());
+		ThrowIfFailed( frameResource.CommandList->Reset(frameResource.CommandAllocator.Get(), m_pipelineState.Get()));
 
 		// Create the texture.
 		{
@@ -395,8 +377,8 @@ namespace zenyth::renderer {
 			textureData.SlicePitch = textureData.RowPitch * height;
 
 			auto pixelShaderTransition = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-			m_commandList->ResourceBarrier(1, &pixelShaderTransition);
+			UpdateSubresources(frameResource.CommandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+			frameResource.CommandList->ResourceBarrier(1, &pixelShaderTransition);
 
 			// Describe and create a SRV for the texture.
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -404,21 +386,22 @@ namespace zenyth::renderer {
 			srvDesc.Format = textureDesc.Format;
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Texture2D.MipLevels = 1;
-			// SRV at slot 1
-			UINT cbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), 1, cbvSrvDescriptorSize);
-			m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHandle);
+			// SRV at slot 1 and 3
+			for (int i = 0; i < FrameCount; i++)
+			{
+				CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), i * ResourceCount + 1, m_cbvSrvDescriptorSize);
+				m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHandle);
+			}
 		}
 
 		// Close the command list and execute it to begin the initial GPU setup.
-		ThrowIfFailed(m_commandList->Close());
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+		ThrowIfFailed(frameResource.CommandList->Close());
+		ID3D12CommandList* ppCommandLists[] = { frameResource.CommandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 		// Create synchronization objects and wait until assets have been uploaded to the GPU.
 		{
 			ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-			m_fenceValue = 1;
 
 			// Create an event handle to use for frame synchronization.
 			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -430,7 +413,12 @@ namespace zenyth::renderer {
 			// Wait for the command list to execute; we are reusing the same command
 			// list in our main loop but for now, we just want to wait for setup to
 			// complete before continuing.
-			WaitForPreviousFrame();
+
+			m_fenceValue = 1;
+			ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValue));
+			frameResource.FenceValue = m_fenceValue;
+			WaitForFence(m_fenceValue);
+			m_fenceValue++;
 		}
 	}
 
@@ -441,73 +429,103 @@ namespace zenyth::renderer {
 		return Texture{width, height, 4, {data, data + width * height * 4} };
 	}
 
+
+	void D3D12Renderer::BeginFrame()
+	{
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+		auto& frameResource = m_frameResources[m_frameIndex];
+		WaitForFence(frameResource.FenceValue);
+
+		const float translationSpeed = 0.005f;
+		const float offsetBounds = 1.25f;
+
+		m_constantBufferData.offset.x() += translationSpeed;
+		if (m_constantBufferData.offset.x() > offsetBounds)
+		{
+			m_constantBufferData.offset.x() = -offsetBounds;
+		}
+		memcpy(frameResource.pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+		// Record all the commands we need to render the scene into the command list.
+		PopulateCommandList();
+	}
+
+	void D3D12Renderer::EndFrame()
+	{
+		auto& frameResource = m_frameResources[m_frameIndex];
+
+		// Execute the command list.
+		ID3D12CommandList* ppCommandLists[] = { frameResource.CommandList.Get() };
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+		// Present the frame.
+		ThrowIfFailed(m_swapChain->Present(1, 0));
+
+		m_fenceValue++;
+		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValue));
+		frameResource.FenceValue = m_fenceValue;
+	}
+
+	void D3D12Renderer::Resize(uint32_t width, uint32_t height)
+	{
+	}
+
+
 	void D3D12Renderer::PopulateCommandList() const
 	{
-		// Command list allocators can only be reset when the associated
-		// command lists have finished execution on the GPU; apps should use
-		// fences to determine GPU execution progress.
-		ThrowIfFailed(m_commandAllocator->Reset());
+		auto& frameResource = m_frameResources[m_frameIndex];
 
-		// However, when ExecuteCommandList() is called on a particular command
-		// list, that command list can then be reset at any time and must be before
-		// re-recording.
-		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+		auto& commandAllocator = frameResource.CommandAllocator;
+		auto& commandList = frameResource.CommandList;
+		auto& renderTarget = frameResource.RenderTarget;
+
+
+		ThrowIfFailed(commandAllocator->Reset());
+		ThrowIfFailed(commandList->Reset(commandAllocator.Get(), m_pipelineState.Get()));
 
 		// Set necessary state.
-		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+		commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
 		ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
-		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		auto cbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		m_commandList->SetGraphicsRootDescriptorTable(0, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), 1, cbvSrvDescriptorSize);
-		m_commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
-		m_commandList->RSSetViewports(1, &m_viewport);
-		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE handle(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), m_frameIndex * ResourceCount, m_cbvSrvDescriptorSize);
+		commandList->SetGraphicsRootDescriptorTable(0, handle);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(handle, 1, m_cbvSrvDescriptorSize);
+		commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
+		commandList->RSSetViewports(1, &m_viewport);
+		commandList->RSSetScissorRects(1, &m_scissorRect);
 
 		// Indicate that the back buffer will be used as a render target.
-		const auto rtBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		m_commandList->ResourceBarrier(1, &rtBarrier);
+		const auto rtBarrier = CD3DX12_RESOURCE_BARRIER::Transition(renderTarget.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		commandList->ResourceBarrier(1, &rtBarrier);
 
 		const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<int>(m_frameIndex), m_rtvDescriptorSize);
-		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 		// Record commands.
 		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-		m_commandList->DrawInstanced(3, 1, 0, 0);
+		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+		commandList->DrawInstanced(3, 1, 0, 0);
 
 		// Indicate that the back buffer will now be used to present.
-		const auto presentBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		m_commandList->ResourceBarrier(1, &presentBarrier);
+		const auto presentBarrier = CD3DX12_RESOURCE_BARRIER::Transition(renderTarget.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		commandList->ResourceBarrier(1, &presentBarrier);
 
-		ThrowIfFailed(m_commandList->Close());
+		ThrowIfFailed(commandList->Close());
 	}
 
-	void D3D12Renderer::WaitForPreviousFrame()
+	void D3D12Renderer::WaitForFence(const std::uint64_t fenceValue) const
 	{
-		// WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-		// This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-		// sample illustrates how to use fences for efficient resource usage and to
-		// maximize GPU utilization.
-
-		// Signal and increment the fence value.
-		const UINT64 fence = m_fenceValue;
-		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-		m_fenceValue++;
-
 		// Wait until the previous frame is finished.
-		if (m_fence->GetCompletedValue() < fence)
+		if (m_fence->GetCompletedValue() < fenceValue)
 		{
-			ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+			ThrowIfFailed(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
 			WaitForSingleObject(m_fenceEvent, INFINITE);
 		}
-
-		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 	}
 
 
