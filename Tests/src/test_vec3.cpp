@@ -127,3 +127,17 @@ TEST_CASE("vec3: mutable accessors") {
 	CHECK_NEAR(v.y(), 2.0f, tight_eps);
 	CHECK_NEAR(v.z(), 3.0f, tight_eps);
 }
+
+TEST_CASE("vec3: zero()") {
+	const vec3 v = vec3::zero();
+	CHECK_NEAR(v.x(), 0.0f, tight_eps);
+	CHECK_NEAR(v.y(), 0.0f, tight_eps);
+	CHECK_NEAR(v.z(), 0.0f, tight_eps);
+}
+
+TEST_CASE("vec3: one()") {
+	const vec3 v = vec3::one();
+	CHECK_NEAR(v.x(), 1.0f, tight_eps);
+	CHECK_NEAR(v.y(), 1.0f, tight_eps);
+	CHECK_NEAR(v.z(), 1.0f, tight_eps);
+}

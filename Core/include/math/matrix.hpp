@@ -21,8 +21,8 @@ namespace zenyth::math {
 
 		// [[nodiscard]] static mat4 from_basis(const vec3& right, const vec3& up, const vec3& forward) noexcept;
 		// [[nodiscard]] static mat4 from_axis_angle(const vec3& axis, float angle_rad) noexcept;
-		// [[nodiscard]] static mat4 from_euler(float pitch, float yaw, float roll) noexcept;
-		// [[nodiscard]] static mat4 from_scale(const vec3& scale) noexcept;
+		[[nodiscard]] static mat4 from_euler(const vec3& euler) noexcept;
+		[[nodiscard]] static mat4 from_scale(const vec3& scale) noexcept;
 		[[nodiscard]] static mat4 from_translation(const vec3& t) noexcept;
 
 		// [[nodiscard]] mat4 operator+(const mat4& rhs) const noexcept;

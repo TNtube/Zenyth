@@ -60,6 +60,81 @@ namespace zenyth::test {
 		CHECK_NEAR(MAT_AT(m, 3, 0), 0.0f, tight_eps);
 	}
 
+	TEST_CASE("mat4: from_scale") {
+		const mat4 m = mat4::from_scale(vec3(2.0f, 3.0f, 4.0f));
+
+		CHECK_NEAR(MAT_AT(m, 0, 0), 2.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 1, 1), 3.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 2, 2), 4.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 3, 3), 1.0f, tight_eps);
+
+		// Off-diagonal should be zero
+		CHECK_NEAR(MAT_AT(m, 0, 1), 0.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 0, 2), 0.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 0, 3), 0.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 1, 0), 0.0f, tight_eps);
+		CHECK_NEAR(MAT_AT(m, 3, 0), 0.0f, tight_eps);
+	}
+
+	TEST_CASE("mat4: from_scale transforms point") {
+		const mat4 s = mat4::from_scale(vec3(2.0f, 3.0f, 4.0f));
+		const vec4 p(1.0f, 1.0f, 1.0f, 1.0f);
+		const vec4 r = s * p;
+		CHECK_NEAR(r.x(), 2.0f, loose_eps);
+		CHECK_NEAR(r.y(), 3.0f, loose_eps);
+		CHECK_NEAR(r.z(), 4.0f, loose_eps);
+		CHECK_NEAR(r.w(), 1.0f, loose_eps);
+	}
+
+	TEST_CASE("mat4: from_euler zero rotation is identity") {
+		const mat4 m = mat4::from_euler(vec3(0.0f, 0.0f, 0.0f));
+		for (int c = 0; c < 4; c++)
+			for (int r = 0; r < 4; r++) {
+				const float expected = (r == c) ? 1.0f : 0.0f;
+				CHECK_NEAR(MAT_AT(m, r, c), expected, tight_eps);
+			}
+	}
+
+	TEST_CASE("mat4: from_euler rotation about X") {
+		// +90 deg about X: +Y -> +Z
+		const mat4 m = mat4::from_euler(vec3(rad(90.0f), 0.0f, 0.0f));
+		const vec4 p(0.0f, 1.0f, 0.0f, 1.0f);
+		const vec4 r = m * p;
+		CHECK_NEAR(r.x(), 0.0f, loose_eps);
+		CHECK_NEAR(r.y(), 0.0f, loose_eps);
+		CHECK_NEAR(r.z(), 1.0f, loose_eps);
+		CHECK_NEAR(r.w(), 1.0f, loose_eps);
+	}
+
+	TEST_CASE("mat4: from_euler rotation about Y") {
+		// +90 deg about Y: +X -> -Z
+		const mat4 m = mat4::from_euler(vec3(0.0f, rad(90.0f), 0.0f));
+		const vec4 p(1.0f, 0.0f, 0.0f, 1.0f);
+		const vec4 r = m * p;
+		CHECK_NEAR(r.x(), 0.0f, loose_eps);
+		CHECK_NEAR(r.y(), 0.0f, loose_eps);
+		CHECK_NEAR(r.z(), -1.0f, loose_eps);
+		CHECK_NEAR(r.w(), 1.0f, loose_eps);
+	}
+
+	TEST_CASE("mat4: from_euler rotation about Z") {
+		// +90 deg about Z: +X -> +Y
+		const mat4 m = mat4::from_euler(vec3(0.0f, 0.0f, rad(90.0f)));
+		const vec4 p(1.0f, 0.0f, 0.0f, 1.0f);
+		const vec4 r = m * p;
+		CHECK_NEAR(r.x(), 0.0f, loose_eps);
+		CHECK_NEAR(r.y(), 1.0f, loose_eps);
+		CHECK_NEAR(r.z(), 0.0f, loose_eps);
+		CHECK_NEAR(r.w(), 1.0f, loose_eps);
+	}
+
+	TEST_CASE("mat4: from_euler does not affect direction w") {
+		const mat4 m = mat4::from_euler(vec3(rad(30.0f), rad(45.0f), rad(60.0f)));
+		const vec4 d(1.0f, 0.0f, 0.0f, 0.0f);  // w=0 for direction
+		const vec4 r = m * d;
+		CHECK_NEAR(r.w(), 0.0f, loose_eps);
+	}
+
 	TEST_CASE("mat4: identity * identity = identity") {
 		const mat4 I = mat4::identity();
 		const mat4 r = I * I;

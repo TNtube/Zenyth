@@ -92,8 +92,11 @@ namespace zenyth::math {
 	vec3 vec3::cross(const vec3& a, const vec3& b) noexcept { return a.cross(b); }
 	vec3 vec3::normalize(const vec3& vec) noexcept { return vec.normalize(); }
 	float vec3::dot(const vec3& a, const vec3& b) noexcept { return a.dot(b); }
-	float vec3::length_sq(const vec3& vec) noexcept { return vec.length(); }
-	float vec3::length(const vec3& vec) noexcept { return vec.length_sq(); }
+	float vec3::length_sq(const vec3& vec) noexcept { return vec.length_sq(); }
+	float vec3::length(const vec3& vec) noexcept { return vec.length(); }
+
+	vec3 vec3::zero() noexcept { return vec3{}; }
+	vec3 vec3::one() noexcept { return vec3{1.0f}; }
 #pragma endregion
 
 #pragma region vec4

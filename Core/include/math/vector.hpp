@@ -69,6 +69,9 @@ namespace zenyth::math {
 		[[nodiscard]] static float dot(const vec3& a, const vec3& b) noexcept;
 		[[nodiscard]] static float length_sq(const vec3& vec) noexcept;
 		[[nodiscard]] static float length(const vec3& vec) noexcept;
+
+		[[nodiscard]] static vec3 zero() noexcept;
+		[[nodiscard]] static vec3 one() noexcept;
 	protected:
 		explicit vec3(const __m128 simd) : m_simd(simd) {};
 

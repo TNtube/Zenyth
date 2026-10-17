@@ -24,6 +24,31 @@ namespace zenyth::math {
 		return mat4{};
 	}
 
+	mat4 mat4::from_euler(const vec3& euler) noexcept {
+		const float cx = std::cos(euler.x());
+		const float sx = std::sin(euler.x());
+		const float cy = std::cos(euler.y());
+		const float sy = std::sin(euler.y());
+		const float cz = std::cos(euler.z());
+		const float sz = std::sin(euler.z());
+
+		return {
+			_mm_set_ps(0.0f, -sy, cy * sz, cy * cz), // col0
+			_mm_set_ps(0.0f,  sx * cy, cx * cz + sx * sy * sz, -cx * sz + sx * sy * cz), // col1
+			_mm_set_ps(0.0f,  cx * cy, -sx * cz + cx * sy * sz, sx * sz + cx * sy * cz), // col2
+			_mm_set_ps(1.0f, 0.0f, 0.0f, 0.0f) // col3
+		};
+	}
+
+	mat4 mat4::from_scale(const vec3 &scale) noexcept {
+		return {
+			_mm_set_ps(0, 0, 0, scale.x()),     // col0: (sx, 0, 0, 0)
+			_mm_set_ps(0, 0, scale.y(), 0),     // col1: (0, sy, 0, 0)
+			_mm_set_ps(0, scale.z(), 0, 0),     // col2: (0, 0, sz, 0)
+			_mm_set_ps(1, 0, 0, 0)              // col3: (0, 0, 0, 1)
+		};
+	}
+
 	mat4 mat4::from_translation(const vec3& t) noexcept {
 		return {
 			_mm_set_ps(0, 0, 0, 1),             // col0: (1, 0, 0, 0)
