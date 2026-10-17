@@ -47,6 +47,8 @@ namespace zenyth::renderer {
 
 		m_viewport.Width = static_cast<float>(width);
 		m_viewport.Height = static_cast<float>(height);
+		m_viewport.MinDepth = 0.0f;
+		m_viewport.MaxDepth = 1.0f;
 
 		m_scissorRect.right = m_scissorRect.left + static_cast<LONG>(width);
 		m_scissorRect.bottom = m_scissorRect.top + static_cast<LONG>(height);
@@ -138,12 +140,50 @@ namespace zenyth::renderer {
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
 			m_cbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+			// Describe and create a depth stencil view (DSV) descriptor heap.
+			D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+			dsvHeapDesc.NumDescriptors = 1;
+			dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+			dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
+		}
+
+		// create depth stencil resources
+		{
+			CD3DX12_RESOURCE_DESC depthResourceDesc(
+				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				0,
+				static_cast<UINT>(m_viewport.Width),
+				static_cast<UINT>(m_viewport.Height),
+				1,
+				1,
+				DXGI_FORMAT_D32_FLOAT,
+				1,
+				0,
+				D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+
+			D3D12_CLEAR_VALUE clearValue;
+			clearValue.Format = DXGI_FORMAT_D32_FLOAT;
+			clearValue.DepthStencil.Depth = 1.0f;
+			clearValue.DepthStencil.Stencil = 0;
+
+			const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&heapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&depthResourceDesc,
+				D3D12_RESOURCE_STATE_DEPTH_WRITE,
+				&clearValue,
+				IID_PPV_ARGS(&m_depthStencil)));
+
+			m_device->CreateDepthStencilView(m_depthStencil.Get(), nullptr, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
 		// Create frame resources.
 		{
 			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
 			// Create a RTV for each frame.
 			for (UINT n = 0; n < FrameCount; n++)
@@ -230,6 +270,13 @@ namespace zenyth::renderer {
 			};
 
 			// Describe and create the graphics pipeline state object (PSO).
+
+			CD3DX12_DEPTH_STENCIL_DESC depthStencilDesc(D3D12_DEFAULT);
+			depthStencilDesc.DepthEnable = true;
+			depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+			depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+			depthStencilDesc.StencilEnable = FALSE;
+
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 			psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 			psoDesc.pRootSignature = m_rootSignature.Get();
@@ -237,12 +284,12 @@ namespace zenyth::renderer {
 			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShaderData.data(), pixelShaderData.size());
 			psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 			psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-			psoDesc.DepthStencilState.DepthEnable = FALSE;
-			psoDesc.DepthStencilState.StencilEnable = FALSE;
+			psoDesc.DepthStencilState = depthStencilDesc;
 			psoDesc.SampleMask = UINT_MAX;
 			psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			psoDesc.NumRenderTargets = 1;
 			psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+			psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 			psoDesc.SampleDesc.Count = 1;
 			ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
@@ -295,29 +342,56 @@ namespace zenyth::renderer {
 		{
 			auto& frameResource = m_frameResources[n];
 			const UINT constantBufferSize = sizeof(SceneConstantBuffer);    // CB size is required to be 256-byte aligned.
-
 			CD3DX12_HEAP_PROPERTIES cboHeapProps(D3D12_HEAP_TYPE_UPLOAD);
-			CD3DX12_RESOURCE_DESC cboBufferDesc =CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
-			ThrowIfFailed(m_device->CreateCommittedResource(
-				&cboHeapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&cboBufferDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&frameResource.ConstantBuffer)));
+			{
+				CD3DX12_RESOURCE_DESC cboBufferDesc =CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+				ThrowIfFailed(m_device->CreateCommittedResource(
+					&cboHeapProps,
+					D3D12_HEAP_FLAG_NONE,
+					&cboBufferDesc,
+					D3D12_RESOURCE_STATE_GENERIC_READ,
+					nullptr,
+					IID_PPV_ARGS(&frameResource.ConstantBufferA)));
 
-			// Describe and create a constant buffer view.
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-			cbvDesc.BufferLocation = frameResource.ConstantBuffer->GetGPUVirtualAddress();
-			cbvDesc.SizeInBytes = constantBufferSize;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), n * ResourceCount, m_cbvSrvDescriptorSize);
-			m_device->CreateConstantBufferView(&cbvDesc, cbvHandle);
+				// Describe and create a constant buffer view.
+				D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+				cbvDesc.BufferLocation = frameResource.ConstantBufferA->GetGPUVirtualAddress();
+				cbvDesc.SizeInBytes = constantBufferSize;
+				CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), n * ResourceCount, m_cbvSrvDescriptorSize);
+				m_device->CreateConstantBufferView(&cbvDesc, cbvHandle);
 
-			// Map and initialize the constant buffer. We don't unmap this until the
-			// app closes. Keeping things mapped for the lifetime of the resource is okay.
-			CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-			ThrowIfFailed(frameResource.ConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&frameResource.pCbvDataBegin)));
-			memcpy(frameResource.pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+				// Map and initialize the constant buffer. We don't unmap this until the
+				// app closes. Keeping things mapped for the lifetime of the resource is okay.
+				CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+				ThrowIfFailed(frameResource.ConstantBufferA->Map(0, &readRange, reinterpret_cast<void**>(&frameResource.pCbvDataBeginA)));
+				m_transformA.position.z() = 0.5f;
+				m_constantBufferDataA.transform = m_transformA.getMatrix();
+				memcpy(frameResource.pCbvDataBeginA, &m_constantBufferDataA, sizeof(m_constantBufferDataA));
+			}
+			{
+				CD3DX12_RESOURCE_DESC cboBufferDesc =CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+				ThrowIfFailed(m_device->CreateCommittedResource(
+					&cboHeapProps,
+					D3D12_HEAP_FLAG_NONE,
+					&cboBufferDesc,
+					D3D12_RESOURCE_STATE_GENERIC_READ,
+					nullptr,
+					IID_PPV_ARGS(&frameResource.ConstantBufferB)));
+
+				// Describe and create a constant buffer view.
+				D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+				cbvDesc.BufferLocation = frameResource.ConstantBufferB->GetGPUVirtualAddress();
+				cbvDesc.SizeInBytes = constantBufferSize;
+				CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), n * ResourceCount + 1, m_cbvSrvDescriptorSize);
+				m_device->CreateConstantBufferView(&cbvDesc, cbvHandle);
+
+				// Map and initialize the constant buffer. We don't unmap this until the
+				// app closes. Keeping things mapped for the lifetime of the resource is okay.
+				CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+				ThrowIfFailed(frameResource.ConstantBufferB->Map(0, &readRange, reinterpret_cast<void**>(&frameResource.pCbvDataBeginB)));
+				m_constantBufferDataB.transform = m_transformB.getMatrix();
+				memcpy(frameResource.pCbvDataBeginB, &m_constantBufferDataB, sizeof(m_constantBufferDataB));
+			}
 		}
 
 
@@ -389,7 +463,7 @@ namespace zenyth::renderer {
 			// SRV at slot 1 and 3
 			for (int i = 0; i < FrameCount; i++)
 			{
-				CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), i * ResourceCount + 1, m_cbvSrvDescriptorSize);
+				CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), i * ResourceCount + 2, m_cbvSrvDescriptorSize);
 				m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHandle);
 			}
 		}
@@ -440,12 +514,22 @@ namespace zenyth::renderer {
 		const float translationSpeed = 0.005f;
 		const float offsetBounds = 1.25f;
 
-		m_constantBufferData.offset.x() += translationSpeed;
-		if (m_constantBufferData.offset.x() > offsetBounds)
+		m_transformA.position.x() += translationSpeed;
+		if (m_transformA.position.x() > offsetBounds)
 		{
-			m_constantBufferData.offset.x() = -offsetBounds;
+			m_transformA.position.x() = -offsetBounds;
 		}
-		memcpy(frameResource.pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+		m_constantBufferDataA.transform = m_transformA.getMatrix();
+
+		m_transformB.position.y() += translationSpeed;
+		if (m_transformB.position.y() > offsetBounds)
+		{
+			m_transformB.position.y() = -offsetBounds;
+		}
+		m_constantBufferDataB.transform = m_transformB.getMatrix();
+
+		memcpy(frameResource.pCbvDataBeginA, &m_constantBufferDataA, sizeof(m_constantBufferDataA));
+		memcpy(frameResource.pCbvDataBeginB, &m_constantBufferDataB, sizeof(m_constantBufferDataB));
 
 		// Record all the commands we need to render the scene into the command list.
 		PopulateCommandList();
@@ -490,9 +574,9 @@ namespace zenyth::renderer {
 		ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
 		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE handle(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), m_frameIndex * ResourceCount, m_cbvSrvDescriptorSize);
-		commandList->SetGraphicsRootDescriptorTable(0, handle);
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(handle, 1, m_cbvSrvDescriptorSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE cbvHandleA(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), m_frameIndex * ResourceCount, m_cbvSrvDescriptorSize);
+		commandList->SetGraphicsRootDescriptorTable(0, cbvHandleA);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(cbvHandleA, 2, m_cbvSrvDescriptorSize);
 		commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
 		commandList->RSSetViewports(1, &m_viewport);
 		commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -502,13 +586,19 @@ namespace zenyth::renderer {
 		commandList->ResourceBarrier(1, &rtBarrier);
 
 		const CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<int>(m_frameIndex), m_rtvDescriptorSize);
-		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+		const CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 		// Record commands.
 		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+		commandList->DrawInstanced(3, 1, 0, 0);
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE cbvHandleB(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), m_frameIndex * ResourceCount + 1, m_cbvSrvDescriptorSize);
+		commandList->SetGraphicsRootDescriptorTable(0, cbvHandleB);
 		commandList->DrawInstanced(3, 1, 0, 0);
 
 		// Indicate that the back buffer will now be used to present.

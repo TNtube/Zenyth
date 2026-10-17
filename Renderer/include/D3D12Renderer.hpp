@@ -4,17 +4,33 @@
 #include <dxgi1_6.h>
 #include "math/vector.hpp"
 #include "Texture.hpp"
+#include "math/matrix.hpp"
 
 namespace zenyth::renderer {
 	struct Vertex
 	{
-		zenyth::math::vec3 position;
-		zenyth::math::vec2 uv;
+		math::vec3 position;
+		math::vec2 uv;
 	};
+
+	struct Transform
+	{
+		math::vec3 position;
+		math::vec3 rotation;
+		math::vec3 scale = math::vec3::one();
+
+		[[nodiscard]] math::mat4 getMatrix() const {
+			return
+				math::mat4::from_translation(position)
+				* math::mat4::from_euler(rotation)
+				* math::mat4::from_scale(scale);
+		}
+	};
+
 	struct SceneConstantBuffer
 	{
-		zenyth::math::vec4 offset;
-		float padding[60]; // Padding so the constant buffer is 256-byte aligned.
+		math::mat4 transform;
+		float padding[48]; // Padding so the constant buffer is 256-byte aligned.
 	};
 
 	struct FrameResources
@@ -23,8 +39,10 @@ namespace zenyth::renderer {
 		Microsoft::WRL::ComPtr<ID3D12Resource> RenderTarget;
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
-		Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBuffer;
-		std::uint8_t* pCbvDataBegin {};
+		Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferA;
+		Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferB;
+		std::uint8_t* pCbvDataBeginA {};
+		std::uint8_t* pCbvDataBeginB {};
 	};
 
 
@@ -36,7 +54,7 @@ namespace zenyth::renderer {
 		void Resize(uint32_t width, uint32_t height) override;
 	private:
 		static const UINT FrameCount = 2;
-		static const int ResourceCount = 2;
+		static const int ResourceCount = 3;
 		// Pipeline objects.
 		CD3DX12_VIEWPORT m_viewport{};
 		CD3DX12_RECT m_scissorRect{};
@@ -46,13 +64,18 @@ namespace zenyth::renderer {
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 		std::uint32_t m_rtvDescriptorSize {};
 		std::uint32_t m_cbvSrvDescriptorSize {};
 		FrameResources m_frameResources[FrameCount] {};
-		SceneConstantBuffer m_constantBufferData {};
+		Transform m_transformA;
+		Transform m_transformB;
+		SceneConstantBuffer m_constantBufferDataA {};
+		SceneConstantBuffer m_constantBufferDataB {};
 
 		// App resources.
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_depthStencil;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView{};
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
